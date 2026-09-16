@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Next.js and production output
+.next/
+out/
+dist/
+build/
+
+# Test and tooling output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+storybook-static/
+.turbo/
+*.tsbuildinfo
+
+# Local environment files (the documented template is tracked)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Deployment tooling
+.vercel/
+
+# Package-manager and runtime logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
