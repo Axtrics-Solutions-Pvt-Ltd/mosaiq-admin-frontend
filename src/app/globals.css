@@ -1,0 +1,59 @@
+﻿@import "tailwindcss";
+@import "../styles/tokens.css";
+* {
+  border-color: var(--border);
+}
+html {
+  min-width: 20rem;
+  background: var(--canvas);
+}
+body {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.375rem;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+summary,
+select,
+input[type="checkbox"] {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--brand-primary-soft);
+  color: var(--text-strong);
+}
+dialog::backdrop {
+  background: rgb(15 23 42 / 0.48);
+  backdrop-filter: blur(2px);
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.48;
+  }
+}
+.animate-skeleton {
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

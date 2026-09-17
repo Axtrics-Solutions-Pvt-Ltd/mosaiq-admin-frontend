@@ -1,0 +1,76 @@
+﻿:root {
+  --brand-primary: #2563eb;
+  --brand-primary-hover: #1d4ed8;
+  --brand-primary-soft: #eff6ff;
+  --brand-indigo: #4f46e5;
+  --canvas: #f6f8fc;
+  --surface: #fff;
+  --surface-subtle: #f8fafc;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-strong: #0f172a;
+  --text: #334155;
+  --text-muted: #64748b;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --info: #0369a1;
+  --info-soft: #f0f9ff;
+  --chart-blue: #2563eb;
+  --chart-indigo: #4f46e5;
+  --chart-cyan: #0891b2;
+  --chart-teal: #0f766e;
+  --chart-amber: #d97706;
+  --chart-purple: #7e22ce;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-overlay: 1rem;
+  --focus-ring: #2563eb;
+  --sidebar-width: 16rem;
+  --sidebar-collapsed-width: 4.5rem;
+  --page-padding: 1.5rem;
+  --section-gap: 1.5rem;
+  --shadow-overlay: 0 20px 50px -24px rgb(15 23 42 / 0.35);
+}
+@media (max-width: 63.999rem) {
+  :root {
+    --page-padding: 1.25rem;
+    --section-gap: 1.25rem;
+  }
+}
+@media (max-width: 47.999rem) {
+  :root {
+    --page-padding: 1rem;
+  }
+}
+@theme inline {
+  --color-background: var(--canvas);
+  --color-foreground: var(--text);
+  --color-strong: var(--text-strong);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-primary: var(--brand-primary);
+  --color-primary-foreground: var(--surface);
+  --color-primary-hover: var(--brand-primary-hover);
+  --color-primary-soft: var(--brand-primary-soft);
+  --color-muted: var(--surface-subtle);
+  --color-muted-foreground: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-destructive: var(--danger);
+  --color-destructive-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--focus-ring);
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --radius-sm: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-overlay);
+}

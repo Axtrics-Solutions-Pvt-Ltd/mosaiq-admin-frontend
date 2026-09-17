@@ -1,0 +1,10 @@
+.next
+coverage
+node_modules
+package-lock.json
+playwright-report
+test-results
+AGENTS.md
+MOSAIQ-Admin-Frontend-Screen-Spec.md
+MOSAIQ-Admin-UI-Engineering-Spec.md
+implementation-plan/

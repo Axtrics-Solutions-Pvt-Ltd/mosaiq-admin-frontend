@@ -18,7 +18,7 @@ The core Admin frontend contains **14 conceptual screen groups**:
 
 | Area | Screens |
 |---|---:|
-| Authentication | 1 |
+| Authentication and account access | 5 |
 | Overview | 1 |
 | Agency management | 2 |
 | Workspace management | 2 |
@@ -26,7 +26,7 @@ The core Admin frontend contains **14 conceptual screen groups**:
 | Data management | 3 |
 | Client configuration | 1 |
 | Governance and settings | 1 |
-| **Total** | **14** |
+| **Total** | **18** |
 
 Create, edit, and details modes that share one feature layout count as one conceptual screen group, even when they use separate URLs. Drawers, dialogs, confirmation prompts, loading states, and responsive variants are not counted as separate screen groups.
 
@@ -35,6 +35,10 @@ Create, edit, and details modes that share one feature layout count as one conce
 ```text
 MOSAIQ Admin
 ├── Login
+├── Invite-only Sign-up
+├── Forgot Password
+├── Reset Password
+├── Forbidden
 ├── Overview
 │   └── Admin Dashboard
 ├── Agencies
@@ -138,6 +142,19 @@ Show a small non-intrusive label such as **Demo data** or **Sample workspace** s
 - Successful navigation to the Dashboard for the agreed demo credentials.
 
 **States:** Default, validation error, submitting, invalid credentials, generic unavailable error, and success.
+
+Authentication is presented as a reviewable UI prototype. It must not imply that an account, email, password reset, or session operation occurred. Admin sign-up uses an invite-only working assumption until Laravel eligibility and invitation contracts are agreed.
+
+### Account access companion routes
+
+- `/signup` presents invite-only account activation with identity, email, password, confirmation, and invitation guidance.
+- `/forgot-password` presents the reset-link request form plus submitted and unavailable preview states.
+- `/reset-password` presents new-password entry plus invalid/expired-link and success preview states.
+- `/forbidden` presents a clear access-denied state with safe navigation.
+- Logout is available from the authenticated profile menu and leads to a clearly labelled preview-only signed-out state.
+- Protected-route/session-expired presentation returns to sign-in with an accessible status message.
+
+Exact invitation eligibility, reset tokens, password policy, session storage, cookies/CSRF, and delivery behavior remain backend contract dependencies.
 
 ### Screen 2 — Admin Dashboard
 
@@ -665,8 +682,6 @@ The Admin product is desktop-first because of tables and configuration tasks, bu
 
 The following are valid future UI concepts but are not part of the current 14-screen hardcoded Admin UI:
 
-- Forgot Password.
-- Reset Password.
 - Dedicated Workspace Onboarding Wizard.
 - Dedicated Connector Setup/Reconnect screen.
 - Separate Import Validation route.
@@ -688,7 +703,8 @@ These items should be absent from the main navigation or displayed only as clear
 
 The Admin frontend design is complete when:
 
-- All 14 conceptual screen groups and their required URLs render within the shared Admin shell.
+- All 18 conceptual screen groups and their required URLs render in their specified public-auth or authenticated-shell layout.
+- Sign-in, invite-only sign-up, forgot-password, reset-password, forbidden, logout, and session-expired prototype states are reviewable without implying a real account or session operation.
 - The global agency selector consistently changes the displayed sample context.
 - Agency and workspace create/edit screens have complete form, validation, and success states.
 - Users can be visually assigned to agencies and multiple workspaces.
