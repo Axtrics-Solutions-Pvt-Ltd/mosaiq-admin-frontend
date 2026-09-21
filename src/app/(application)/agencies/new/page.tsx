@@ -1,5 +1,5 @@
-﻿import { AgencyForm } from "@/features/agencies/AgencyForm";
+import { AgencyCreateScreen } from "@/features/agencies/AgencyForm";
 
 export default function NewAgencyPage() {
-  return <AgencyForm mode="create" />;
+  return <AgencyCreateScreen />;
 }

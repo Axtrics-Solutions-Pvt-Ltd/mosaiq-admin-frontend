@@ -1,7 +1,4 @@
-﻿import { notFound } from "next/navigation";
-
-import { AgencyDetails } from "@/features/agencies/AgencyDetails";
-import { getAgency } from "@/features/agencies/view-model";
+import { AgencyDetailsScreen } from "@/features/agencies/AgencyDetails";
 
 export default async function AgencyPage({
   params,
@@ -9,7 +6,5 @@ export default async function AgencyPage({
   params: Promise<{ agencyId: string }>;
 }) {
   const { agencyId } = await params;
-  const agency = getAgency(agencyId);
-  if (!agency) notFound();
-  return <AgencyDetails agency={agency} />;
+  return <AgencyDetailsScreen agencyId={Number(agencyId)} />;
 }

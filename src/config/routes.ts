@@ -37,3 +37,31 @@ export const routes = {
   governance: "/governance",
   designSystem: "/design-system",
 } as const;
+
+export function workspaceScope(agencyId: number, clientId: number) {
+  const params = new URLSearchParams({
+    agency: String(agencyId),
+    client: String(clientId),
+  });
+  return "?" + params;
+}
+export function workspaceDetailUrl(
+  workspaceId: number,
+  agencyId: number,
+  clientId: number,
+) {
+  return (
+    routes.workspaces.detail(String(workspaceId)) +
+    workspaceScope(agencyId, clientId)
+  );
+}
+export function workspaceEditUrl(
+  workspaceId: number,
+  agencyId: number,
+  clientId: number,
+) {
+  return (
+    routes.workspaces.edit(String(workspaceId)) +
+    workspaceScope(agencyId, clientId)
+  );
+}

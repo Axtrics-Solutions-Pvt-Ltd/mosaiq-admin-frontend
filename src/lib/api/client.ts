@@ -1,9 +1,9 @@
-﻿import { toApiError, unavailableError } from "./errors";
+import { toApiError, unavailableError } from "./errors";
 
 export async function apiRequest<T>(
   path: string,
   options: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PUT" | "DELETE";
     body?: unknown;
     signal?: AbortSignal;
   } = {},
@@ -30,7 +30,8 @@ export async function apiRequest<T>(
   if (!response.ok) throw await toApiError(response);
   if (response.status === 204) return undefined as T;
   try {
-    return (await response.json()) as T;
+    const body = await response.text();
+    return body ? (JSON.parse(body) as T) : (undefined as T);
   } catch {
     throw unavailableError();
   }

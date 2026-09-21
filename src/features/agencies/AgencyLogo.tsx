@@ -1,4 +1,6 @@
-﻿import type { AgencySummary } from "@/features/agencies/view-model";
+import Image from "next/image";
+
+import type { AgencySummary } from "@/features/agencies/view-model";
 import { cn } from "@/lib/utils/cn";
 
 const tones: Record<AgencySummary["logoTone"], string> = {
@@ -13,10 +15,12 @@ export function AgencyLogo({
   className,
   name,
   tone,
+  url,
 }: {
   className?: string;
   name: string;
   tone: AgencySummary["logoTone"];
+  url?: string | null;
 }) {
   const initials = name
     .split(" ")
@@ -28,12 +32,23 @@ export function AgencyLogo({
     <span
       aria-hidden
       className={cn(
-        "flex size-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold",
+        "flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg text-sm font-semibold",
         tones[tone],
         className,
       )}
     >
-      {initials}
+      {url ? (
+        <Image
+          alt=""
+          className="size-full object-cover"
+          height={40}
+          src={url}
+          unoptimized
+          width={40}
+        />
+      ) : (
+        initials
+      )}
     </span>
   );
 }

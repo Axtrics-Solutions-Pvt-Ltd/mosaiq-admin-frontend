@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   Activity,
@@ -26,7 +26,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
 import { routes } from "@/config/routes";
 import { AgencyLogo } from "@/features/agencies/AgencyLogo";
+import type { AgencyRecord } from "@/features/agencies/contracts";
+import { useAgency, useUpdateAgency } from "@/features/agencies/queries";
+import {
+  profileFromRecord,
+  toAgencyDetail,
+} from "@/features/agencies/remote-model";
 import type { AgencyDetail } from "@/features/agencies/view-model";
+import { ApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/formatters";
 
 function DetailList({
@@ -76,8 +83,7 @@ function Overview({ agency }: { agency: AgencyDetail }) {
         <CardContent className="space-y-4">
           <StatusBadge status={agency.status} />
           <p className="text-muted-foreground text-sm">
-            Status controls access for the agency and its workspaces. This
-            prototype does not change access.
+            Status controls access for the agency and its workspaces.
           </p>
         </CardContent>
       </Card>
@@ -86,6 +92,10 @@ function Overview({ agency }: { agency: AgencyDetail }) {
 }
 
 function PrimaryContact({ agency }: { agency: AgencyDetail }) {
+  const contact = agency.primaryContact;
+  const hasName = contact.name !== "--";
+  const hasEmail = contact.email !== "--";
+  const hasPhone = contact.phone !== "--";
   return (
     <Card>
       <CardHeader>
@@ -94,33 +104,45 @@ function PrimaryContact({ agency }: { agency: AgencyDetail }) {
       <CardContent>
         <div className="flex items-start gap-4">
           <span className="bg-primary-soft text-primary flex size-12 items-center justify-center rounded-full font-semibold">
-            {agency.primaryContact.name
-              .split(" ")
-              .map((name) => name[0])
-              .join("")}
+            {hasName
+              ? contact.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)
+              : "?"}
           </span>
           <div>
             <h3 className="text-strong font-semibold">
-              {agency.primaryContact.name}
+              {hasName ? contact.name : "Not provided"}
             </h3>
-            <p className="text-muted-foreground">
-              {agency.primaryContact.jobTitle}
-            </p>
+            {contact.jobTitle !== "--" && (
+              <p className="text-muted-foreground">{contact.jobTitle}</p>
+            )}
             <div className="mt-4 space-y-2 text-sm">
-              <a
-                className="hover:text-primary flex items-center gap-2"
-                href={`mailto:${agency.primaryContact.email}`}
-              >
-                <Mail aria-hidden className="size-4" />
-                {agency.primaryContact.email}
-              </a>
-              <a
-                className="hover:text-primary flex items-center gap-2"
-                href={`tel:${agency.primaryContact.phone.replaceAll(" ", "")}`}
-              >
-                <Phone aria-hidden className="size-4" />
-                {agency.primaryContact.phone}
-              </a>
+              {hasEmail && (
+                <a
+                  className="hover:text-primary flex items-center gap-2"
+                  href={`mailto:${contact.email}`}
+                >
+                  <Mail aria-hidden className="size-4" />
+                  {contact.email}
+                </a>
+              )}
+              {hasPhone && (
+                <a
+                  className="hover:text-primary flex items-center gap-2"
+                  href={`tel:${contact.phone.replaceAll(" ", "")}`}
+                >
+                  <Phone aria-hidden className="size-4" />
+                  {contact.phone}
+                </a>
+              )}
+              {!hasEmail && !hasPhone && (
+                <p className="text-muted-foreground">
+                  No contact details provided.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -128,7 +150,6 @@ function PrimaryContact({ agency }: { agency: AgencyDetail }) {
     </Card>
   );
 }
-
 function Defaults({ agency }: { agency: AgencyDetail }) {
   return (
     <Card>
@@ -159,7 +180,7 @@ function Workspaces({ agency }: { agency: AgencyDetail }) {
             <Link href={routes.workspaces.new}>Open workspace preview</Link>
           </Button>
         }
-        description="This sample agency has no linked workspaces yet."
+        description="This agency has no linked workspaces yet."
         kind="empty"
         title="No workspaces"
       />
@@ -194,6 +215,9 @@ function Administrators({ agency }: { agency: AgencyDetail }) {
         <CardTitle>Assigned administrators</CardTitle>
       </CardHeader>
       <CardContent>
+        {agency.administrators.length === 0 && (
+          <p className="text-muted-foreground">No administrators assigned.</p>
+        )}
         <ul className="divide-y">
           {agency.administrators.map((administrator) => (
             <li
@@ -232,6 +256,7 @@ function BrandPreview({ agency }: { agency: AgencyDetail }) {
                 className="size-12"
                 name={agency.name}
                 tone={agency.logoTone}
+                url={agency.logoUrl}
               />
               <div>
                 <p className="text-strong font-semibold">
@@ -244,7 +269,7 @@ function BrandPreview({ agency }: { agency: AgencyDetail }) {
             </div>
             <div className="mt-5 h-2 rounded-full bg-[var(--brand-primary)]" />
             <p className="text-muted-foreground mt-3 text-xs">
-              Accent {agency.brandColor} · Basic preview
+              Accent {agency.brandColor} - Basic preview
             </p>
           </div>
         </div>
@@ -260,6 +285,9 @@ function RecentActivity({ agency }: { agency: AgencyDetail }) {
         <CardTitle>Recent administrative activity</CardTitle>
       </CardHeader>
       <CardContent>
+        {agency.activity.length === 0 && (
+          <p className="text-muted-foreground">No recent activity.</p>
+        )}
         <ol className="space-y-5">
           {agency.activity.map((entry, index) => (
             <li className="relative flex gap-3" key={entry.id}>
@@ -289,7 +317,14 @@ function RecentActivity({ agency }: { agency: AgencyDetail }) {
   );
 }
 
-export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
+export function AgencyDetails({
+  agency,
+  record,
+}: {
+  agency: AgencyDetail;
+  record: AgencyRecord;
+}) {
+  const updateMutation = useUpdateAgency();
   const [isConfirming, setIsConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const tabs: readonly TabOption[] = [
@@ -335,7 +370,11 @@ export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
       <PageHeader
         actions={
           <>
-            <Button onClick={() => setIsConfirming(true)} variant="outline">
+            <Button
+              disabled={updateMutation.isPending}
+              onClick={() => setIsConfirming(true)}
+              variant="outline"
+            >
               <Power aria-hidden className="size-4" />
               {agency.status === "active" ? "Deactivate" : "Activate"}
             </Button>
@@ -357,7 +396,6 @@ export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
         }
         context={agency.primaryContact.name}
         description="Review agency identity, defaults, people, workspaces, branding, and administrative activity."
-        isPreview
         title={agency.name}
       />
       <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5">
@@ -365,6 +403,7 @@ export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
           className="size-14 text-base"
           name={agency.name}
           tone={agency.logoTone}
+          url={agency.logoUrl}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -393,26 +432,51 @@ export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
           </div>
         </div>
       </div>
-      <div aria-live="polite" className="sr-only">
-        {announcement}
-      </div>
+      {announcement && (
+        <div
+          role={updateMutation.isError ? "alert" : "status"}
+          className={
+            updateMutation.isError
+              ? "text-destructive rounded-lg border p-4"
+              : "text-success rounded-lg border p-4"
+          }
+        >
+          {announcement}
+        </div>
+      )}
       <div className="bg-card overflow-hidden rounded-lg border p-4 sm:p-5">
         <div className="overflow-x-auto">
           <Tabs items={tabs} />
         </div>
       </div>
       <ConfirmationDialog
+        body="This status change will be saved immediately and may affect agency access."
         confirmLabel={
           agency.status === "active" ? "Deactivate agency" : "Activate agency"
         }
         description={`Review the impact before changing ${agency.name} to ${agency.status === "active" ? "inactive" : "active"}.`}
         isOpen={isConfirming}
+        isPending={updateMutation.isPending}
         onCancel={() => setIsConfirming(false)}
-        onConfirm={() => {
-          setIsConfirming(false);
-          setAnnouncement(
-            "Status change preview closed. Sample data remains unchanged.",
-          );
+        onConfirm={async () => {
+          try {
+            await updateMutation.mutateAsync({
+              agencyId: record.id,
+              payload: {
+                ...profileFromRecord(record),
+                status: record.status === "active" ? "inactive" : "active",
+              },
+            });
+            setAnnouncement("Agency status updated.");
+            setIsConfirming(false);
+          } catch (error) {
+            setAnnouncement(
+              error instanceof ApiError
+                ? error.message
+                : "Agency status could not be updated.",
+            );
+            setIsConfirming(false);
+          }
         }}
         title={
           agency.status === "active"
@@ -421,5 +485,35 @@ export function AgencyDetails({ agency }: { agency: AgencyDetail }) {
         }
       />
     </PageStack>
+  );
+}
+
+export function AgencyDetailsScreen({ agencyId }: { agencyId: number }) {
+  const query = useAgency(agencyId);
+  if (!Number.isSafeInteger(agencyId) || agencyId <= 0)
+    return (
+      <StatePanel
+        kind="error"
+        title="Invalid agency"
+        description="The agency link is invalid."
+      />
+    );
+  if (query.isPending)
+    return (
+      <div aria-busy="true" className="p-8">
+        Loading agency...
+      </div>
+    );
+  if (query.isError)
+    return (
+      <StatePanel
+        kind="error"
+        title="Agency unavailable"
+        description="The agency could not be loaded."
+        action={<Button onClick={() => query.refetch()}>Try again</Button>}
+      />
+    );
+  return (
+    <AgencyDetails agency={toAgencyDetail(query.data)} record={query.data} />
   );
 }

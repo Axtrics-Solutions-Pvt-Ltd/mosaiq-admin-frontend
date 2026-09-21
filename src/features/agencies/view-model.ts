@@ -1,5 +1,5 @@
-﻿export type AgencyStatus = "active" | "inactive";
-export type AgencyCurrency = "AUD" | "EUR" | "GBP" | "INR" | "USD";
+export type AgencyStatus = "active" | "inactive";
+export type AgencyCurrency = string;
 
 export type AgencySummary = {
   createdAt: string;
@@ -7,6 +7,7 @@ export type AgencySummary = {
   id: string;
   lastActivity: string;
   logoTone: "blue" | "cyan" | "indigo" | "teal" | "violet";
+  logoUrl?: string | null;
   name: string;
   primaryAdmin: { email: string; name: string };
   status: AgencyStatus;
