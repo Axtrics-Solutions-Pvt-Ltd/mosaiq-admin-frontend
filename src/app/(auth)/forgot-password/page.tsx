@@ -2,12 +2,13 @@ import Link from "next/link";
 
 import { routes } from "@/config/routes";
 import { AuthCard } from "@/features/auth/AuthCard";
-import { ForgotPasswordForm } from "@/features/auth/AuthForms";
+import { ForgotPasswordForm } from "@/features/auth/PasswordRecoveryForms";
 
 export default function ForgotPasswordPage() {
   return (
     <AuthCard
-      description="Enter your work email to review the password recovery experience."
+      description="Enter your work email and we'll send a reset link if your account is eligible."
+      isPreview={false}
       footer={
         <Link
           className="text-primary font-medium hover:underline"

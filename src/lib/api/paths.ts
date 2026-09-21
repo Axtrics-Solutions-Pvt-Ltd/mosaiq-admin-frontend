@@ -1,6 +1,8 @@
 export const authPaths = {
   csrf: "/sanctum/csrf-cookie",
   login: "/api/v1/auth/login",
+  forgotPassword: "/api/v1/auth/forgot-password",
+  resetPassword: "/api/v1/auth/reset-password",
   me: "/api/v1/auth/me",
   logout: "/api/v1/auth/logout",
 } as const;

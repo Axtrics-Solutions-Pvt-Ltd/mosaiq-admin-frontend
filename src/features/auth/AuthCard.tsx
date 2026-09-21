@@ -5,12 +5,14 @@ export function AuthCard({
   description,
   eyebrow = "MOSAIQ Admin",
   footer,
+  isPreview = true,
   title,
 }: {
   children: ReactNode;
   description: string;
   eyebrow?: string;
   footer?: ReactNode;
+  isPreview?: boolean;
   title: string;
 }) {
   return (
@@ -28,9 +30,11 @@ export function AuthCard({
           {footer}
         </div>
       )}
-      <p className="text-muted-foreground mt-6 text-center text-xs">
-        UI preview &middot; No account, email, or session operation occurs
-      </p>
+      {isPreview && (
+        <p className="text-muted-foreground mt-6 text-center text-xs">
+          UI preview &middot; No account, email, or session operation occurs
+        </p>
+      )}
     </div>
   );
 }

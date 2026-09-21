@@ -14,6 +14,39 @@ import { forwardAuthRequest } from "./server";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("auth gateway", () => {
+  it("forwards password recovery through the same origin and CSRF boundary", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await forwardAuthRequest(
+      "resetPassword",
+      new Request("http://localhost:3000/api/v1/auth/reset-password", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3000",
+          cookie: "XSRF-TOKEN=token%3D; unrelated=secret",
+        },
+        body: '{"email":"person@example.test","token":"reset-token"}',
+      }),
+    );
+
+    expect(result.status).toBe(204);
+    const call = fetchMock.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("Expected upstream request");
+    const [url, options] = call;
+    expect(String(url)).toBe(
+      "https://api.example.test/api/v1/auth/reset-password",
+    );
+    expect(options?.method).toBe("POST");
+    expect(options?.body).toBe(
+      '{"email":"person@example.test","token":"reset-token"}',
+    );
+    expect(new Headers(options?.headers).get("X-XSRF-TOKEN")).toBe("token=");
+  });
+
   it("rejects a cross-origin login before forwarding credentials", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

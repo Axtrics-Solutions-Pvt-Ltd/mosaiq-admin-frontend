@@ -19,6 +19,27 @@ export async function login(credentials: {
   return parseCurrentUser(result);
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  await csrfBootstrap();
+  await apiRequest<{ message: string }>(authPaths.forgotPassword, {
+    method: "POST",
+    body: { email },
+  });
+}
+
+export async function resetPassword(credentials: {
+  email: string;
+  token: string;
+  password: string;
+  password_confirmation: string;
+}): Promise<void> {
+  await csrfBootstrap();
+  await apiRequest<void>(authPaths.resetPassword, {
+    method: "POST",
+    body: credentials,
+  });
+}
+
 export async function getCurrentUser(): Promise<CurrentUser> {
   const result = await apiRequest<unknown>(authPaths.me);
   return parseCurrentUser(result);

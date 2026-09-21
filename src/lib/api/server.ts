@@ -47,7 +47,11 @@ export async function forwardAuthRequest(
   incoming: Request,
 ): Promise<Response> {
   const config = getServerApiConfig();
-  const isMutation = operation === "login" || operation === "logout";
+  const isMutation = operation !== "csrf" && operation !== "me";
+  const hasBody =
+    operation === "login" ||
+    operation === "forgotPassword" ||
+    operation === "resetPassword";
   if (isMutation && incoming.headers.get("origin") !== config.adminOrigin) {
     return Response.json(
       { message: "Invalid request origin." },
@@ -72,9 +76,9 @@ export async function forwardAuthRequest(
   if (isMutation) {
     const token = xsrfFromCookie(cookie);
     if (token) headers.set("X-XSRF-TOKEN", token);
-    if (operation === "login") headers.set("Content-Type", "application/json");
+    if (hasBody) headers.set("Content-Type", "application/json");
   }
-  const body = operation === "login" ? await incoming.text() : undefined;
+  const body = hasBody ? await incoming.text() : undefined;
   const upstream = await fetch(
     new URL(authPaths[operation], config.apiOrigin),
     {
