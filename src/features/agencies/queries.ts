@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   type AgencyListFilters,
@@ -7,7 +12,7 @@ import {
   listAgencies,
   updateAgency,
 } from "./api";
-import type { AgencyProfile } from "./contracts";
+import type { AgencyCreatePayload, AgencyProfile } from "./contracts";
 
 export const agencyKeys = {
   all: ["agencies"] as const,
@@ -15,10 +20,34 @@ export const agencyKeys = {
   detail: (agencyId: number) => ["agencies", "detail", agencyId] as const,
 };
 
-export function useAgencies(filters: AgencyListFilters) {
+export function useAgencies(
+  filters: AgencyListFilters,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: agencyKeys.list(filters),
     queryFn: ({ signal }) => listAgencies(filters, signal),
+    enabled: options?.enabled,
+  });
+}
+
+export function useInfiniteAgencies(search: string) {
+  return useInfiniteQuery({
+    queryKey: [...agencyKeys.all, "selector", search] as const,
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      listAgencies(
+        {
+          search: search || undefined,
+          page: pageParam,
+          per_page: 40,
+        },
+        signal,
+      ),
+    getNextPageParam: (page) =>
+      page.meta.current_page < page.meta.last_page
+        ? page.meta.current_page + 1
+        : undefined,
   });
 }
 
@@ -34,6 +63,15 @@ export function useCreateAgency() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AgencyProfile) => createAgency(payload),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: agencyKeys.all }),
+  });
+}
+
+export function useQuickCreateAgency() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AgencyCreatePayload) => createAgency(payload),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: agencyKeys.all }),
   });

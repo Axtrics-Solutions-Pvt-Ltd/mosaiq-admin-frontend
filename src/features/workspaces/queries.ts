@@ -1,15 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import {
   createWorkspace,
   getClient,
   getWorkspace,
+  listAgencyWorkspaces,
   listClients,
   listWorkspaces,
   updateWorkspace,
   type WorkspaceListFilters,
 } from "./api";
-import type { WorkspaceProfile } from "./contracts";
+import type { WorkspaceProfile, WorkspaceRecord } from "./contracts";
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -21,12 +28,38 @@ export const workspaceKeys = {
     ["workspaces", "list", agencyId, clientId, filters] as const,
   detail: (agencyId: number, clientId: number, workspaceId: number) =>
     ["workspaces", "detail", agencyId, clientId, workspaceId] as const,
+  byAgency: (agencyId: number, filters: WorkspaceListFilters) =>
+    ["workspaces", "by-agency", agencyId, filters] as const,
 };
 const valid = (id: number) => Number.isSafeInteger(id) && id > 0;
 export function useClients(agencyId: number, page = 1) {
   return useQuery({
     queryKey: workspaceKeys.clients(agencyId, page),
-    queryFn: ({ signal }) => listClients(agencyId, page, signal),
+    queryFn: ({ signal }) =>
+      listClients(agencyId, { page, per_page: 100 }, signal),
+    enabled: valid(agencyId),
+  });
+}
+
+export function useInfiniteClients(agencyId: number, search: string) {
+  return useInfiniteQuery({
+    queryKey: ["workspaces", "client-selector", agencyId, search] as const,
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      listClients(
+        agencyId,
+        {
+          search: search || undefined,
+          status: "active",
+          page: pageParam,
+          per_page: 40,
+        },
+        signal,
+      ),
+    getNextPageParam: (page) =>
+      page.meta.current_page < page.meta.last_page
+        ? page.meta.current_page + 1
+        : undefined,
     enabled: valid(agencyId),
   });
 }
@@ -47,6 +80,71 @@ export function useWorkspaces(
     queryFn: ({ signal }) =>
       listWorkspaces(agencyId, clientId, filters, signal),
     enabled: valid(agencyId) && valid(clientId),
+  });
+}
+
+export function useAgencyWorkspaces(
+  agencyId: number,
+  filters: WorkspaceListFilters,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.byAgency(agencyId, filters),
+    queryFn: ({ signal }) => listAgencyWorkspaces(agencyId, filters, signal),
+    enabled: valid(agencyId),
+  });
+}
+
+export function useInfiniteWorkspaces(
+  agencyId: number,
+  clientId: number,
+  search: string,
+) {
+  return useInfiniteQuery({
+    queryKey: [
+      "workspaces",
+      "workspace-selector",
+      agencyId,
+      clientId,
+      search,
+    ] as const,
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      listWorkspaces(
+        agencyId,
+        clientId,
+        {
+          search: search || undefined,
+          status: "active",
+          page: pageParam,
+          per_page: 40,
+        },
+        signal,
+      ),
+    getNextPageParam: (page) =>
+      page.meta.current_page < page.meta.last_page
+        ? page.meta.current_page + 1
+        : undefined,
+    enabled: valid(agencyId) && valid(clientId),
+  });
+}
+export function useWorkspacesByIds(
+  agencyId: number,
+  clientId: number,
+  workspaceIds: readonly number[],
+) {
+  return useQueries({
+    combine: (results) => ({
+      data: results
+        .map((result) => result.data)
+        .filter((record): record is WorkspaceRecord => Boolean(record)),
+      isPending: results.some((result) => result.isPending),
+    }),
+    queries: workspaceIds.map((workspaceId) => ({
+      queryKey: workspaceKeys.detail(agencyId, clientId, workspaceId),
+      queryFn: ({ signal }: { signal?: AbortSignal }) =>
+        getWorkspace(agencyId, clientId, workspaceId, signal),
+      enabled: valid(agencyId) && valid(clientId) && valid(workspaceId),
+    })),
   });
 }
 export function useWorkspace(

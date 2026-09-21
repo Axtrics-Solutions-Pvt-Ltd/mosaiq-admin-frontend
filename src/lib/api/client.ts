@@ -8,6 +8,7 @@ export async function apiRequest<T>(
     signal?: AbortSignal;
   } = {},
 ): Promise<T> {
+  const isFormData = options.body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(path, {
@@ -17,12 +18,16 @@ export async function apiRequest<T>(
       signal: options.signal,
       headers: {
         Accept: "application/json",
-        ...(options.body === undefined
+        ...(options.body === undefined || isFormData
           ? {}
           : { "Content-Type": "application/json" }),
       },
       body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
+        options.body === undefined
+          ? undefined
+          : isFormData
+            ? (options.body as FormData)
+            : JSON.stringify(options.body),
     });
   } catch {
     throw unavailableError();

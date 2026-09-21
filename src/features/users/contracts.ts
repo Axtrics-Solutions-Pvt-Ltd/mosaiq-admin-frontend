@@ -1,0 +1,84 @@
+import { z } from "zod";
+
+export const agencyUserRoles = [
+  "AGENCY_ADMIN",
+  "MANAGER",
+  "ANALYST",
+  "VIEWER",
+  "CLIENT_USER",
+] as const;
+
+export const agencyUserStatuses = ["invited", "active", "inactive"] as const;
+
+export const agencyUserSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  email: z.email(),
+  status: z.enum(agencyUserStatuses),
+  agency_id: z.number().int().positive(),
+  membership_status: z.string(),
+  role_code: z.enum(agencyUserRoles),
+  client_id: z.number().int().positive().nullable(),
+  workspace_ids: z.array(z.number().int().positive()),
+  invited_at: z.string().nullable(),
+  accepted_at: z.string().nullable(),
+});
+
+export const agencyUserListResponseSchema = z.object({
+  data: z.array(agencyUserSchema),
+  meta: z.object({
+    current_page: z.number().int().positive(),
+    last_page: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  }),
+});
+
+export const agencyUserResponseSchema = z.object({
+  data: agencyUserSchema,
+});
+
+export const updateAgencyUserSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter a name.").max(255),
+    role_code: z.enum(agencyUserRoles),
+    client_id: z.number().int().positive().nullable(),
+    workspace_ids: z.array(z.number().int().positive()),
+    status: z.enum(["active", "inactive"]),
+  })
+  .partial()
+  .superRefine((value, context) => {
+    if (value.role_code === "CLIENT_USER" && value.client_id === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["client_id"],
+        message: "Choose a client for this user.",
+      });
+    }
+    if (
+      value.role_code &&
+      value.role_code !== "CLIENT_USER" &&
+      value.client_id
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["client_id"],
+        message: "A client can only be assigned to a Client User.",
+      });
+    }
+    if (
+      value.workspace_ids &&
+      new Set(value.workspace_ids).size !== value.workspace_ids.length
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["workspace_ids"],
+        message: "Choose each workspace only once.",
+      });
+    }
+  });
+
+export type AgencyUser = z.infer<typeof agencyUserSchema>;
+export type AgencyUserListResponse = z.infer<
+  typeof agencyUserListResponseSchema
+>;
+export type UpdateAgencyUserPayload = z.infer<typeof updateAgencyUserSchema>;

@@ -30,6 +30,76 @@ export const inviteSchema = z
         message: "Choose at least one workspace for this client.",
       });
     }
+    if (value.role_code !== "CLIENT_USER" && value.client_id !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["client_id"],
+        message: "A client can only be assigned to a Client User.",
+      });
+    }
+    if (new Set(value.workspace_ids).size !== value.workspace_ids.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["workspace_ids"],
+        message: "Choose each workspace only once.",
+      });
+    }
   });
 
+export const invitationSchema = z.object({
+  id: z.number().int().positive(),
+  email: z.email(),
+  agency_id: z.number().int().positive(),
+  client_id: z.number().int().positive().nullable(),
+  role_code: z.enum(invitationRoles),
+  workspace_ids: z.array(z.number().int().positive()),
+  expires_at: z.string().min(1),
+  accepted_at: z.string().nullable(),
+  revoked_at: z.string().nullable(),
+});
+
+export const invitationListResponseSchema = z.object({
+  data: z.array(invitationSchema),
+  meta: z.object({
+    current_page: z.number().int().positive(),
+    last_page: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+  }),
+});
+
 export type InvitePayload = z.infer<typeof inviteSchema>;
+export type Invitation = z.infer<typeof invitationSchema>;
+
+export const invitationTokenRequestSchema = z.object({
+  token: z.string().length(64, "Invalid invitation token."),
+});
+
+export const acceptInvitationRequestSchema = z.object({
+  token: z.string().length(64, "Invalid invitation token."),
+  name: z.string().trim().min(1).max(255).nullable().optional(),
+  password: z.string().min(12).nullable().optional(),
+  password_confirmation: z.string().min(12).nullable().optional(),
+});
+
+export const invitationInspectionSchema = z.object({
+  email: z.email(),
+  agency_name: z.string(),
+  role_code: z.enum(invitationRoles),
+  expires_at: z.string().min(1),
+  requires_existing_login: z.boolean(),
+});
+export type InvitationInspection = z.infer<typeof invitationInspectionSchema>;
+
+export const acceptInvitationFormSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter your full name.").max(255),
+    password: z.string().min(12, "Use at least 12 characters."),
+    password_confirmation: z.string(),
+  })
+  .refine((value) => value.password === value.password_confirmation, {
+    message: "Passwords must match.",
+    path: ["password_confirmation"],
+  });
+export type AcceptInvitationFormValues = z.infer<
+  typeof acceptInvitationFormSchema
+>;

@@ -2,6 +2,8 @@ import "server-only";
 
 import { getServerApiConfig } from "@/config/env";
 
+type ServerApiConfig = ReturnType<typeof getServerApiConfig>;
+
 function csrfToken(cookie: string) {
   const value = cookie
     .split(";")
@@ -15,36 +17,81 @@ function csrfToken(cookie: string) {
   }
 }
 
-export async function forwardAdminMutation(
+function forwardCookie(request: Request, config: ServerApiConfig) {
+  return (request.headers.get("cookie") ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter(
+      (part) =>
+        part.startsWith("XSRF-TOKEN=") ||
+        part.startsWith(`${config.sessionCookieName}=`),
+    )
+    .join("; ");
+}
+
+function buildForwardHeaders(
+  request: Request,
+  config: ServerApiConfig,
+  method: "GET" | "POST" | "DELETE",
+  hasJsonBody: boolean,
+) {
+  const cookie = forwardCookie(request, config);
+  const headers = new Headers({
+    Accept: "application/json",
+    Origin: config.adminOrigin,
+  });
+  if (cookie) headers.set("Cookie", cookie);
+  if (method !== "GET") {
+    const token = csrfToken(cookie);
+    if (token) headers.set("X-XSRF-TOKEN", token);
+    if (hasJsonBody) headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
+
+async function relayUpstream(upstream: Response) {
+  const contentType = upstream.headers.get("Content-Type") ?? "";
+  const responseHeaders = new Headers({ "Cache-Control": "no-store" });
+  if (contentType.includes("application/json"))
+    responseHeaders.set("Content-Type", "application/json");
+  const requestId = upstream.headers.get("X-Request-ID");
+  if (requestId) responseHeaders.set("X-Request-ID", requestId);
+  if (upstream.status >= 300 && !contentType.includes("application/json"))
+    return Response.json(
+      { message: "The service could not complete the request." },
+      {
+        status: upstream.status >= 500 ? 502 : upstream.status,
+        headers: responseHeaders,
+      },
+    );
+  return new Response(upstream.status === 204 ? null : await upstream.text(), {
+    status: upstream.status,
+    headers: responseHeaders,
+  });
+}
+
+export async function forwardAdminRequest(
   request: Request,
   path: string,
-  method: "POST" | "DELETE",
+  method: "GET" | "POST" | "DELETE",
   body?: unknown,
 ) {
   try {
     const config = getServerApiConfig();
-    if (request.headers.get("origin") !== config.adminOrigin)
+    if (
+      method !== "GET" &&
+      request.headers.get("origin") !== config.adminOrigin
+    )
       return Response.json(
         { message: "Invalid request origin." },
         { status: 403 },
       );
-    const cookie = (request.headers.get("cookie") ?? "")
-      .split(";")
-      .map((part) => part.trim())
-      .filter(
-        (part) =>
-          part.startsWith("XSRF-TOKEN=") ||
-          part.startsWith(`${config.sessionCookieName}=`),
-      )
-      .join("; ");
-    const headers = new Headers({
-      Accept: "application/json",
-      Origin: config.adminOrigin,
-    });
-    if (cookie) headers.set("Cookie", cookie);
-    const token = csrfToken(cookie);
-    if (token) headers.set("X-XSRF-TOKEN", token);
-    if (body !== undefined) headers.set("Content-Type", "application/json");
+    const headers = buildForwardHeaders(
+      request,
+      config,
+      method,
+      body !== undefined,
+    );
     const upstream = await fetch(new URL(path, config.apiOrigin), {
       method,
       headers,
@@ -53,27 +100,37 @@ export async function forwardAdminMutation(
       cache: "no-store",
       redirect: "manual",
     });
-    const contentType = upstream.headers.get("Content-Type") ?? "";
-    const responseHeaders = new Headers({ "Cache-Control": "no-store" });
-    if (contentType.includes("application/json"))
-      responseHeaders.set("Content-Type", "application/json");
-    const requestId = upstream.headers.get("X-Request-ID");
-    if (requestId) responseHeaders.set("X-Request-ID", requestId);
-    if (upstream.status >= 300 && !contentType.includes("application/json"))
-      return Response.json(
-        { message: "The service could not complete the request." },
-        {
-          status: upstream.status >= 500 ? 502 : upstream.status,
-          headers: responseHeaders,
-        },
-      );
-    return new Response(
-      upstream.status === 204 ? null : await upstream.text(),
-      {
-        status: upstream.status,
-        headers: responseHeaders,
-      },
+    return await relayUpstream(upstream);
+  } catch {
+    return Response.json(
+      { message: "The service is unavailable." },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
+  }
+}
+
+export async function forwardAdminUpload(
+  request: Request,
+  path: string,
+  formData: FormData,
+) {
+  try {
+    const config = getServerApiConfig();
+    if (request.headers.get("origin") !== config.adminOrigin)
+      return Response.json(
+        { message: "Invalid request origin." },
+        { status: 403 },
+      );
+    const headers = buildForwardHeaders(request, config, "POST", false);
+    const upstream = await fetch(new URL(path, config.apiOrigin), {
+      method: "POST",
+      headers,
+      body: formData,
+      credentials: "include",
+      cache: "no-store",
+      redirect: "manual",
+    });
+    return await relayUpstream(upstream);
   } catch {
     return Response.json(
       { message: "The service is unavailable." },

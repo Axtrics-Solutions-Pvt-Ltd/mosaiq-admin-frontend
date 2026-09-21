@@ -1,4 +1,4 @@
-import { forwardAdminMutation } from "@/lib/api/admin-server";
+import { forwardAdminRequest } from "@/lib/api/admin-server";
 import { invitationPaths } from "@/lib/api/paths";
 
 export async function DELETE(
@@ -15,7 +15,7 @@ export async function DELETE(
     invitationId <= 0
   )
     return Response.json({ message: "Invalid invitation." }, { status: 400 });
-  return forwardAdminMutation(
+  return forwardAdminRequest(
     request,
     invitationPaths.detail(agencyId, invitationId),
     "DELETE",

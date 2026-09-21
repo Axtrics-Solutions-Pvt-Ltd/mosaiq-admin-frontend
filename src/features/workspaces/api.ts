@@ -19,13 +19,19 @@ function withQuery(
   }
   return path + (params.size ? "?" + params : "");
 }
+export type ClientListFilters = {
+  search?: string;
+  status?: "active" | "inactive";
+  page?: number;
+  per_page?: number;
+};
 export async function listClients(
   agencyId: number,
-  page = 1,
+  filters: ClientListFilters,
   signal?: AbortSignal,
 ) {
   const result = await apiRequest<unknown>(
-    withQuery(workspacePaths.clients(agencyId), { page, per_page: 100 }),
+    withQuery(workspacePaths.clients(agencyId), filters),
     { signal },
   );
   return clientListSchema.parse(result);
@@ -45,6 +51,7 @@ export type WorkspaceListFilters = {
   search?: string;
   status?: "active" | "inactive";
   page?: number;
+  per_page?: number;
 };
 export async function listWorkspaces(
   agencyId: number,
@@ -54,6 +61,17 @@ export async function listWorkspaces(
 ) {
   const result = await apiRequest<unknown>(
     withQuery(workspacePaths.collection(agencyId, clientId), filters),
+    { signal },
+  );
+  return workspaceListSchema.parse(result);
+}
+export async function listAgencyWorkspaces(
+  agencyId: number,
+  filters: WorkspaceListFilters,
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    withQuery(workspacePaths.agencyCollection(agencyId), filters),
     { signal },
   );
   return workspaceListSchema.parse(result);

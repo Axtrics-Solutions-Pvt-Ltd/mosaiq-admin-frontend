@@ -47,6 +47,24 @@ dialog::backdrop {
 .animate-skeleton {
   animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 200ms ease-out;
+}
+.animate-toast-out {
+  animation: toast-out 150ms ease-in forwards;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

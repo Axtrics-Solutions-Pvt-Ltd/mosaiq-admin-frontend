@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 
 import {
+  filterNavigationGroups,
   getNavigationItem,
   navigationGroups,
   navigationItems,
@@ -18,5 +19,30 @@ describe("navigation configuration", () => {
       "Agencies",
     );
     expect(getNavigationItem("/import-history")?.label).toBe("Import history");
+  });
+});
+
+describe("capability-based navigation filtering", () => {
+  it("shows only Dashboard to a session with no capabilities", () => {
+    const visible = filterNavigationGroups(navigationGroups, () => false);
+    expect(visible).toHaveLength(0);
+  });
+  it("shows an agency staff role only Dashboard, Import history, and Connector status", () => {
+    const staffCapabilities = new Set([
+      "dashboard.view",
+      "importHistory.view",
+      "connectors.view",
+    ]);
+    const visible = filterNavigationGroups(navigationGroups, (capability) =>
+      staffCapabilities.has(capability),
+    );
+    const labels = visible.flatMap((group) =>
+      group.items.map((item) => item.label),
+    );
+    expect(labels).toEqual(["Dashboard", "Import history", "Connector status"]);
+  });
+  it("shows every destination to a full-capability session", () => {
+    const visible = filterNavigationGroups(navigationGroups, () => true);
+    expect(visible).toEqual(navigationGroups);
   });
 });

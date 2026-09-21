@@ -1,9 +1,32 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createInvitation, revokeInvitation } from "./api";
+import {
+  acceptInvitation,
+  createInvitation,
+  inspectInvitation,
+  listPendingInvitations,
+  rejectInvitation,
+  revokeInvitation,
+} from "./api";
 import type { InvitePayload } from "./contracts";
 
+export const invitationKeys = {
+  all: ["invitations"] as const,
+  list: (agencyId: number, page: number) =>
+    ["invitations", "pending", agencyId, page] as const,
+  inspect: (token: string) => ["invitations", "inspect", token] as const,
+};
+
+export function usePendingInvitations(agencyId: number, page: number) {
+  return useQuery({
+    queryKey: invitationKeys.list(agencyId, page),
+    queryFn: ({ signal }) => listPendingInvitations(agencyId, page, signal),
+    enabled: Number.isSafeInteger(agencyId) && agencyId > 0,
+  });
+}
+
 export function useCreateInvitation() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       agencyId,
@@ -13,10 +36,30 @@ export function useCreateInvitation() {
       payload: InvitePayload;
     }) => createInvitation(agencyId, payload),
     retry: false,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: invitationKeys.all }),
   });
 }
 
+export function useInspectInvitation(token: string | null) {
+  return useQuery({
+    queryKey: invitationKeys.inspect(token ?? ""),
+    queryFn: ({ signal }) => inspectInvitation(token as string, signal),
+    enabled: Boolean(token),
+    retry: false,
+  });
+}
+
+export function useAcceptInvitation() {
+  return useMutation({ mutationFn: acceptInvitation, retry: false });
+}
+
+export function useRejectInvitation() {
+  return useMutation({ mutationFn: rejectInvitation, retry: false });
+}
+
 export function useRevokeInvitation() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       agencyId,
@@ -26,5 +69,7 @@ export function useRevokeInvitation() {
       invitationId: number;
     }) => revokeInvitation(agencyId, invitationId),
     retry: false,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: invitationKeys.all }),
   });
 }

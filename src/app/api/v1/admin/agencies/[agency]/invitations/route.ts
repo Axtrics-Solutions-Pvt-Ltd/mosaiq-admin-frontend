@@ -1,6 +1,29 @@
 import { inviteSchema } from "@/features/invitations/contracts";
-import { forwardAdminMutation } from "@/lib/api/admin-server";
+import { forwardAdminRequest } from "@/lib/api/admin-server";
 import { invitationPaths } from "@/lib/api/paths";
+
+const allowedFilters = ["page", "per_page"];
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ agency: string }> },
+) {
+  const agencyId = Number((await params).agency);
+  if (!Number.isSafeInteger(agencyId) || agencyId <= 0)
+    return Response.json({ message: "Invalid agency." }, { status: 400 });
+  const incoming = new URL(request.url);
+  const query = new URLSearchParams();
+  for (const key of allowedFilters) {
+    const value = incoming.searchParams.get(key);
+    if (value !== null) query.set(key, value);
+  }
+  const path = invitationPaths.collection(agencyId);
+  return forwardAdminRequest(
+    request,
+    `${path}${query.size ? `?${query}` : ""}`,
+    "GET",
+  );
+}
 
 export async function POST(
   request: Request,
@@ -21,7 +44,7 @@ export async function POST(
       { message: "Invalid invitation details." },
       { status: 422 },
     );
-  return forwardAdminMutation(
+  return forwardAdminRequest(
     request,
     invitationPaths.collection(agencyId),
     "POST",

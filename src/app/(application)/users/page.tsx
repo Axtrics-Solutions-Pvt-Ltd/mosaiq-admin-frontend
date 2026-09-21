@@ -1,31 +1,44 @@
-import { UserPlus } from "lucide-react";
-import Link from "next/link";
+import { agencyUserRoles } from "@/features/users/contracts";
+import { UserDirectory } from "@/features/users/UserDirectory";
 
-import { PageStack } from "@/components/shared/LayoutPatterns";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { StatePanel } from "@/components/shared/StatePanel";
-import { Button } from "@/components/ui/Button";
-import { routes } from "@/config/routes";
+function positive(value: string | string[] | undefined) {
+  const number = Number(typeof value === "string" ? value : undefined);
+  return Number.isSafeInteger(number) && number > 0 ? number : undefined;
+}
 
-export default function UsersPage() {
+function text(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : "";
+}
+
+const statuses = ["all", "invited", "active", "inactive"] as const;
+function status(value: string | string[] | undefined) {
+  const candidate = typeof value === "string" ? value : "all";
+  return statuses.includes(candidate as (typeof statuses)[number])
+    ? (candidate as (typeof statuses)[number])
+    : "all";
+}
+
+const roles = ["all", ...agencyUserRoles] as const;
+function role(value: string | string[] | undefined) {
+  const candidate = typeof value === "string" ? value : "all";
+  return roles.includes(candidate as (typeof roles)[number])
+    ? (candidate as (typeof roles)[number])
+    : "all";
+}
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   return (
-    <PageStack>
-      <PageHeader
-        actions={
-          <Button asChild>
-            <Link href={routes.users.invite}>
-              <UserPlus aria-hidden className="size-4" /> Invite user
-            </Link>
-          </Button>
-        }
-        description="Invite people to an agency and assign their initial access."
-        title="Users"
-      />
-      <StatePanel
-        kind="unavailable"
-        title="Invitation list unavailable"
-        description="The backend does not yet provide an invitation list or resend endpoint. You can send an invitation now; revocation can be shown when an invitation ID is available."
-      />
-    </PageStack>
+    <UserDirectory
+      page={positive(params.page) ?? 1}
+      requestedAgencyId={positive(params.agency)}
+      search={text(params.search)}
+      status={status(params.status)}
+      role={role(params.role)}
+    />
   );
 }

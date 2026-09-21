@@ -21,7 +21,9 @@ type Status =
   | "processing"
   | "completed"
   | "warning"
-  | "failed";
+  | "failed"
+  | "previewed"
+  | "invalid";
 const statuses: Record<
   Status,
   {
@@ -42,6 +44,8 @@ const statuses: Record<
   completed: { icon: CheckCircle2, label: "Completed", tone: "success" },
   warning: { icon: AlertTriangle, label: "Warning", tone: "warning" },
   failed: { icon: XCircle, label: "Failed", tone: "danger" },
+  previewed: { icon: Info, label: "Previewed", tone: "info" },
+  invalid: { icon: XCircle, label: "Invalid", tone: "danger" },
 };
 export function StatusBadge({ status }: { status: Status }) {
   const config = statuses[status];

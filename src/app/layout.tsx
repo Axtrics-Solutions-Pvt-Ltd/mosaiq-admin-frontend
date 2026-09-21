@@ -3,6 +3,7 @@
 import { GeistSans } from "geist/font/sans";
 import type { Metadata } from "next";
 
+import { Toaster } from "@/components/ui/Toast";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en" className={GeistSans.variable}>
       <body>
         <QueryProvider>{children}</QueryProvider>
+        <Toaster />
       </body>
     </html>
   );

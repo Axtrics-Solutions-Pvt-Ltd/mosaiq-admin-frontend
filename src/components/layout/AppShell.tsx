@@ -21,7 +21,9 @@ import { Drawer } from "@/components/ui/Drawer";
 import { Select } from "@/components/ui/Select";
 import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
+import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
+import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 export function AppShell({ children }: { children: ReactNode }) {
@@ -31,6 +33,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   const currentUser = useCurrentUser();
   const logoutMutation = useLogout();
   const [logoutError, setLogoutError] = useState<string>();
+  const [agencyScope, setAgencyScope] = useState("all");
+  const [workspaceScope, setWorkspaceScope] = useState("all");
+  const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  const agenciesQuery = useAgencies(
+    { status: "active", per_page: 100 },
+    { enabled: isSuperAdmin },
+  );
+  const workspaceScopeAgencyId = isSuperAdmin
+    ? agencyScope === "all"
+      ? undefined
+      : Number(agencyScope)
+    : currentUser.data?.membership?.agencyId;
+  const workspacesQuery = useAgencyWorkspaces(workspaceScopeAgencyId ?? 0, {
+    status: "active",
+    per_page: 100,
+  });
+  const [scopedAgencyId, setScopedAgencyId] = useState(workspaceScopeAgencyId);
+  if (scopedAgencyId !== workspaceScopeAgencyId) {
+    setScopedAgencyId(workspaceScopeAgencyId);
+    setWorkspaceScope("all");
+  }
   const didHandleSessionLoss = useRef(false);
   useEffect(() => {
     if (
@@ -148,19 +171,41 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Badge className="inline-flex" tone="primary">
               Demo data
             </Badge>
-            <div className="hidden w-40 lg:block">
-              <Select aria-label="Agency scope" defaultValue="all">
-                <option value="all">All agencies</option>
-                <option value="northstar">Northstar Digital</option>
-                <option value="kinetic">Kinetic Growth</option>
-                <option value="atlas">Atlas Partners</option>
-              </Select>
-            </div>
+            {isSuperAdmin && (
+              <div className="hidden w-40 lg:block">
+                <Select
+                  aria-label="Agency scope"
+                  disabled={agenciesQuery.isPending}
+                  onChange={(event) => setAgencyScope(event.target.value)}
+                  value={agencyScope}
+                >
+                  <option value="all">All agencies</option>
+                  {agenciesQuery.data?.data.map((agency) => (
+                    <option key={agency.id} value={String(agency.id)}>
+                      {agency.display_name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="hidden w-40 2xl:block">
-              <Select aria-label="Workspace scope" defaultValue="all">
+              <Select
+                aria-label="Workspace scope"
+                disabled={!workspaceScopeAgencyId || workspacesQuery.isPending}
+                onChange={(event) => setWorkspaceScope(event.target.value)}
+                title={
+                  workspaceScopeAgencyId
+                    ? undefined
+                    : "Select an agency to filter by workspace"
+                }
+                value={workspaceScope}
+              >
                 <option value="all">All workspaces</option>
-                <option value="commerce">Commerce Hub</option>
-                <option value="insights">Insights Lab</option>
+                {workspacesQuery.data?.data.map((workspace) => (
+                  <option key={workspace.id} value={String(workspace.id)}>
+                    {workspace.name}
+                  </option>
+                ))}
               </Select>
             </div>
             <Button
@@ -251,19 +296,29 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Badge tone="primary">Demo data</Badge>
         </div>
         <SidebarNavigation onNavigate={() => setMobileOpen(false)} />
-        <div className="mt-6 space-y-3 border-t pt-4">
-          <label
-            className="text-muted-foreground block text-xs font-medium"
-            htmlFor="mobile-agency"
-          >
-            Agency scope
-          </label>
-          <Select defaultValue="all" id="mobile-agency">
-            <option value="all">All agencies</option>
-            <option value="northstar">Northstar Digital</option>
-            <option value="kinetic">Kinetic Growth</option>
-          </Select>
-        </div>
+        {isSuperAdmin && (
+          <div className="mt-6 space-y-3 border-t pt-4">
+            <label
+              className="text-muted-foreground block text-xs font-medium"
+              htmlFor="mobile-agency"
+            >
+              Agency scope
+            </label>
+            <Select
+              disabled={agenciesQuery.isPending}
+              id="mobile-agency"
+              onChange={(event) => setAgencyScope(event.target.value)}
+              value={agencyScope}
+            >
+              <option value="all">All agencies</option>
+              {agenciesQuery.data?.data.map((agency) => (
+                <option key={agency.id} value={String(agency.id)}>
+                  {agency.display_name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
       </Drawer>
     </div>
   );

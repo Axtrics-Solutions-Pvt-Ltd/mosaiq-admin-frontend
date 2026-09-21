@@ -2,7 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { navigationGroups } from "@/config/navigation";
+import { filterNavigationGroups, navigationGroups } from "@/config/navigation";
+import { hasCapability } from "@/features/auth/contracts";
+import { useCurrentUser } from "@/features/auth/queries";
 import { cn } from "@/lib/utils/cn";
 export function SidebarNavigation({
   collapsed = false,
@@ -12,9 +14,15 @@ export function SidebarNavigation({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const currentUser = useCurrentUser();
+  const visibleGroups = currentUser.data
+    ? filterNavigationGroups(navigationGroups, (capability) =>
+        hasCapability(currentUser.data, capability),
+      )
+    : [];
   return (
     <nav aria-label="Primary" className="space-y-5">
-      {navigationGroups.map((group) => (
+      {visibleGroups.map((group) => (
         <div key={group.label}>
           {!collapsed && (
             <p className="text-muted-foreground mb-1.5 px-3 text-[.6875rem] font-semibold tracking-wide uppercase">

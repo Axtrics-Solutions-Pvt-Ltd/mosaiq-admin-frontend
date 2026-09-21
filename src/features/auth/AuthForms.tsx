@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { routes } from "@/config/routes";
 import { AuthAlert } from "@/features/auth/AuthAlert";
-import { canAccessAdmin } from "@/features/auth/contracts";
+import { canSignIntoAdmin } from "@/features/auth/contracts";
 import { PasswordInput } from "@/features/auth/PasswordInput";
 import { useLogin } from "@/features/auth/queries";
 import { ApiError } from "@/lib/api/errors";
@@ -101,7 +101,9 @@ export function LoginForm({ reason }: { reason?: string }) {
     try {
       const user = await loginMutation.mutateAsync(values);
       router.replace(
-        canAccessAdmin(user) ? routes.dashboard : routes.forbidden,
+        canSignIntoAdmin(user)
+          ? routes.dashboard
+          : `${routes.forbidden}?reason=client-portal`,
       );
       router.refresh();
     } catch (error) {

@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 import { agencyPaths } from "@/lib/api/paths";
 
 import {
+  type AgencyCreatePayload,
   agencyListResponseSchema,
   type AgencyProfile,
   agencyResponseSchema,
@@ -14,6 +15,7 @@ export type AgencyListFilters = {
   workspace_count?: "none" | "one-to-five" | "six-plus";
   activity?: "recent" | "stale";
   page?: number;
+  per_page?: number;
 };
 
 export async function listAgencies(
@@ -38,7 +40,7 @@ export async function getAgencyRecord(agencyId: number, signal?: AbortSignal) {
   return agencyResponseSchema.parse(result).data;
 }
 
-export async function createAgency(payload: AgencyProfile) {
+export async function createAgency(payload: AgencyCreatePayload) {
   const result = await apiRequest<unknown>(agencyPaths.collection, {
     method: "POST",
     body: payload,

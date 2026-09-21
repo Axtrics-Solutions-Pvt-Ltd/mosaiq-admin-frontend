@@ -11,7 +11,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { getServerApiConfig } from "@/config/env";
 import { routes } from "@/config/routes";
 import {
-  canAccessAdmin,
+  canSignIntoAdmin,
   currentUserSchema,
   normalizeCurrentUser,
 } from "@/features/auth/contracts";
@@ -66,7 +66,8 @@ export default async function ApplicationLayout({
       </div>
     );
   const user = normalizeCurrentUser(parsed.data.data);
-  if (!canAccessAdmin(user)) redirect(routes.forbidden);
+  if (!canSignIntoAdmin(user))
+    redirect(`${routes.forbidden}?reason=client-portal`);
   const queryClient = new QueryClient();
   queryClient.setQueryData(authKeys.me(), user);
   return (

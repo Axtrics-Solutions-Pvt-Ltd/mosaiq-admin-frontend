@@ -760,18 +760,22 @@ Accessibility is verified during component implementation, not postponed to fina
 
 ## 17. Frontend permission presentation
 
-Use typed capability identifiers for presentation decisions, for example:
+Use typed capability identifiers for presentation decisions. `config/permissions.ts` defines the `Capability` union and the fixed role → capability map (mirroring the six roles and permission arrays `GET /admin/roles` returns):
 
 ```text
-agencies.view
+dashboard.view
 agencies.manage
 workspaces.manage
-users.invite
+users.manage
+roles.view
 imports.create
+importHistory.view
+connectors.view
 curation.manage
 settings.manage
-audit.view
 ```
+
+Super Admin and Agency Admin hold every capability. Manager, Analyst, and Viewer hold `dashboard.view`, `importHistory.view`, and `connectors.view` only, matching what `ImportHistoryController` and `WorkspaceConnectorController` actually authorize for those roles. Client User cannot sign into this portal at all (see the Screen Spec's Admin Login section), so it holds no capabilities here. `features/auth/contracts.ts` exposes `userCapabilities(user)` and `hasCapability(user, capability)`; `config/navigation.ts` exposes `filterNavigationGroups(groups, isVisible)`, which `SidebarNavigation` uses to hide groups and items the current session's role cannot use rather than rendering them disabled.
 
 Rules:
 
@@ -781,6 +785,7 @@ Rules:
 - Permission checks are centralized through a hook or component, not repeated string comparisons.
 - The frontend must still handle `401` and `403` responses because UI presentation is not authorization enforcement.
 - Roles & Permissions remains read-only as required by the screen specification.
+- Client User sessions are redirected out of the authenticated shell (`canSignIntoAdmin` in `features/auth/contracts.ts`) rather than shown a restricted shell, since that role has no Admin-portal destinations at all.
 
 ## 18. Error handling
 

@@ -84,6 +84,26 @@ The active item uses a blue-tinted background, blue icon, and stronger text. Rel
 
 On tablets and mobile devices, the sidebar becomes a slide-out navigation drawer.
 
+#### Sidebar and top-bar visibility by role
+
+Only the destinations a session's role has real Laravel authorization to use are rendered — the sidebar and the top-bar agency/workspace scope controls hide, rather than disable, destinations a role cannot access, per the frontend permission rules in §17 of the Engineering Spec. Client User never reaches the shell (see above), so it is omitted below.
+
+| Sidebar item | Super Admin | Agency Admin | Manager | Analyst | Viewer |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Agencies | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Workspaces | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Users | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Roles & Permissions | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Data Import | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Import History | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Connector Status | ✅ | ✅ | ✅ | ✅ | ✅ |
+| KPI & Module Curation | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Audit & Settings | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Top bar "Agency scope" selector | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+This mirrors the Laravel API's actual authorization, not an independent frontend policy: `AgencyPolicy`/`ClientPolicy`/`WorkspacePolicy` restrict Agencies, Workspaces, and their Users/Roles/Data Import surfaces to Super Admin and the owning Agency Admin; `ImportHistoryController` and `WorkspaceConnectorController` allow any non-Client-User agency role scoped to their assigned workspaces. The Agency scope selector is hidden for every role except Super Admin because every other role already belongs to exactly one agency and the selector would otherwise imply a broader scope than the account has. As with all frontend permission presentation, this is a usability convenience — Laravel remains the authorization boundary.
+
 ### Top bar
 
 The top bar contains:
@@ -155,6 +175,8 @@ Authentication is presented as a reviewable UI prototype. It must not imply that
 - Protected-route/session-expired presentation returns to sign-in with an accessible status message.
 
 Exact invitation eligibility, reset tokens, password policy, session storage, cookies/CSRF, and delivery behavior remain backend contract dependencies.
+
+**Client User accounts cannot sign into this Admin portal.** Client User is a Laravel-authenticated agency role reserved for the separate MOSAIQ client-facing portal. The Laravel `login`/`me` endpoints do not themselves reject a Client User session (that portal reuses the same session mechanism), so this restriction is enforced as frontend presentation: after a successful sign-in, a Client User session is redirected away from the authenticated Admin shell to `/forbidden` with a message explaining that client accounts use the separate client portal. Client User accounts remain fully manageable from this Admin portal (invited, edited, deactivated) by Super Admin and Agency Admin through the Users screens — only interactive sign-in to this portal is blocked. Because this is presentation, not enforcement, any real security boundary for Client User data continues to rely on Laravel's own per-endpoint authorization.
 
 ### Screen 2 — Admin Dashboard
 

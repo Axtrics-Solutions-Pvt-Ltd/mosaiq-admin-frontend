@@ -4,9 +4,42 @@ import { describe, expect, it } from "vitest";
 import { invitationPaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 
-import { createInvitation, revokeInvitation } from "./api";
+import {
+  createInvitation,
+  listPendingInvitations,
+  revokeInvitation,
+} from "./api";
 
 describe("invitation API", () => {
+  it("lists the selected agency's pending invitations with pagination", async () => {
+    let query = "";
+    server.use(
+      http.get(invitationPaths.collection(12), ({ request }) => {
+        query = new URL(request.url).search;
+        return HttpResponse.json({
+          data: [
+            {
+              id: 34,
+              email: "person@example.test",
+              agency_id: 12,
+              client_id: null,
+              role_code: "VIEWER",
+              workspace_ids: [],
+              expires_at: "2026-09-28T10:00:00Z",
+              accepted_at: null,
+              revoked_at: null,
+            },
+          ],
+          meta: { current_page: 2, last_page: 3, total: 21 },
+        });
+      }),
+    );
+    const response = await listPendingInvitations(12, 2);
+    expect(query).toBe("?page=2");
+    expect(response.data[0]?.id).toBe(34);
+    expect(response.meta.total).toBe(21);
+  });
+
   it("posts the confirmed payload and accepts an empty success response", async () => {
     let received: unknown;
     server.use(

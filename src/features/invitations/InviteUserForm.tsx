@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -14,19 +15,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { routes } from "@/config/routes";
+import { toast } from "@/components/ui/Toast";
+import { routes, userInvitationsUrl } from "@/config/routes";
+import {
+  AgencyCombobox,
+  type AgencyOption,
+} from "@/features/agencies/AgencyCombobox";
 import { useCurrentUser } from "@/features/auth/queries";
+import type {
+  ClientRecord,
+  WorkspaceRecord,
+} from "@/features/workspaces/contracts";
 import { ApiError } from "@/lib/api/errors";
 
 import { invitationRoles, inviteSchema } from "./contracts";
+import { InvitationScopeSelectors } from "./InvitationScopeSelectors";
 import { useCreateInvitation } from "./queries";
 
 const formSchema = z.object({
-  agencyId: z.string(),
+  agencyId: z.number().int().positive().nullable(),
   email: z.email("Enter a valid email address."),
   roleCode: z.enum(invitationRoles),
-  clientId: z.string(),
-  workspaceIds: z.string(),
+  clientId: z.number().int().positive().nullable(),
+  workspaceIds: z.array(z.number().int().positive()),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -38,67 +49,58 @@ const roles = [
   { code: "CLIENT_USER", label: "Client User" },
 ] as const;
 
-function positiveId(value: string) {
-  const number = Number(value.trim());
-  return Number.isSafeInteger(number) && number > 0 ? number : undefined;
-}
-
 export function InviteUserForm() {
+  const router = useRouter();
   const currentUser = useCurrentUser();
   const createMutation = useCreateInvitation();
-  const [message, setMessage] = useState<
-    { kind: "success" | "error"; text: string } | undefined
-  >();
+  const [selectedAgency, setSelectedAgency] = useState<AgencyOption>();
+  const [selectedClient, setSelectedClient] = useState<ClientRecord>();
+  const [selectedWorkspaces, setSelectedWorkspaces] = useState<
+    WorkspaceRecord[]
+  >([]);
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
   const ownAgencyId = currentUser.data?.membership?.agencyId;
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
     control,
-    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      agencyId: "",
+      agencyId: null,
       email: "",
       roleCode: "VIEWER",
-      clientId: "",
-      workspaceIds: "",
+      clientId: null,
+      workspaceIds: [],
     },
   });
   const roleCode = useWatch({ control, name: "roleCode" });
+  const roleRegistration = register("roleCode");
+  const agencyId = isSuperAdmin ? selectedAgency?.id : ownAgencyId;
+
+  function clearScope() {
+    setSelectedClient(undefined);
+    setSelectedWorkspaces([]);
+    setValue("clientId", null);
+    setValue("workspaceIds", []);
+  }
+
   const onSubmit = handleSubmit(async (values) => {
-    setMessage(undefined);
-    const agencyId = isSuperAdmin ? positiveId(values.agencyId) : ownAgencyId;
-    if (!agencyId) {
-      setError("agencyId", { message: "Enter a valid agency ID." });
-      return;
-    }
-    const clientId = values.clientId.trim()
-      ? positiveId(values.clientId)
-      : undefined;
-    if (values.clientId.trim() && !clientId) {
-      setError("clientId", { message: "Enter a valid client ID." });
-      return;
-    }
-    const workspaceParts = values.workspaceIds
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-    const workspaceIds = workspaceParts.map(positiveId);
-    if (workspaceIds.some((id) => id === undefined)) {
-      setError("workspaceIds", {
-        message: "Enter workspace IDs separated by commas.",
-      });
+    const targetAgencyId = isSuperAdmin ? values.agencyId : ownAgencyId;
+    if (!targetAgencyId) {
+      setError("agencyId", { message: "Choose an agency." });
       return;
     }
     const parsed = inviteSchema.safeParse({
       email: values.email.trim(),
       role_code: values.roleCode,
-      ...(clientId ? { client_id: clientId } : {}),
-      workspace_ids: workspaceIds,
+      ...(values.roleCode === "CLIENT_USER" && values.clientId
+        ? { client_id: values.clientId }
+        : {}),
+      workspace_ids: values.workspaceIds,
     });
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
@@ -110,12 +112,15 @@ export function InviteUserForm() {
       return;
     }
     try {
-      await createMutation.mutateAsync({ agencyId, payload: parsed.data });
-      setMessage({
-        kind: "success",
-        text: `Invitation emailed to ${parsed.data.email}.`,
+      await createMutation.mutateAsync({
+        agencyId: targetAgencyId,
+        payload: parsed.data,
       });
-      reset({ ...values, email: "", clientId: "", workspaceIds: "" });
+      toast({
+        title: `Invitation emailed to ${parsed.data.email}.`,
+        tone: "success",
+      });
+      router.push(userInvitationsUrl(targetAgencyId));
     } catch (error) {
       if (error instanceof ApiError) {
         const fields = error.fieldErrors;
@@ -126,11 +131,11 @@ export function InviteUserForm() {
           setError("clientId", { message: fields.client_id });
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
-        setMessage({ kind: "error", text: error.message });
+        toast({ title: error.message, tone: "error" });
       } else {
-        setMessage({
-          kind: "error",
-          text: "The invitation could not be sent. Please try again.",
+        toast({
+          title: "The invitation could not be sent. Please try again.",
+          tone: "error",
         });
       }
     }
@@ -155,18 +160,6 @@ export function InviteUserForm() {
           <CardTitle>Invitation details</CardTitle>
         </CardHeader>
         <CardContent>
-          {message && (
-            <p
-              className={
-                message.kind === "success"
-                  ? "bg-success-soft text-success mb-5 rounded-lg border p-3"
-                  : "bg-destructive-soft text-destructive mb-5 rounded-lg border p-3"
-              }
-              role={message.kind === "success" ? "status" : "alert"}
-            >
-              {message.text}
-            </p>
-          )}
           <form className="space-y-5" noValidate onSubmit={onSubmit}>
             <FormField
               error={errors.email?.message}
@@ -176,9 +169,9 @@ export function InviteUserForm() {
             >
               <Input
                 aria-invalid={Boolean(errors.email)}
+                autoComplete="email"
                 id="invite-email"
                 type="email"
-                autoComplete="email"
                 {...register("email")}
               />
             </FormField>
@@ -188,7 +181,14 @@ export function InviteUserForm() {
               label="Role"
               required
             >
-              <Select id="invite-role" {...register("roleCode")}>
+              <Select
+                id="invite-role"
+                {...roleRegistration}
+                onChange={(event) => {
+                  roleRegistration.onChange(event);
+                  clearScope();
+                }}
+              >
                 {roles.map((role) => (
                   <option key={role.code} value={role.code}>
                     {role.label}
@@ -198,16 +198,26 @@ export function InviteUserForm() {
             </FormField>
             {isSuperAdmin ? (
               <FormField
-                description="Use the numeric agency ID from the Admin API. Agency selection will be added when a lookup endpoint is available."
+                description="Search by agency name. Inactive agencies can receive invitations, but access begins after reactivation."
                 error={errors.agencyId?.message}
                 id="invite-agency"
-                label="Agency ID"
+                label="Agency"
                 required
               >
-                <Input
+                <AgencyCombobox
+                  ariaDescribedBy={
+                    errors.agencyId
+                      ? "invite-agency-error"
+                      : "invite-agency-description"
+                  }
                   id="invite-agency"
-                  inputMode="numeric"
-                  {...register("agencyId")}
+                  isInvalid={Boolean(errors.agencyId)}
+                  onChange={(agency) => {
+                    setSelectedAgency(agency);
+                    setValue("agencyId", agency.id, { shouldValidate: true });
+                    clearScope();
+                  }}
+                  value={selectedAgency}
                 />
               </FormField>
             ) : (
@@ -216,32 +226,35 @@ export function InviteUserForm() {
                 {ownAgencyId ? ` (ID ${ownAgencyId})` : ""}.
               </p>
             )}
-            <FormField
-              description={
-                roleCode === "CLIENT_USER"
-                  ? "Required. Use a client ID from the selected agency."
-                  : "Optional when access should be limited to a client."
-              }
-              error={errors.clientId?.message}
-              id="invite-client"
-              label="Client ID"
-              required={roleCode === "CLIENT_USER"}
-            >
-              <Input
-                id="invite-client"
-                inputMode="numeric"
-                {...register("clientId")}
-              />
-            </FormField>
-            <FormField
-              description="Enter numeric workspace IDs separated by commas. For Client User, every workspace must belong to the selected client; the API validates this relationship."
-              error={errors.workspaceIds?.message}
-              id="invite-workspaces"
-              label="Workspace IDs"
-              required={roleCode === "CLIENT_USER"}
-            >
-              <Input id="invite-workspaces" {...register("workspaceIds")} />
-            </FormField>
+            {selectedAgency?.status === "inactive" && (
+              <p className="bg-warning-soft text-warning rounded-lg border p-3 text-sm">
+                This agency is inactive. The recipient may accept the
+                invitation, but agency access starts only after the agency is
+                reactivated.
+              </p>
+            )}
+            <InvitationScopeSelectors
+              agencyId={agencyId ?? 0}
+              client={selectedClient}
+              clientError={errors.clientId?.message}
+              isClientUser={roleCode === "CLIENT_USER"}
+              onClientChange={(client) => {
+                setSelectedClient(client);
+                setSelectedWorkspaces([]);
+                setValue("clientId", client.id, { shouldValidate: true });
+                setValue("workspaceIds", []);
+              }}
+              onWorkspacesChange={(workspaces) => {
+                setSelectedWorkspaces(workspaces);
+                setValue(
+                  "workspaceIds",
+                  workspaces.map((workspace) => workspace.id),
+                  { shouldValidate: true },
+                );
+              }}
+              workspaceError={errors.workspaceIds?.message}
+              workspaces={selectedWorkspaces}
+            />
             <div className="flex flex-wrap gap-3 border-t pt-5">
               <Button
                 disabled={createMutation.isPending || currentUser.isPending}

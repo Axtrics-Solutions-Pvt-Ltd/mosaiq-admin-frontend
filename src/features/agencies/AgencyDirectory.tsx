@@ -37,6 +37,7 @@ import type {
   AgencyFilters,
   AgencySummary,
 } from "@/features/agencies/view-model";
+import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import { formatDate, formatNumber } from "@/lib/formatters";
 
@@ -241,7 +242,9 @@ export function AgencyDirectory({
   const query = useAgencies(requestFilters);
   const agencies = query.data?.data.map(toAgencySummary) ?? [];
   const summary = query.data?.meta.summary;
-  const canCreate = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  const canCreate = Boolean(
+    currentUser.data && hasCapability(currentUser.data, "agencies.create"),
+  );
   const hasFilters =
     filters.search !== "" ||
     filters.status !== "all" ||

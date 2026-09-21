@@ -1,5 +1,11 @@
 ﻿import { z } from "zod";
 
+import {
+  capabilitiesByAgencyRole,
+  type Capability,
+  superAdminCapabilities,
+} from "@/config/permissions";
+
 export const currentUserSchema = z.object({
   data: z.object({
     id: z.number(),
@@ -58,4 +64,21 @@ export function canAccessAdmin(user: CurrentUser) {
     user.platformRoleCode === "SUPER_ADMIN" ||
     user.membership?.roleCode === "AGENCY_ADMIN"
   );
+}
+
+export function isClientUser(user: CurrentUser) {
+  return user.membership?.roleCode === "CLIENT_USER";
+}
+
+export function canSignIntoAdmin(user: CurrentUser) {
+  return !isClientUser(user);
+}
+
+export function userCapabilities(user: CurrentUser): readonly Capability[] {
+  if (user.platformRoleCode === "SUPER_ADMIN") return superAdminCapabilities;
+  return capabilitiesByAgencyRole[user.membership?.roleCode ?? ""] ?? [];
+}
+
+export function hasCapability(user: CurrentUser, capability: Capability) {
+  return userCapabilities(user).includes(capability);
 }

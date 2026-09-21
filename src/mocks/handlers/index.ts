@@ -1,6 +1,6 @@
 ﻿import { http, HttpResponse, type RequestHandler } from "msw";
 
-import { authPaths } from "@/lib/api/paths";
+import { authPaths, dashboardPaths } from "@/lib/api/paths";
 
 let isSignedIn = false;
 const mockUser = {
@@ -56,4 +56,19 @@ export const handlers: RequestHandler[] = [
       headers: { "Set-Cookie": "mosaiq-session=; Max-Age=0; Path=/; HttpOnly" },
     });
   }),
+  http.get(dashboardPaths.summary, () =>
+    isSignedIn
+      ? HttpResponse.json({
+          data: {
+            scope: "platform",
+            agency_id: null,
+            client_id: null,
+            agencies: 12,
+            clients: 38,
+            workspaces: 186,
+            users: 142,
+          },
+        })
+      : HttpResponse.json({ error_code: "UNAUTHENTICATED" }, { status: 401 }),
+  ),
 ];

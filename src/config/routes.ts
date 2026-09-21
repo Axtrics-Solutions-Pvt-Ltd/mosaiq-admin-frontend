@@ -7,6 +7,7 @@ export const routes = {
   signup: "/signup",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
+  acceptInvitation: "/accept-invitation",
   forbidden: "/forbidden",
   signedOut: "/login?reason=signed-out",
   sessionExpired: "/login?reason=session-expired",
@@ -26,6 +27,7 @@ export const routes = {
   users: {
     index: "/users",
     invite: "/users/invite",
+    invitations: "/users/invitations",
     detail: (id: string) => routeWithId("/users", id),
     edit: (id: string) => `${routeWithId("/users", id)}/edit` as const,
   },
@@ -64,4 +66,13 @@ export function workspaceEditUrl(
     routes.workspaces.edit(String(workspaceId)) +
     workspaceScope(agencyId, clientId)
   );
+}
+export function userDetailUrl(userId: number, agencyId: number) {
+  return `${routes.users.detail(String(userId))}?agency=${agencyId}`;
+}
+export function userEditUrl(userId: number, agencyId: number) {
+  return `${routes.users.edit(String(userId))}?agency=${agencyId}`;
+}
+export function userInvitationsUrl(agencyId: number) {
+  return `${routes.users.invitations}?agency=${agencyId}`;
 }

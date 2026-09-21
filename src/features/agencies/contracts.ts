@@ -119,6 +119,11 @@ export const agencyProfileSchema = z.object({
   }),
 });
 
+export const agencyCreateSchema = agencyProfileSchema.partial().required({
+  display_name: true,
+});
+
 export type AgencyListResponse = z.infer<typeof agencyListResponseSchema>;
 export type AgencyRecord = z.infer<typeof agencyResponseSchema>["data"];
 export type AgencyProfile = z.infer<typeof agencyProfileSchema>;
+export type AgencyCreatePayload = z.infer<typeof agencyCreateSchema>;

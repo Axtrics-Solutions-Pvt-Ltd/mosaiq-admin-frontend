@@ -1,4 +1,4 @@
-import { agencyProfileSchema } from "@/features/agencies/contracts";
+import { agencyCreateSchema } from "@/features/agencies/contracts";
 import { forwardAgencyRequest } from "@/lib/api/agency-server";
 import { agencyPaths } from "@/lib/api/paths";
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ message: "Invalid request body." }, { status: 400 });
   }
-  const parsed = agencyProfileSchema.safeParse(body);
+  const parsed = agencyCreateSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
       { message: "Invalid agency details." },
