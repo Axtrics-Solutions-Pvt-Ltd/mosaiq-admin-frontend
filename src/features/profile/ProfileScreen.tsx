@@ -19,19 +19,11 @@ import { AuthAlert } from "@/features/auth/AuthAlert";
 import type { CurrentUser } from "@/features/auth/contracts";
 import { authKeys, useCurrentUser } from "@/features/auth/queries";
 import { useUpdateAgencyUser } from "@/features/users/queries";
-import { roleLabels } from "@/features/users/role-labels";
+import { currentUserRoleLabel as roleLabel } from "@/features/users/role-labels";
 import { ApiError } from "@/lib/api/errors";
 
 import { ChangePasswordForm } from "./ChangePasswordForm";
 import { type EditProfilePayload, editProfileSchema } from "./contracts";
-
-function roleLabel(user: CurrentUser) {
-  if (user.platformRoleCode === "SUPER_ADMIN") return "Super Admin";
-  const role = user.membership?.roleCode;
-  return role && Object.hasOwn(roleLabels, role)
-    ? roleLabels[role as keyof typeof roleLabels]
-    : "Account";
-}
 
 function NameForm({
   user,

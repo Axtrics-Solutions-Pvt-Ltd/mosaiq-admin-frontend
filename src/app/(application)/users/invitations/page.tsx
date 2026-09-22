@@ -19,8 +19,10 @@ export default async function InvitationsPage({
   const params = await searchParams;
   return (
     <InvitationDirectory
+      agencyId={positive(params.agency)}
       page={positive(params.page) ?? 1}
       status={statusFilter(params.status)}
+      workspaceId={positive(params.workspace)}
     />
   );
 }

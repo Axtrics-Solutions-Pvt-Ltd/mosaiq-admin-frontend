@@ -5,8 +5,14 @@ import { expect, it, vi } from "vitest";
 import { agencyPaths, invitationPaths, workspacePaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
+import { useScope } from "@/providers/ScopeProvider";
 
 import { InvitationDirectory } from "./InvitationDirectory";
+
+function ScopeAgencyProbe() {
+  const scope = useScope();
+  return <p>Header scope agency: {scope.agencyId ?? "none"}</p>;
+}
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
@@ -54,7 +60,8 @@ it("lists pending invitations for an Agency Admin's own agency", async () => {
             agency_id: 12,
             client_id: 4,
             role_code: "CLIENT_USER",
-            workspace_ids: [9, 10],
+            workspace_id: 9,
+            workspace_name: "Northstar Growth",
             expires_at: "2026-09-28T10:00:00Z",
             accepted_at: null,
             revoked_at: null,
@@ -64,14 +71,22 @@ it("lists pending invitations for an Agency Admin's own agency", async () => {
       });
     }),
   );
-  renderWithScope(<InvitationDirectory page={1} status="all" />, {
-    membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
-  });
+  renderWithScope(
+    <InvitationDirectory
+      agencyId={undefined}
+      page={1}
+      status="all"
+      workspaceId={undefined}
+    />,
+    {
+      membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
+    },
+  );
   expect(
     (await screen.findAllByText("new.user@example.test"))[0],
   ).toBeVisible();
   expect(screen.getAllByText("Client User")[0]).toBeVisible();
-  expect(screen.getAllByText("2 workspaces")[0]).toBeVisible();
+  expect(screen.getAllByText("Northstar Growth")[0]).toBeVisible();
   expect(requestedPath).toBe("/api/v1/admin/agencies/12/invitations");
 });
 
@@ -89,7 +104,8 @@ it("lets a Super Admin choose an agency from the page and loads its invitations"
             agency_id: 1,
             client_id: null,
             role_code: "AGENCY_ADMIN",
-            workspace_ids: [],
+            workspace_id: null,
+            workspace_name: null,
             expires_at: "2026-09-28T10:00:00Z",
             accepted_at: null,
             revoked_at: null,
@@ -99,9 +115,17 @@ it("lets a Super Admin choose an agency from the page and loads its invitations"
       });
     }),
   );
-  renderWithScope(<InvitationDirectory page={1} status="all" />, {
-    platformRoleCode: "SUPER_ADMIN",
-  });
+  renderWithScope(
+    <InvitationDirectory
+      agencyId={undefined}
+      page={1}
+      status="all"
+      workspaceId={undefined}
+    />,
+    {
+      platformRoleCode: "SUPER_ADMIN",
+    },
+  );
   expect(await screen.findByText("Choose an agency")).toBeVisible();
   fireEvent.change(await screen.findByLabelText("Agency"), {
     target: { value: "1" },
@@ -110,6 +134,36 @@ it("lets a Super Admin choose an agency from the page and loads its invitations"
     (await screen.findAllByText("invited@example.test"))[0],
   ).toBeVisible();
   expect(requestedPath).toBe("/api/v1/admin/agencies/1/invitations");
+});
+
+it("does not change the header's agency scope when the page-level agency filter is changed", async () => {
+  server.use(
+    http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
+    http.get(invitationPaths.collection(1), () =>
+      HttpResponse.json({
+        data: [],
+        meta: { current_page: 1, last_page: 1, total: 0 },
+      }),
+    ),
+  );
+  renderWithScope(
+    <>
+      <InvitationDirectory
+        agencyId={undefined}
+        page={1}
+        status="all"
+        workspaceId={undefined}
+      />
+      <ScopeAgencyProbe />
+    </>,
+    { platformRoleCode: "SUPER_ADMIN" },
+  );
+  expect(await screen.findByText("Header scope agency: none")).toBeVisible();
+  fireEvent.change(await screen.findByLabelText("Agency"), {
+    target: { value: "1" },
+  });
+  await screen.findByText("No invitations found");
+  expect(screen.getByText("Header scope agency: none")).toBeVisible();
 });
 
 it("filters invitations by workspace for an Agency Admin", async () => {
@@ -141,9 +195,17 @@ it("filters invitations by workspace for an Agency Admin", async () => {
       });
     }),
   );
-  renderWithScope(<InvitationDirectory page={1} status="all" />, {
-    membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
-  });
+  renderWithScope(
+    <InvitationDirectory
+      agencyId={undefined}
+      page={1}
+      status="all"
+      workspaceId={undefined}
+    />,
+    {
+      membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
+    },
+  );
   const workspaceSelect = await screen.findByLabelText("Workspace");
   expect(await screen.findByText("Northstar Growth")).toBeInTheDocument();
   await screen.findByText("No invitations found");

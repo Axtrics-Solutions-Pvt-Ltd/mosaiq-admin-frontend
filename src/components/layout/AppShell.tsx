@@ -24,6 +24,7 @@ import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
 import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
+import { currentUserRoleLabel } from "@/features/users/role-labels";
 import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
@@ -164,9 +165,11 @@ function AppShellContent({ children }: { children: ReactNode }) {
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Badge className="inline-flex" tone="primary">
-              Demo data
-            </Badge>
+            {currentUser.data && (
+              <Badge className="hidden sm:inline-flex" tone="neutral">
+                {currentUserRoleLabel(currentUser.data)}
+              </Badge>
+            )}
             {isSuperAdmin && (
               <div className="hidden w-40 lg:block">
                 <Select
@@ -307,9 +310,13 @@ function AppShellContent({ children }: { children: ReactNode }) {
         side="left"
         title="MOSAIQ Admin"
       >
-        <div className="mb-4">
-          <Badge tone="primary">Demo data</Badge>
-        </div>
+        {currentUser.data && (
+          <div className="mb-4">
+            <Badge tone="neutral">
+              {currentUserRoleLabel(currentUser.data)}
+            </Badge>
+          </div>
+        )}
         <SidebarNavigation onNavigate={() => setMobileOpen(false)} />
         {isSuperAdmin && (
           <div className="mt-6 space-y-3 border-t pt-4">

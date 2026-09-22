@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { FilterBar, PageStack } from "@/components/shared/LayoutPatterns";
@@ -57,11 +58,13 @@ function Scope({ invitation }: { invitation: Invitation }) {
           Client #{invitation.client_id}
         </span>
         <span className="text-muted-foreground block text-xs">
-          {invitation.workspace_ids.length} workspace
-          {invitation.workspace_ids.length === 1 ? "" : "s"}
+          {invitation.workspace_name ?? "No workspace assigned"}
         </span>
       </span>
     );
+  }
+  if (invitation.workspace_name) {
+    return <span>{invitation.workspace_name}</span>;
   }
   return <span className="text-muted-foreground">Agency access</span>;
 }
@@ -80,7 +83,7 @@ const columns: readonly DataTableColumn<Invitation>[] = [
     render: (invitation) => roleLabels[invitation.role_code],
   },
   {
-    header: "Access scope",
+    header: "Workspace",
     id: "scope",
     render: (invitation) => <Scope invitation={invitation} />,
   },
@@ -131,7 +134,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
           <div>
-            <dt className="text-muted-foreground text-xs">Access scope</dt>
+            <dt className="text-muted-foreground text-xs">Workspace</dt>
             <dd className="mt-1">
               <Scope invitation={invitation} />
             </dd>
@@ -173,20 +176,29 @@ function LoadingInvitations() {
 }
 
 export function InvitationDirectory({
+  agencyId: agencyIdFromUrl,
   page,
   status,
+  workspaceId: workspaceIdFromUrl,
 }: {
+  agencyId: number | undefined;
   page: number;
   status: InvitationStatus | "all";
+  workspaceId: number | undefined;
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
   const scope = useScope();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
-  const agencyId = scope.agencyId;
+  // The agency/workspace filters here are local to this page, not the
+  // header's global scope: choosing an agency to review invitations for
+  // must not change what "agency" the header is showing elsewhere.
+  const [localAgencyId, setLocalAgencyId] = useState(agencyIdFromUrl);
+  const [localWorkspaceId, setLocalWorkspaceId] = useState(workspaceIdFromUrl);
+  const agencyId = isSuperAdmin ? localAgencyId : scope.agencyId;
   const agenciesQuery = useAgencies({ page: 1 }, { enabled: isSuperAdmin });
   const agencies = agenciesQuery.data?.data ?? [];
-  const workspaceId = scope.workspaceId;
+  const workspaceId = localWorkspaceId;
   const workspacesQuery = useAgencyWorkspaces(agencyId ?? 0, {
     status: "active",
     per_page: 100,
@@ -197,8 +209,12 @@ export function InvitationDirectory({
 
   function changeAgency(value: string) {
     const nextAgencyId = value ? Number(value) : undefined;
-    scope.setAgencyId(nextAgencyId);
+    setLocalAgencyId(nextAgencyId);
+    setLocalWorkspaceId(undefined);
     const params = new URLSearchParams(window.location.search);
+    if (value) params.set("agency", value);
+    else params.delete("agency");
+    params.delete("workspace");
     params.delete("page");
     router.replace(
       `${routes.users.invitations}${params.size ? `?${params}` : ""}`,
@@ -206,8 +222,10 @@ export function InvitationDirectory({
   }
 
   function changeWorkspace(value: string) {
-    scope.setWorkspaceId(value ? Number(value) : undefined);
+    setLocalWorkspaceId(value ? Number(value) : undefined);
     const params = new URLSearchParams(window.location.search);
+    if (value) params.set("workspace", value);
+    else params.delete("workspace");
     params.delete("page");
     router.replace(
       `${routes.users.invitations}${params.size ? `?${params}` : ""}`,

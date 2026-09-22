@@ -15,7 +15,7 @@ test("root redirects to public login", async ({ page }) => {
 test("authenticated shell and destination routes render", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByText("Demo data", { exact: true })).toHaveCount(3);
+  await expect(page.getByText("Super Admin", { exact: true })).toBeVisible();
   await page.goto("/agencies");
   await expect(page).toHaveURL(/\/agencies$/);
   await expect(page.getByRole("heading", { name: "Agencies" })).toBeVisible();
