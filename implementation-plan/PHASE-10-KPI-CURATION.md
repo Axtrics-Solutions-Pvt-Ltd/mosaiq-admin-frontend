@@ -2,24 +2,51 @@
 
 ## Outcome
 
-A clear configuration screen shows what each workspace can display and distinguishes visible, deliberately hidden, and unavailable data.
+A clear configuration screen shows what each workspace can display and distinguishes visible and deliberately hidden data.
+
+## Reconciliation (2026-09-22)
+
+Built as a fully functional screen against the real Laravel admin curation endpoints
+(`GET`/`PUT /admin/workspaces/{workspace}/curation`), not a local-draft prototype, since the
+API contract was already available and agencies/workspaces had already moved to real
+integration. This overrides the "prototype first" framing below for this screen. The
+documented `UpdateWorkspaceCurationRequest` payload only accepts `{ id, is_enabled }` per
+module/KPI — it has no `position` field and no primary-KPI or data-availability field. As a
+result, scope was cut against the original screen spec:
+
+- Only two states are represented: **Visible** (`is_enabled: true`) and **Hidden**
+  (`is_enabled: false`). The three-state "Available & visible / Available but hidden /
+  Unavailable" vocabulary and the data-availability label are dropped — there is no backend
+  field to source an "unavailable" distinction from.
+- Primary-KPI marking is dropped — no backing field exists.
+- No reorder UI — modules/KPIs render in the order the API returns (`position`), since any
+  client-side reordering could not be saved.
+- The client-preview entry point links to a placeholder URL pending the client portal's
+  actual route contract (tracked as an unresolved backend/product dependency).
 
 ## Route
 
-`/curation` with selected agency/workspace represented in the URL later when it defines the result set.
+`/curation` with the selected agency and workspace represented in the URL query (`agency`,
+`workspace`) since they define the result set.
 
 ## Screen scope
 
-- Agency and workspace selectors, draft/saved indicator, Reset, Save Configuration, and client-preview entry point.
-- Sections for Reporting Dashboard, Marketing Intelligence, and Media Mix Model.
-- Per module: enable/disable, grouped KPIs, visibility controls, primary KPI, ordering affordance, data availability, and client-visible/internal-only label.
-- Explicit presentations for Available and visible, Available but hidden, and Unavailable.
-- Default, modified/draft, saved, reset-confirmation, validation, loading, unavailable-data, permission, and error designs.
+- Agency and workspace selectors, draft/saved indicator, Reset, Save Configuration, and a
+  client-preview entry point (placeholder URL).
+- Modules and their KPIs as returned by the API, each with enable/disable.
+- Explicit presentations for Visible and Hidden.
+- Default, modified/draft, saved, reset-confirmation, validation, loading, permission, and
+  error designs.
 
 ## Prototype behavior
 
-Controls may update a local draft purely to make the layout reviewable, but must not claim persistence. Decide whether ordering uses drag-and-drop or keyboard-friendly up/down controls during review; if drag is retained, provide an equivalent keyboard action. Client preview must not open an unconfirmed or unsafe URL.
+Superseded — see Reconciliation above. Save and Reset perform real requests against
+`PUT /admin/workspaces/{workspace}/curation`.
 
 ## Exit gate
 
-Approve information hierarchy, availability vocabulary, primary-KPI rule presentation, ordering interaction, draft/saved feedback, reset consequence, responsive layout, and preview behavior. Later functional work validates configuration rules, loads and saves through typed feature functions, guards dirty scope changes, and tests mutation failure/recovery.
+Approve information hierarchy, draft/saved feedback, reset consequence, responsive layout,
+and preview behavior. Confirmed: loads and saves through typed feature functions
+(`src/features/curation`), guards dirty scope changes, and covers mutation failure/recovery.
+Outstanding: primary-KPI marking, data-availability status, and the real client-preview URL
+remain unresolved backend/product contract dependencies.

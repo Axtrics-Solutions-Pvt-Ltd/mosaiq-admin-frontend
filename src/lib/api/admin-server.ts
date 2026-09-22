@@ -32,7 +32,7 @@ function forwardCookie(request: Request, config: ServerApiConfig) {
 function buildForwardHeaders(
   request: Request,
   config: ServerApiConfig,
-  method: "GET" | "POST" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   hasJsonBody: boolean,
 ) {
   const cookie = forwardCookie(request, config);
@@ -73,7 +73,7 @@ async function relayUpstream(upstream: Response) {
 export async function forwardAdminRequest(
   request: Request,
   path: string,
-  method: "GET" | "POST" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE",
   body?: unknown,
 ) {
   try {

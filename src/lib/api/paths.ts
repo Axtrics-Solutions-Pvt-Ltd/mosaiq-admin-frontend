@@ -66,6 +66,11 @@ export const importHistoryPaths = {
   collection: "/api/v1/import-history",
 } as const;
 
+export const curationPaths = {
+  detail: (workspaceId: number) =>
+    `/api/v1/admin/workspaces/${workspaceId}/curation`,
+} as const;
+
 export const workspacePaths = {
   clients: (agencyId: number) => "/api/v1/agencies/" + agencyId + "/clients",
   client: (agencyId: number, clientId: number) =>
