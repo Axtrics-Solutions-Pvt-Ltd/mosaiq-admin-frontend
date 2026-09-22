@@ -46,6 +46,15 @@ export const inviteSchema = z
     }
   });
 
+export const invitationStatuses = [
+  "pending",
+  "accepted",
+  "rejected",
+  "revoked",
+  "expired",
+] as const;
+export type InvitationStatus = (typeof invitationStatuses)[number];
+
 export const invitationSchema = z.object({
   id: z.number().int().positive(),
   email: z.email(),
@@ -56,7 +65,27 @@ export const invitationSchema = z.object({
   expires_at: z.string().min(1),
   accepted_at: z.string().nullable(),
   revoked_at: z.string().nullable(),
+  // Backend does not yet return this field. Once the reject endpoint records
+  // a timestamp, this becomes required — see InvitationDirectory handoff note.
+  rejected_at: z.string().nullable().optional(),
+  // Backend may eventually compute this directly; when present it wins over
+  // client-side derivation from the timestamp fields above.
+  status: z.enum(invitationStatuses).optional(),
 });
+
+export function getInvitationStatus(
+  invitation: Pick<
+    Invitation,
+    "accepted_at" | "revoked_at" | "rejected_at" | "expires_at" | "status"
+  >,
+): InvitationStatus {
+  if (invitation.status) return invitation.status;
+  if (invitation.revoked_at) return "revoked";
+  if (invitation.rejected_at) return "rejected";
+  if (invitation.accepted_at) return "accepted";
+  if (new Date(invitation.expires_at).getTime() < Date.now()) return "expired";
+  return "pending";
+}
 
 export const invitationListResponseSchema = z.object({
   data: z.array(invitationSchema),

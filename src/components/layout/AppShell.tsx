@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
@@ -26,34 +26,25 @@ import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
-export function AppShell({ children }: { children: ReactNode }) {
+import { ScopeProvider, useScope } from "@/providers/ScopeProvider";
+
+function AppShellContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
   const currentUser = useCurrentUser();
   const logoutMutation = useLogout();
   const [logoutError, setLogoutError] = useState<string>();
-  const [agencyScope, setAgencyScope] = useState("all");
-  const [workspaceScope, setWorkspaceScope] = useState("all");
+  const scope = useScope();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
   const agenciesQuery = useAgencies(
     { status: "active", per_page: 100 },
     { enabled: isSuperAdmin },
   );
-  const workspaceScopeAgencyId = isSuperAdmin
-    ? agencyScope === "all"
-      ? undefined
-      : Number(agencyScope)
-    : currentUser.data?.membership?.agencyId;
-  const workspacesQuery = useAgencyWorkspaces(workspaceScopeAgencyId ?? 0, {
+  const workspacesQuery = useAgencyWorkspaces(scope.agencyId ?? 0, {
     status: "active",
     per_page: 100,
   });
-  const [scopedAgencyId, setScopedAgencyId] = useState(workspaceScopeAgencyId);
-  if (scopedAgencyId !== workspaceScopeAgencyId) {
-    setScopedAgencyId(workspaceScopeAgencyId);
-    setWorkspaceScope("all");
-  }
   const didHandleSessionLoss = useRef(false);
   useEffect(() => {
     if (
@@ -176,8 +167,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Select
                   aria-label="Agency scope"
                   disabled={agenciesQuery.isPending}
-                  onChange={(event) => setAgencyScope(event.target.value)}
-                  value={agencyScope}
+                  onChange={(event) =>
+                    scope.setAgencyId(
+                      event.target.value === "all"
+                        ? undefined
+                        : Number(event.target.value),
+                    )
+                  }
+                  value={scope.agencyId ? String(scope.agencyId) : "all"}
                 >
                   <option value="all">All agencies</option>
                   {agenciesQuery.data?.data.map((agency) => (
@@ -191,14 +188,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden w-40 2xl:block">
               <Select
                 aria-label="Workspace scope"
-                disabled={!workspaceScopeAgencyId || workspacesQuery.isPending}
-                onChange={(event) => setWorkspaceScope(event.target.value)}
+                disabled={!scope.agencyId || workspacesQuery.isPending}
+                onChange={(event) =>
+                  scope.setWorkspaceId(
+                    event.target.value === "all"
+                      ? undefined
+                      : Number(event.target.value),
+                  )
+                }
                 title={
-                  workspaceScopeAgencyId
+                  scope.agencyId
                     ? undefined
                     : "Select an agency to filter by workspace"
                 }
-                value={workspaceScope}
+                value={scope.workspaceId ? String(scope.workspaceId) : "all"}
               >
                 <option value="all">All workspaces</option>
                 {workspacesQuery.data?.data.map((workspace) => (
@@ -307,8 +310,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Select
               disabled={agenciesQuery.isPending}
               id="mobile-agency"
-              onChange={(event) => setAgencyScope(event.target.value)}
-              value={agencyScope}
+              onChange={(event) =>
+                scope.setAgencyId(
+                  event.target.value === "all"
+                    ? undefined
+                    : Number(event.target.value),
+                )
+              }
+              value={scope.agencyId ? String(scope.agencyId) : "all"}
             >
               <option value="all">All agencies</option>
               {agenciesQuery.data?.data.map((agency) => (
@@ -321,5 +330,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       </Drawer>
     </div>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <ScopeProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </ScopeProvider>
   );
 }

@@ -14,6 +14,10 @@ type Status =
   | "inactive"
   | "invited"
   | "pending"
+  | "accepted"
+  | "rejected"
+  | "revoked"
+  | "expired"
   | "seeded"
   | "imported"
   | "planned"
@@ -36,6 +40,10 @@ const statuses: Record<
   inactive: { icon: MinusCircle, label: "Inactive", tone: "neutral" },
   invited: { icon: Info, label: "Invited", tone: "info" },
   pending: { icon: Clock3, label: "Pending", tone: "warning" },
+  accepted: { icon: CheckCircle2, label: "Accepted", tone: "success" },
+  rejected: { icon: XCircle, label: "Rejected", tone: "danger" },
+  revoked: { icon: XCircle, label: "Revoked", tone: "neutral" },
+  expired: { icon: MinusCircle, label: "Expired", tone: "neutral" },
   seeded: { icon: CheckCircle2, label: "Seeded", tone: "primary" },
   imported: { icon: CheckCircle2, label: "Imported", tone: "success" },
   planned: { icon: Clock3, label: "Planned", tone: "neutral" },

@@ -26,7 +26,6 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
-import { AgencyCombobox, type AgencyOption } from "@/features/agencies/AgencyCombobox";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import type { ClientRecord, WorkspaceRecord } from "@/features/workspaces/contracts";
@@ -34,6 +33,7 @@ import { useInfiniteClients, useInfiniteWorkspaces } from "@/features/workspaces
 import { ApiError } from "@/lib/api/errors";
 import { formatDate, formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils/cn";
+import { useScope } from "@/providers/ScopeProvider";
 
 import {
   type CsvImportMode,
@@ -138,7 +138,7 @@ function SectionHeading({
 export function DataImportPreview() {
   const queryClient = useQueryClient();
   const currentUser = useCurrentUser();
-  const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  const scope = useScope();
   const canImport = Boolean(
     currentUser.data && hasCapability(currentUser.data, "imports.create"),
   );
@@ -146,10 +146,7 @@ export function DataImportPreview() {
     currentUser.data && hasCapability(currentUser.data, "importHistory.view"),
   );
 
-  const [selectedAgency, setSelectedAgency] = useState<AgencyOption>();
-  const agencyId = isSuperAdmin
-    ? selectedAgency?.id
-    : currentUser.data?.membership?.agencyId;
+  const agencyId = scope.agencyId;
 
   const [clientSearch, setClientSearch] = useState("");
   const [client, setClient] = useState<ClientRecord>();
@@ -177,6 +174,14 @@ export function DataImportPreview() {
   const [mode, setMode] = useState<CsvImportMode>("append");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
+  const [priorAgencyId, setPriorAgencyId] = useState(agencyId);
+  if (priorAgencyId !== agencyId) {
+    setPriorAgencyId(agencyId);
+    setClient(undefined);
+    setWorkspace(undefined);
+    setCsvImportId(undefined);
+  }
+
   const previewMutation = usePreviewCsvImport();
   const confirmMutation = useConfirmCsvImport();
   const retryMutation = useRetryCsvImport();
@@ -188,13 +193,6 @@ export function DataImportPreview() {
   );
   const csvImport = importQuery.data;
   const guide = datasetColumnGuides[datasetType];
-
-  function selectAgency(next: AgencyOption) {
-    setSelectedAgency(next);
-    setClient(undefined);
-    setWorkspace(undefined);
-    setCsvImportId(undefined);
-  }
 
   function selectClient(next: ClientRecord) {
     setClient(next);
@@ -366,18 +364,10 @@ export function DataImportPreview() {
                   />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {isSuperAdmin && (
-                    <div>
-                      <Label htmlFor="import-agency">Agency</Label>
-                      <div className="mt-1.5">
-                        <AgencyCombobox
-                          canCreate={false}
-                          id="import-agency"
-                          onChange={selectAgency}
-                          value={selectedAgency}
-                        />
-                      </div>
-                    </div>
+                  {!agencyId && (
+                    <p className="text-muted-foreground md:col-span-2 text-sm">
+                      Select an agency from the header to choose a destination.
+                    </p>
                   )}
                   <div>
                     <Label htmlFor="import-client">Client</Label>

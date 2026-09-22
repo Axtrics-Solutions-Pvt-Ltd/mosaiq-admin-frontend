@@ -4,23 +4,27 @@ import {
   acceptInvitation,
   createInvitation,
   inspectInvitation,
-  listPendingInvitations,
+  listInvitations,
   rejectInvitation,
   revokeInvitation,
 } from "./api";
-import type { InvitePayload } from "./contracts";
+import type { InvitationStatus, InvitePayload } from "./contracts";
 
 export const invitationKeys = {
   all: ["invitations"] as const,
-  list: (agencyId: number, page: number) =>
-    ["invitations", "pending", agencyId, page] as const,
+  list: (agencyId: number, page: number, status: InvitationStatus | "all") =>
+    ["invitations", "list", agencyId, status, page] as const,
   inspect: (token: string) => ["invitations", "inspect", token] as const,
 };
 
-export function usePendingInvitations(agencyId: number, page: number) {
+export function useInvitations(
+  agencyId: number,
+  page: number,
+  status: InvitationStatus | "all",
+) {
   return useQuery({
-    queryKey: invitationKeys.list(agencyId, page),
-    queryFn: ({ signal }) => listPendingInvitations(agencyId, page, signal),
+    queryKey: invitationKeys.list(agencyId, page, status),
+    queryFn: ({ signal }) => listInvitations(agencyId, page, status, signal),
     enabled: Number.isSafeInteger(agencyId) && agencyId > 0,
   });
 }

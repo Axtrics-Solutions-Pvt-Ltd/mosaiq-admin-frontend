@@ -1,3 +1,4 @@
+import { invitationStatuses } from "@/features/invitations/contracts";
 import { InvitationDirectory } from "@/features/invitations/InvitationDirectory";
 
 function positive(value: string | string[] | undefined) {
@@ -5,7 +6,12 @@ function positive(value: string | string[] | undefined) {
   return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
 
-export default async function PendingInvitationsPage({
+function statusFilter(value: string | string[] | undefined) {
+  const candidate = typeof value === "string" ? value : undefined;
+  return invitationStatuses.find((status) => status === candidate) ?? "all";
+}
+
+export default async function InvitationsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -14,7 +20,7 @@ export default async function PendingInvitationsPage({
   return (
     <InvitationDirectory
       page={positive(params.page) ?? 1}
-      requestedAgencyId={positive(params.agency)}
+      status={statusFilter(params.status)}
     />
   );
 }

@@ -1,34 +1,19 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, it, vi } from "vitest";
 
-import { authKeys } from "@/features/auth/queries";
 import { userPaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
+import { renderWithScope } from "@/test/renderWithScope";
 
 import { UserDirectory } from "./UserDirectory";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 it("lists an accepted user for an Agency Admin's own agency", async () => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  queryClient.setQueryData(authKeys.me(), {
-    id: 1,
-    name: "Agency Admin",
-    email: "admin@example.test",
-    platformRoleCode: null,
-    membership: {
-      agencyId: 12,
-      roleCode: "AGENCY_ADMIN",
-      clientId: null,
-      workspaceIds: [],
-    },
-  });
   let requestedPath = "";
   server.use(
     http.get(userPaths.collection(12), ({ request }) => {
@@ -53,11 +38,9 @@ it("lists an accepted user for an Agency Admin's own agency", async () => {
       });
     }),
   );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <UserDirectory page={1} role="all" search="" status="all" />
-    </QueryClientProvider>,
-  );
+  renderWithScope(<UserDirectory page={1} role="all" search="" status="all" />, {
+    membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
+  });
   expect(
     (await screen.findAllByText("new.user@example.test"))[0],
   ).toBeVisible();

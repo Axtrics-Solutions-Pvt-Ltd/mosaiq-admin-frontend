@@ -5,15 +5,18 @@ import { invitationPaths } from "@/lib/api/paths";
 import {
   invitationInspectionSchema,
   invitationListResponseSchema,
+  type InvitationStatus,
   type InvitePayload,
 } from "./contracts";
 
-export async function listPendingInvitations(
+export async function listInvitations(
   agencyId: number,
   page: number,
+  status: InvitationStatus | "all",
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({ page: String(page) });
+  if (status !== "all") params.set("status", status);
   const result = await apiRequest<unknown>(
     `${invitationPaths.collection(agencyId)}?${params}`,
     { signal },

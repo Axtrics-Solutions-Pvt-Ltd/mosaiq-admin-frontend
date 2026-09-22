@@ -4,7 +4,6 @@
 export const routes = {
   home: "/",
   login: "/login",
-  signup: "/signup",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
   acceptInvitation: "/accept-invitation",

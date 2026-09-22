@@ -9,7 +9,7 @@ Complete reviewable entry/account-access screens on the dedicated Admin domain, 
 | URL | UI purpose |
 |---|---|
 | `/login` | Sign in; email/password, remember me, show/hide password, help link |
-| `/signup` | Admin account creation/activation design; identity, email, password, confirmation, terms/help copy as agreed |
+| `/accept-invitation` | Account activation using the emailed invitation token; sets name/password, or auto-links an existing account. Built in Phase 07 and functional. |
 | `/forgot-password` | Request reset link; submitted and unavailable states |
 | `/reset-password` | Set new password using a reset link; invalid/expired link and success states |
 | `/forbidden` | Access denied presentation |
@@ -17,7 +17,7 @@ Complete reviewable entry/account-access screens on the dedicated Admin domain, 
 
 ## Important product decision
 
-The visual pass should use **invite-only Admin sign-up** as a clearly marked working assumption, because open self-registration could create unauthorized Admin accounts. The exact eligibility, invitation link, reset token, password policy, session storage, cookie/CSRF, and delivery contracts require Laravel/API agreement before functional implementation. Do not imply the screen already sends email or creates an account.
+Admin access is **invite-only**: there is no open self-registration route. A standalone `/signup` screen was planned here as a visual placeholder for account activation, but it was superseded by the real, token-based `/accept-invitation` flow delivered in Phase 07 (`src/features/invitations/AcceptInvitationForm.tsx`), which is the only way an account is created or its password is first set. The `/signup` route and its simulated form were removed from the codebase to avoid a dead-end duplicate of that working flow. A user who already has an account changes or recovers their password only through `/forgot-password` → `/reset-password`; there is no separate in-app "change password" settings screen (that would belong to Phase 11, Governance/settings, if ever added).
 
 ## Screen design tasks
 

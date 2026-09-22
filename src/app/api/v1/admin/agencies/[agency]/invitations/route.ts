@@ -2,7 +2,7 @@ import { inviteSchema } from "@/features/invitations/contracts";
 import { forwardAdminRequest } from "@/lib/api/admin-server";
 import { invitationPaths } from "@/lib/api/paths";
 
-const allowedFilters = ["page", "per_page"];
+const allowedFilters = ["page", "per_page", "status"];
 
 export async function GET(
   request: Request,

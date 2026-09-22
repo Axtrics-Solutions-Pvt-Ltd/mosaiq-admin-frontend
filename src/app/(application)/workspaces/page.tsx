@@ -16,7 +16,6 @@ export default async function WorkspacesPage({
   return (
     <WorkspaceDirectory
       filters={{
-        agency: positive(single(params.agency)),
         client: positive(single(params.client)),
         search: single(params.search) ?? "",
         status: status === "active" || status === "inactive" ? status : "all",

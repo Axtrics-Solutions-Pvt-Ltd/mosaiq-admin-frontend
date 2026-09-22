@@ -18,12 +18,12 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
-import { AgencyCombobox, type AgencyOption } from "@/features/agencies/AgencyCombobox";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import type { ClientRecord, WorkspaceRecord } from "@/features/workspaces/contracts";
 import { useInfiniteClients, useInfiniteWorkspaces } from "@/features/workspaces/queries";
 import { formatDate, formatNumber } from "@/lib/formatters";
+import { useScope } from "@/providers/ScopeProvider";
 
 import {
   csvImportTypes,
@@ -71,15 +71,12 @@ export function ImportHistoryDirectory({
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
-  const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  const scope = useScope();
   const canViewHistory = Boolean(
     currentUser.data && hasCapability(currentUser.data, "importHistory.view"),
   );
 
-  const [selectedAgency, setSelectedAgency] = useState<AgencyOption>();
-  const agencyId = isSuperAdmin
-    ? selectedAgency?.id
-    : currentUser.data?.membership?.agencyId;
+  const agencyId = scope.agencyId;
 
   const [clientSearch, setClientSearch] = useState("");
   const [client, setClient] = useState<ClientRecord>();
@@ -99,6 +96,16 @@ export function ImportHistoryDirectory({
     workspacesQuery.data?.pages.flatMap((entry) => entry.data) ?? [],
   );
 
+  const [priorAgencyId, setPriorAgencyId] = useState(agencyId);
+  if (priorAgencyId !== agencyId) {
+    setPriorAgencyId(agencyId);
+    setClient(undefined);
+    setWorkspace(undefined);
+  }
+
+  // The import-history endpoint has no agency-scoping parameter yet, only
+  // workspace_id, so header agency scope narrows the client/workspace
+  // pickers above but isn't sent to the request itself.
   const filters = {
     workspace_id: workspace?.id,
     type: csvImportTypes.includes(type as (typeof csvImportTypes)[number])
@@ -206,23 +213,6 @@ export function ImportHistoryDirectory({
       {canViewHistory && (
         <>
           <FilterBar className="flex-wrap">
-            {isSuperAdmin && (
-              <div className="w-full sm:max-w-56">
-                <Label htmlFor="history-agency">Agency</Label>
-                <div className="mt-1.5">
-                  <AgencyCombobox
-                    canCreate={false}
-                    id="history-agency"
-                    onChange={(agency) => {
-                      setSelectedAgency(agency);
-                      setClient(undefined);
-                      setWorkspace(undefined);
-                    }}
-                    value={selectedAgency}
-                  />
-                </div>
-              </div>
-            )}
             <div className="w-full sm:max-w-56">
               <Label htmlFor="history-client">Client</Label>
               <div className="mt-1.5">

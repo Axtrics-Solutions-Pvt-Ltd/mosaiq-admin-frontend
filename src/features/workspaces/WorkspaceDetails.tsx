@@ -202,26 +202,24 @@ export function WorkspaceDetails({
       value: "modules",
       label: "Modules",
       content: (
-        <Preview
-          title="Module access"
-          description="Module settings are waiting for a backend contract. These controls show the planned layout and cannot be saved."
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              "Reporting Dashboard",
-              "Marketing Intelligence",
-              "Media Mix Model",
-            ].map((label) => (
-              <label
-                className="bg-muted flex items-center gap-3 rounded-lg border p-4 text-sm"
-                key={label}
+        <Card>
+          <CardHeader>
+            <CardTitle>Module access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground text-sm">
+              KPI and module visibility for this workspace is managed on the
+              Curation screen.
+            </p>
+            <Button asChild variant="outline">
+              <Link
+                href={`${routes.curation}?agency=${agencyId}&workspace=${workspaceId}`}
               >
-                <input type="checkbox" disabled />
-                {label}
-              </label>
-            ))}
-          </div>
-        </Preview>
+                Open curation
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       ),
     },
     {

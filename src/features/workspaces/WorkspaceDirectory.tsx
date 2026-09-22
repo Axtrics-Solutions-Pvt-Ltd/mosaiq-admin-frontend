@@ -25,12 +25,12 @@ import {
 import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
 import { formatDate, formatNumber } from "@/lib/formatters";
+import { useScope } from "@/providers/ScopeProvider";
 
 import type { WorkspaceRecord } from "./contracts";
 import { useClients, useWorkspaces } from "./queries";
 
 type Filters = {
-  agency?: number;
   client?: number;
   search: string;
   status: "all" | "active" | "inactive";
@@ -85,10 +85,10 @@ function WorkspaceCard({
 export function WorkspaceDirectory({ filters }: { filters: Filters }) {
   const router = useRouter();
   const user = useCurrentUser();
+  const scope = useScope();
   const agenciesQuery = useAgencies({ page: 1 });
   const agencies = agenciesQuery.data?.data ?? [];
-  const agencyId =
-    filters.agency ?? user.data?.membership?.agencyId ?? agencies[0]?.id ?? 0;
+  const agencyId = scope.agencyId ?? 0;
   const clientsQuery = useClients(agencyId);
   const clients = clientsQuery.data?.data ?? [];
   const clientId =
@@ -206,30 +206,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
           )}
         />
       </div>
-      <FilterBar className="lg:grid lg:grid-cols-4">
-        <div>
-          <Label htmlFor="workspace-agency">Agency</Label>
-          <Select
-            id="workspace-agency"
-            className="mt-1.5"
-            value={agencyId || ""}
-            onChange={(event) =>
-              replace({
-                agency: event.target.value,
-                client: undefined,
-                page: undefined,
-              })
-            }
-            disabled={user.data?.platformRoleCode !== "SUPER_ADMIN"}
-          >
-            <option value="">Select agency</option>
-            {agencies.map((agency) => (
-              <option key={agency.id} value={agency.id}>
-                {agency.display_name}
-              </option>
-            ))}
-          </Select>
-        </div>
+      <FilterBar className="lg:grid lg:grid-cols-3">
         <div>
           <Label htmlFor="workspace-client">Client</Label>
           <Select
@@ -276,41 +253,11 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
             <option value="inactive">Inactive</option>
           </Select>
         </div>
-        <div>
-          <Label htmlFor="workspace-module">Enabled module (UI preview)</Label>
-          <Select id="workspace-module" className="mt-1.5" disabled>
-            <option>Unavailable</option>
-            <option>Reporting Dashboard</option>
-            <option>Marketing Intelligence</option>
-            <option>Media Mix Model</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="workspace-source">Data source (UI preview)</Label>
-          <Select id="workspace-source" className="mt-1.5" disabled>
-            <option>Unavailable</option>
-            <option>Seeded</option>
-            <option>CSV Imported</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="workspace-manager">
-            Account manager (UI preview)
-          </Label>
-          <Select id="workspace-manager" className="mt-1.5" disabled>
-            <option>Unavailable</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="workspace-freshness">Freshness (UI preview)</Label>
-          <Select id="workspace-freshness" className="mt-1.5" disabled>
-            <option>Unavailable</option>
-          </Select>
-        </div>
       </FilterBar>
       <p className="text-muted-foreground text-xs">
-        The API lists workspaces per client. Module, data source, manager, and
-        freshness filters await backend contracts.
+        The API lists workspaces per client. Module, data source, account
+        manager, and freshness filters are not offered here because the
+        workspace API does not return that data yet — see the handoff notes.
       </p>
       {(agenciesQuery.isPending ||
         (agencyId > 0 && clientsQuery.isPending) ||
@@ -340,6 +287,13 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
           kind="empty"
           title="No agencies"
           description="Create an agency before adding client workspaces."
+        />
+      )}
+      {agenciesQuery.isSuccess && agencies.length > 0 && !agencyId && (
+        <StatePanel
+          kind="empty"
+          title="Choose an agency"
+          description="Select an agency from the header to review its workspaces."
         />
       )}
       {clientsQuery.isSuccess && clients.length === 0 && (

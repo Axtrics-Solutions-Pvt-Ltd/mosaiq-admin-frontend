@@ -3,7 +3,6 @@
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { FilterBar, PageStack } from "@/components/shared/LayoutPatterns";
@@ -13,19 +12,32 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
+import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
-import {
-  AgencyCombobox,
-  type AgencyOption,
-} from "@/features/agencies/AgencyCombobox";
-import { useAgency } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
 import { formatDate } from "@/lib/formatters";
+import { useScope } from "@/providers/ScopeProvider";
 
-import type { Invitation } from "./contracts";
-import { usePendingInvitations } from "./queries";
+import {
+  getInvitationStatus,
+  type Invitation,
+  type InvitationStatus,
+} from "./contracts";
+import { useInvitations } from "./queries";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
+
+const statusFilterOptions: readonly {
+  label: string;
+  value: InvitationStatus | "all";
+}[] = [
+  { label: "All invitations", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "Accepted", value: "accepted" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Revoked", value: "revoked" },
+  { label: "Expired", value: "expired" },
+];
 
 const roleLabels: Record<Invitation["role_code"], string> = {
   AGENCY_ADMIN: "Agency Admin",
@@ -73,7 +85,9 @@ const columns: readonly DataTableColumn<Invitation>[] = [
   {
     header: "Status",
     id: "status",
-    render: () => <StatusBadge status="pending" />,
+    render: (invitation) => (
+      <StatusBadge status={getInvitationStatus(invitation)} />
+    ),
   },
   {
     header: "Expires",
@@ -90,6 +104,7 @@ const columns: readonly DataTableColumn<Invitation>[] = [
     render: (invitation) => (
       <RevokeInvitationButton
         agencyId={invitation.agency_id}
+        canRevoke={getInvitationStatus(invitation) === "pending"}
         invitationId={invitation.id}
       />
     ),
@@ -97,6 +112,7 @@ const columns: readonly DataTableColumn<Invitation>[] = [
 ];
 
 function InvitationCard({ invitation }: { invitation: Invitation }) {
+  const status = getInvitationStatus(invitation);
   return (
     <Card>
       <CardContent className="pt-4 sm:pt-5">
@@ -109,7 +125,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
               {roleLabels[invitation.role_code]}
             </p>
           </div>
-          <StatusBadge status="pending" />
+          <StatusBadge status={status} />
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
           <div>
@@ -130,6 +146,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
         <div className="mt-4 border-t pt-4">
           <RevokeInvitationButton
             agencyId={invitation.agency_id}
+            canRevoke={status === "pending"}
             invitationId={invitation.id}
           />
         </div>
@@ -154,39 +171,33 @@ function LoadingInvitations() {
 }
 
 export function InvitationDirectory({
-  requestedAgencyId,
   page,
+  status,
 }: {
-  requestedAgencyId?: number;
   page: number;
+  status: InvitationStatus | "all";
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
-  const [selectedAgency, setSelectedAgency] = useState<AgencyOption>();
+  const scope = useScope();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
-  const agencyId = isSuperAdmin
-    ? requestedAgencyId
-    : currentUser.data?.membership?.agencyId;
-  const agencyQuery = useAgency(isSuperAdmin ? (requestedAgencyId ?? 0) : 0);
-  const hydratedAgency = agencyQuery.data
-    ? {
-        id: agencyQuery.data.id,
-        displayName: agencyQuery.data.display_name,
-        status: agencyQuery.data.status,
-      }
-    : undefined;
-  const invitationsQuery = usePendingInvitations(agencyId ?? 0, page);
+  const agencyId = scope.agencyId;
+  const invitationsQuery = useInvitations(agencyId ?? 0, page, status);
   const invitations = invitationsQuery.data?.data ?? [];
 
-  function selectAgency(agency: AgencyOption) {
-    setSelectedAgency(agency);
-    router.replace(`${routes.users.invitations}?agency=${agency.id}`);
+  function changeStatus(nextStatus: string) {
+    const params = new URLSearchParams(window.location.search);
+    if (nextStatus === "all") params.delete("status");
+    else params.set("status", nextStatus);
+    params.delete("page");
+    router.replace(
+      `${routes.users.invitations}${params.size ? `?${params}` : ""}`,
+    );
   }
 
   function changePage(nextPage: number) {
     if (!agencyId) return;
-    const params = new URLSearchParams();
-    if (isSuperAdmin) params.set("agency", String(agencyId));
+    const params = new URLSearchParams(window.location.search);
     params.set("page", String(nextPage));
     router.replace(`${routes.users.invitations}?${params}`);
   }
@@ -206,28 +217,26 @@ export function InvitationDirectory({
             Users
           </Link>
         }
-        description="Review pending agency invitations and revoke access before it is accepted."
-        title="Pending invitations"
+        description="Review agency invitations, track accepted and rejected responses, and revoke access before it is accepted."
+        title="Invitations"
       />
-      {isSuperAdmin && (
-        <FilterBar>
-          <div className="w-full max-w-lg">
-            <Label htmlFor="invitation-agency">Agency</Label>
-            <div className="mt-1.5">
-              <AgencyCombobox
-                canCreate={false}
-                id="invitation-agency"
-                onChange={selectAgency}
-                value={
-                  selectedAgency?.id === requestedAgencyId
-                    ? selectedAgency
-                    : hydratedAgency
-                }
-              />
-            </div>
-          </div>
-        </FilterBar>
-      )}
+      <FilterBar>
+        <div className="w-full max-w-xs">
+          <Label htmlFor="invitation-status">Status</Label>
+          <Select
+            className="mt-1.5"
+            id="invitation-status"
+            onChange={(event) => changeStatus(event.target.value)}
+            value={status}
+          >
+            {statusFilterOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </FilterBar>
       {currentUser.isPending && <LoadingInvitations />}
       {currentUser.isError && (
         <StatePanel
@@ -241,7 +250,7 @@ export function InvitationDirectory({
       )}
       {currentUser.isSuccess && isSuperAdmin && !agencyId && (
         <StatePanel
-          description="Select an agency to review its unaccepted invitations."
+          description="Select an agency from the header to review its unaccepted invitations."
           kind="empty"
           title="Choose an agency"
         />
@@ -256,7 +265,7 @@ export function InvitationDirectory({
               Try again
             </Button>
           }
-          description="Pending invitations could not be loaded. Please try again."
+          description="Invitations could not be loaded. Please try again."
           kind="error"
           title="Invitations unavailable"
         />
@@ -271,9 +280,17 @@ export function InvitationDirectory({
                 <Link href={routes.users.invite}>Invite a user</Link>
               </Button>
             }
-            description="New invitations will appear here until they are accepted, revoked, or expire."
+            description={
+              status === "all"
+                ? "New invitations will appear here once sent."
+                : `No invitations currently have the "${
+                    statusFilterOptions.find(
+                      (option) => option.value === status,
+                    )?.label ?? status
+                  }" status.`
+            }
             kind="empty"
-            title="No pending invitations"
+            title="No invitations found"
           />
         )}
       {currentUser.isSuccess &&
@@ -284,10 +301,10 @@ export function InvitationDirectory({
             <p className="text-muted-foreground text-sm">
               Showing{" "}
               <strong className="text-strong">{invitations.length}</strong> of{" "}
-              {invitationsQuery.data.meta.total} pending invitations
+              {invitationsQuery.data.meta.total} invitations
             </p>
             <DataTable
-              caption="Pending invitations"
+              caption="Invitations"
               columns={columns}
               getRowKey={(invitation) => String(invitation.id)}
               mobileCard={(invitation) => (

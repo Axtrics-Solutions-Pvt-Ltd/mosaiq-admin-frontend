@@ -3,7 +3,6 @@
 import { ChevronLeft, ChevronRight, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { FilterBar, PageStack } from "@/components/shared/LayoutPatterns";
@@ -17,14 +16,11 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes, userDetailUrl } from "@/config/routes";
-import {
-  AgencyCombobox,
-  type AgencyOption,
-} from "@/features/agencies/AgencyCombobox";
 import { useCurrentUser } from "@/features/auth/queries";
 import { formatDate } from "@/lib/formatters";
+import { useScope } from "@/providers/ScopeProvider";
 
-import { type AgencyUser,agencyUserRoles } from "./contracts";
+import { type AgencyUser, agencyUserRoles } from "./contracts";
 import { useAgencyUsers } from "./queries";
 
 const roleLabels: Record<AgencyUser["role_code"], string> = {
@@ -153,13 +149,11 @@ function LoadingUsers() {
 }
 
 export function UserDirectory({
-  requestedAgencyId,
   page,
   search,
   status,
   role,
 }: {
-  requestedAgencyId?: number;
   page: number;
   search: string;
   status: "all" | "invited" | "active" | "inactive";
@@ -167,11 +161,9 @@ export function UserDirectory({
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
-  const [selectedAgency, setSelectedAgency] = useState<AgencyOption>();
+  const scope = useScope();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
-  const agencyId = isSuperAdmin
-    ? requestedAgencyId
-    : currentUser.data?.membership?.agencyId;
+  const agencyId = scope.agencyId;
   const usersQuery = useAgencyUsers(agencyId ?? 0, {
     search: search || undefined,
     status: status === "all" ? undefined : status,
@@ -186,11 +178,6 @@ export function UserDirectory({
     update(params);
     params.delete("page");
     router.replace(`${routes.users.index}${params.size ? `?${params}` : ""}`);
-  }
-
-  function selectAgency(agency: AgencyOption) {
-    setSelectedAgency(agency);
-    updateParams((params) => params.set("agency", String(agency.id)));
   }
 
   function changeSearch(value: string) {
@@ -227,7 +214,7 @@ export function UserDirectory({
         actions={
           <>
             <Button asChild variant="outline">
-              <Link href={routes.users.invitations}>Pending invitations</Link>
+              <Link href={routes.users.invitations}>Invitations</Link>
             </Button>
             <Button asChild>
               <Link href={routes.users.invite}>
@@ -239,20 +226,7 @@ export function UserDirectory({
         description="Review agency users, their access, and invitation status."
         title="Users"
       />
-      <FilterBar className="lg:grid lg:grid-cols-[minmax(13rem,1.6fr)_minmax(13rem,1.4fr)_minmax(10rem,1fr)_minmax(10rem,1fr)]">
-        {isSuperAdmin && (
-          <div>
-            <Label htmlFor="user-agency">Agency</Label>
-            <div className="mt-1.5">
-              <AgencyCombobox
-                canCreate={false}
-                id="user-agency"
-                onChange={selectAgency}
-                value={selectedAgency}
-              />
-            </div>
-          </div>
-        )}
+      <FilterBar className="lg:grid lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1fr)_minmax(10rem,1fr)]">
         <div>
           <Label htmlFor="user-search">Search users</Label>
           <div className="relative mt-1.5">
@@ -313,7 +287,7 @@ export function UserDirectory({
       )}
       {currentUser.isSuccess && isSuperAdmin && !agencyId && (
         <StatePanel
-          description="Select an agency to review its users."
+          description="Select an agency from the header to review its users."
           kind="empty"
           title="Choose an agency"
         />
@@ -339,11 +313,7 @@ export function UserDirectory({
             action={
               hasFilters ? (
                 <Button
-                  onClick={() =>
-                    router.replace(
-                      `${routes.users.index}${isSuperAdmin ? `?agency=${agencyId}` : ""}`,
-                    )
-                  }
+                  onClick={() => router.replace(routes.users.index)}
                   variant="outline"
                 >
                   Clear filters

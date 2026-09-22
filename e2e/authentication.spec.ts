@@ -2,7 +2,6 @@
 
 const authRoutes = [
   ["/login", "Welcome back"],
-  ["/signup", "Activate your admin account"],
   ["/forgot-password", "Reset your password"],
   ["/reset-password", "Set a new password"],
   ["/forbidden", "You cannot access this page"],

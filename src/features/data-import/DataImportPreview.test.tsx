@@ -1,14 +1,17 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { authKeys } from "@/features/auth/queries";
 import { csvImportPaths, workspacePaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
+import { renderWithScope } from "@/test/renderWithScope";
 
 import { DataImportPreview } from "./DataImportPreview";
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -21,26 +24,9 @@ beforeAll(() => {
 afterEach(cleanup);
 
 function renderWithProviders(capability: "AGENCY_ADMIN" | "VIEWER") {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  renderWithScope(<DataImportPreview />, {
+    membership: { agencyId: 12, roleCode: capability },
   });
-  queryClient.setQueryData(authKeys.me(), {
-    id: 1,
-    name: "Agency Admin",
-    email: "admin@example.test",
-    platformRoleCode: null,
-    membership: {
-      agencyId: 12,
-      roleCode: capability,
-      clientId: null,
-      workspaceIds: [],
-    },
-  });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <DataImportPreview />
-    </QueryClientProvider>,
-  );
 }
 
 function mockDestinationLookups() {

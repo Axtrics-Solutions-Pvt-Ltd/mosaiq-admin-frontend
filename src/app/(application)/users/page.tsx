@@ -35,7 +35,6 @@ export default async function UsersPage({
   return (
     <UserDirectory
       page={positive(params.page) ?? 1}
-      requestedAgencyId={positive(params.agency)}
       search={text(params.search)}
       status={status(params.status)}
       role={role(params.role)}

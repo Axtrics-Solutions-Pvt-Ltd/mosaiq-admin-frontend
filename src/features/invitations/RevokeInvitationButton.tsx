@@ -11,10 +11,12 @@ import { useRevokeInvitation } from "./queries";
 export function RevokeInvitationButton({
   agencyId,
   invitationId,
+  canRevoke = true,
   onRevoked,
 }: {
   agencyId: number;
   invitationId: number;
+  canRevoke?: boolean;
   onRevoked?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,6 +36,10 @@ export function RevokeInvitationButton({
       );
     }
   }
+  if (!canRevoke) {
+    return <span className="text-muted-foreground text-sm">No action</span>;
+  }
+
   return (
     <>
       <Button

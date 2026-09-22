@@ -4,14 +4,10 @@ import { describe, expect, it } from "vitest";
 import { invitationPaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 
-import {
-  createInvitation,
-  listPendingInvitations,
-  revokeInvitation,
-} from "./api";
+import { createInvitation, listInvitations, revokeInvitation } from "./api";
 
 describe("invitation API", () => {
-  it("lists the selected agency's pending invitations with pagination", async () => {
+  it("lists the selected agency's invitations with pagination", async () => {
     let query = "";
     server.use(
       http.get(invitationPaths.collection(12), ({ request }) => {
@@ -34,10 +30,25 @@ describe("invitation API", () => {
         });
       }),
     );
-    const response = await listPendingInvitations(12, 2);
+    const response = await listInvitations(12, 2, "all");
     expect(query).toBe("?page=2");
     expect(response.data[0]?.id).toBe(34);
     expect(response.meta.total).toBe(21);
+  });
+
+  it("forwards a status filter when one is selected", async () => {
+    let query = "";
+    server.use(
+      http.get(invitationPaths.collection(12), ({ request }) => {
+        query = new URL(request.url).search;
+        return HttpResponse.json({
+          data: [],
+          meta: { current_page: 1, last_page: 1, total: 0 },
+        });
+      }),
+    );
+    await listInvitations(12, 1, "rejected");
+    expect(query).toBe("?page=1&status=rejected");
   });
 
   it("posts the confirmed payload and accepts an empty success response", async () => {

@@ -254,27 +254,37 @@ function WorkspaceForm({
     {
       value: "modules",
       label: "Modules",
-      content: (
-        <PreviewSection
-          title="Modules"
-          description="Module controls are shown for review. The API cannot save these choices yet."
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              "Reporting Dashboard",
-              "Marketing Intelligence",
-              "Media Mix Model",
-            ].map((label) => (
-              <label
-                key={label}
-                className="bg-muted flex items-center gap-3 rounded-lg border p-4 text-sm"
+      content: record ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Module access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground text-sm">
+              KPI and module visibility for this workspace is managed on the
+              Curation screen, not this form.
+            </p>
+            <Button asChild variant="outline">
+              <Link
+                href={`${routes.curation}?agency=${agencyId}&workspace=${record.id}`}
               >
-                <input type="checkbox" disabled />
-                {label}
-              </label>
-            ))}
-          </div>
-        </PreviewSection>
+                Open curation
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Module access</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-sm">
+              Save the workspace first, then configure module and KPI visibility
+              from its details page.
+            </p>
+          </CardContent>
+        </Card>
       ),
     },
     {
