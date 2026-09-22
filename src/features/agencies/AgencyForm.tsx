@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
 import { Textarea } from "@/components/ui/Textarea";
+import { toast } from "@/components/ui/Toast";
 import { routes } from "@/config/routes";
 import { AgencyLogo } from "@/features/agencies/AgencyLogo";
 import type {
@@ -178,6 +179,11 @@ export function AgencyForm({
         mode === "create"
           ? await createMutation.mutateAsync(payload)
           : await updateMutation.mutateAsync({ agencyId: record!.id, payload });
+      toast({
+        title:
+          mode === "create" ? "Agency created." : "Agency updated.",
+        tone: "success",
+      });
       router.push(routes.agencies.detail(String(saved.id)));
       router.refresh();
     } catch (error) {
@@ -189,8 +195,13 @@ export function AgencyForm({
           if (field) setError(field, { type: "server", message });
         }
         setSubmitError(error.message);
+        toast({ title: error.message, tone: "error" });
       } else {
         setSubmitError("The agency could not be saved. Please try again.");
+        toast({
+          title: "The agency could not be saved. Please try again.",
+          tone: "error",
+        });
       }
       document.getElementById("agency-form-errors")?.focus();
     }

@@ -18,7 +18,12 @@ import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
-import { routes, workspaceDetailUrl, workspaceScope } from "@/config/routes";
+import {
+  clientScope,
+  routes,
+  workspaceDetailUrl,
+  workspaceScope,
+} from "@/config/routes";
 import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
 import { ApiError } from "@/lib/api/errors";
@@ -515,25 +520,59 @@ export function WorkspaceCreateScreen({
               </Select>
             </FormField>
             <FormField id="create-workspace-client" label="Client">
-              <Select
-                id="create-workspace-client"
-                value={clientId || ""}
-                onChange={(event) =>
-                  select(agencyId, Number(event.target.value))
-                }
-              >
-                <option value="">Select client</option>
-                {clients.data?.data.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </Select>
+              {clients.data?.data.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  This agency has no clients yet.{" "}
+                  <Link
+                    className="text-primary hover:underline"
+                    href={routes.clients.new + clientScope(agencyId)}
+                  >
+                    Add a client
+                  </Link>{" "}
+                  before creating a workspace.
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select
+                    className="flex-1"
+                    id="create-workspace-client"
+                    value={clientId || ""}
+                    onChange={(event) =>
+                      select(agencyId, Number(event.target.value))
+                    }
+                  >
+                    <option value="">Select client</option>
+                    {clients.data?.data.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button asChild size="sm" type="button" variant="outline">
+                    <Link href={routes.clients.new + clientScope(agencyId)}>
+                      Add client
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </FormField>
           </FormGrid>
         </CardContent>
       </Card>
-      {clientId ? (
+      {clients.data?.data.length === 0 ? (
+        <StatePanel
+          kind="empty"
+          title="This agency has no clients yet"
+          description="Create a client for this agency first; a default workspace is created for it automatically."
+          action={
+            <Button asChild>
+              <Link href={routes.clients.new + clientScope(agencyId)}>
+                Add client
+              </Link>
+            </Button>
+          }
+        />
+      ) : clientId ? (
         <WorkspaceForm
           key={agencyId + "-" + clientId}
           mode="create"

@@ -11,11 +11,18 @@ export const routes = {
   signedOut: "/login?reason=signed-out",
   sessionExpired: "/login?reason=session-expired",
   dashboard: "/dashboard",
+  profile: "/profile",
   agencies: {
     index: "/agencies",
     new: "/agencies/new",
     detail: (id: string) => routeWithId("/agencies", id),
     edit: (id: string) => `${routeWithId("/agencies", id)}/edit` as const,
+  },
+  clients: {
+    index: "/clients",
+    new: "/clients/new",
+    detail: (id: string) => routeWithId("/clients", id),
+    edit: (id: string) => `${routeWithId("/clients", id)}/edit` as const,
   },
   workspaces: {
     index: "/workspaces",
@@ -39,6 +46,16 @@ export const routes = {
   designSystem: "/design-system",
 } as const;
 
+export function clientScope(agencyId: number) {
+  const params = new URLSearchParams({ agency: String(agencyId) });
+  return "?" + params;
+}
+export function clientDetailUrl(clientId: number, agencyId: number) {
+  return routes.clients.detail(String(clientId)) + clientScope(agencyId);
+}
+export function clientEditUrl(clientId: number, agencyId: number) {
+  return routes.clients.edit(String(clientId)) + clientScope(agencyId);
+}
 export function workspaceScope(agencyId: number, clientId: number) {
   const params = new URLSearchParams({
     agency: String(agencyId),

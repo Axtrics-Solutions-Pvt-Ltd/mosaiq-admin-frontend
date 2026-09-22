@@ -1,7 +1,14 @@
 import { forwardAgencyRequest } from "@/lib/api/agency-server";
 import { userPaths } from "@/lib/api/paths";
 
-const allowedFilters = ["search", "status", "role", "page", "per_page"];
+const allowedFilters = [
+  "workspace_id",
+  "search",
+  "status",
+  "role",
+  "page",
+  "per_page",
+];
 
 export async function GET(
   request: Request,

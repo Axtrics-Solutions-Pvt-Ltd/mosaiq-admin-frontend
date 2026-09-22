@@ -2,6 +2,8 @@ import { forwardAdminRequest } from "@/lib/api/admin-server";
 import { importHistoryPaths } from "@/lib/api/paths";
 
 const allowedFilters = [
+  "agency_id",
+  "client_id",
   "workspace_id",
   "type",
   "status",

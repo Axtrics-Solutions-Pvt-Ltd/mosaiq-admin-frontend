@@ -1,8 +1,8 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, it, vi } from "vitest";
 
-import { invitationPaths } from "@/lib/api/paths";
+import { agencyPaths, invitationPaths, workspacePaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
 
@@ -12,6 +12,34 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
+
+const agenciesResponse = {
+  data: [
+    {
+      id: 1,
+      display_name: "Northstar Digital",
+      logo_url: null,
+      primary_admin: null,
+      workspace_count: 1,
+      user_count: 1,
+      default_currency: "USD",
+      status: "active",
+      created_at: null,
+      last_activity_at: null,
+    },
+  ],
+  meta: {
+    current_page: 1,
+    last_page: 1,
+    total: 1,
+    summary: {
+      total_agencies: 1,
+      active_agencies: 1,
+      total_workspaces: 1,
+      total_agency_users: 1,
+    },
+  },
+};
 
 it("lists pending invitations for an Agency Admin's own agency", async () => {
   let requestedPath = "";
@@ -45,4 +73,82 @@ it("lists pending invitations for an Agency Admin's own agency", async () => {
   expect(screen.getAllByText("Client User")[0]).toBeVisible();
   expect(screen.getAllByText("2 workspaces")[0]).toBeVisible();
   expect(requestedPath).toBe("/api/v1/admin/agencies/12/invitations");
+});
+
+it("lets a Super Admin choose an agency from the page and loads its invitations", async () => {
+  let requestedPath = "";
+  server.use(
+    http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
+    http.get(invitationPaths.collection(1), ({ request }) => {
+      requestedPath = new URL(request.url).pathname;
+      return HttpResponse.json({
+        data: [
+          {
+            id: 55,
+            email: "invited@example.test",
+            agency_id: 1,
+            client_id: null,
+            role_code: "AGENCY_ADMIN",
+            workspace_ids: [],
+            expires_at: "2026-09-28T10:00:00Z",
+            accepted_at: null,
+            revoked_at: null,
+          },
+        ],
+        meta: { current_page: 1, last_page: 1, total: 1 },
+      });
+    }),
+  );
+  renderWithScope(<InvitationDirectory page={1} status="all" />, {
+    platformRoleCode: "SUPER_ADMIN",
+  });
+  expect(await screen.findByText("Choose an agency")).toBeVisible();
+  fireEvent.change(await screen.findByLabelText("Agency"), {
+    target: { value: "1" },
+  });
+  expect(
+    (await screen.findAllByText("invited@example.test"))[0],
+  ).toBeVisible();
+  expect(requestedPath).toBe("/api/v1/admin/agencies/1/invitations");
+});
+
+it("filters invitations by workspace for an Agency Admin", async () => {
+  let requestedUrl = "";
+  server.use(
+    http.get(workspacePaths.agencyCollection(12), () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: 7,
+            agency_id: 12,
+            client_id: 4,
+            name: "Northstar Growth",
+            timezone: "UTC",
+            currency: "USD",
+            status: "active",
+            created_at: null,
+            updated_at: null,
+          },
+        ],
+        meta: { current_page: 1, last_page: 1, total: 1 },
+      }),
+    ),
+    http.get(invitationPaths.collection(12), ({ request }) => {
+      requestedUrl = request.url;
+      return HttpResponse.json({
+        data: [],
+        meta: { current_page: 1, last_page: 1, total: 0 },
+      });
+    }),
+  );
+  renderWithScope(<InvitationDirectory page={1} status="all" />, {
+    membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
+  });
+  const workspaceSelect = await screen.findByLabelText("Workspace");
+  expect(await screen.findByText("Northstar Growth")).toBeInTheDocument();
+  await screen.findByText("No invitations found");
+  fireEvent.change(workspaceSelect, { target: { value: "7" } });
+  await waitFor(() =>
+    expect(new URL(requestedUrl).searchParams.get("workspace_id")).toBe("7"),
+  );
 });

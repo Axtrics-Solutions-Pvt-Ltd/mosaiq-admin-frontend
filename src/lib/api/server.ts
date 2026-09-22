@@ -51,7 +51,8 @@ export async function forwardAuthRequest(
   const hasBody =
     operation === "login" ||
     operation === "forgotPassword" ||
-    operation === "resetPassword";
+    operation === "resetPassword" ||
+    operation === "changePassword";
   if (isMutation && incoming.headers.get("origin") !== config.adminOrigin) {
     return Response.json(
       { message: "Invalid request origin." },

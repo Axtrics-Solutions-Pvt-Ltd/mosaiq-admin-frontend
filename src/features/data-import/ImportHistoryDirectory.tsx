@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
+import { useAgencies, useAgency } from "@/features/agencies/queries";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import type { ClientRecord, WorkspaceRecord } from "@/features/workspaces/contracts";
@@ -78,9 +79,15 @@ export function ImportHistoryDirectory({
 
   const agencyId = scope.agencyId;
 
+  const [pageAgencyId, setPageAgencyId] = useState<number>();
+  const effectiveAgencyId = agencyId ?? pageAgencyId;
+  const agenciesQuery = useAgencies({ page: 1, per_page: 100 });
+  const agencies = agenciesQuery.data?.data ?? [];
+  const lockedAgencyQuery = useAgency(agencyId ?? 0);
+
   const [clientSearch, setClientSearch] = useState("");
   const [client, setClient] = useState<ClientRecord>();
-  const clientsQuery = useInfiniteClients(agencyId ?? 0, clientSearch);
+  const clientsQuery = useInfiniteClients(effectiveAgencyId ?? 0, clientSearch);
   const clientOptions = uniqueById(
     clientsQuery.data?.pages.flatMap((entry) => entry.data) ?? [],
   );
@@ -88,7 +95,7 @@ export function ImportHistoryDirectory({
   const [workspaceSearch, setWorkspaceSearch] = useState("");
   const [workspace, setWorkspace] = useState<WorkspaceRecord>();
   const workspacesQuery = useInfiniteWorkspaces(
-    agencyId ?? 0,
+    client?.agency_id ?? effectiveAgencyId ?? 0,
     client?.id ?? 0,
     workspaceSearch,
   );
@@ -96,17 +103,24 @@ export function ImportHistoryDirectory({
     workspacesQuery.data?.pages.flatMap((entry) => entry.data) ?? [],
   );
 
-  const [priorAgencyId, setPriorAgencyId] = useState(agencyId);
-  if (priorAgencyId !== agencyId) {
-    setPriorAgencyId(agencyId);
+  const resolvedAgencyId = client?.agency_id ?? effectiveAgencyId;
+
+  const [priorHeaderAgencyId, setPriorHeaderAgencyId] = useState(agencyId);
+  if (priorHeaderAgencyId !== agencyId) {
+    setPriorHeaderAgencyId(agencyId);
+    setPageAgencyId(undefined);
+  }
+
+  const [priorAgencyId, setPriorAgencyId] = useState(effectiveAgencyId);
+  if (priorAgencyId !== effectiveAgencyId) {
+    setPriorAgencyId(effectiveAgencyId);
     setClient(undefined);
     setWorkspace(undefined);
   }
 
-  // The import-history endpoint has no agency-scoping parameter yet, only
-  // workspace_id, so header agency scope narrows the client/workspace
-  // pickers above but isn't sent to the request itself.
   const filters = {
+    agency_id: resolvedAgencyId,
+    client_id: client?.id,
     workspace_id: workspace?.id,
     type: csvImportTypes.includes(type as (typeof csvImportTypes)[number])
       ? (type as (typeof csvImportTypes)[number])
@@ -214,25 +228,57 @@ export function ImportHistoryDirectory({
         <>
           <FilterBar className="flex-wrap">
             <div className="w-full sm:max-w-56">
+              <Label htmlFor="history-agency">Agency</Label>
+              {agencyId ? (
+                <p className="bg-muted text-muted-foreground mt-1.5 flex min-h-10 items-center rounded-sm border px-3 text-sm">
+                  {lockedAgencyQuery.data?.display_name ??
+                    `Agency #${agencyId}`}
+                </p>
+              ) : (
+                <Select
+                  className="mt-1.5"
+                  id="history-agency"
+                  onChange={(event) => {
+                    setPageAgencyId(
+                      event.target.value
+                        ? Number(event.target.value)
+                        : undefined,
+                    );
+                    setClient(undefined);
+                    setWorkspace(undefined);
+                    updateQuery({ workspace_id: undefined });
+                  }}
+                  value={pageAgencyId ?? ""}
+                >
+                  <option value="">All agencies</option>
+                  {agencies.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.display_name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </div>
+            <div className="w-full sm:max-w-56">
               <Label htmlFor="history-client">Client</Label>
               <div className="mt-1.5">
                 <PaginatedCombobox
-                  disabled={!agencyId}
                   getKey={(option) => String(option.id)}
                   getLabel={(option) => option.name}
                   hasNextPage={clientsQuery.hasNextPage}
                   id="history-client"
                   isFetchingNextPage={clientsQuery.isFetchingNextPage}
-                  isLoading={clientsQuery.isPending && Boolean(agencyId)}
+                  isLoading={clientsQuery.isPending}
                   loadNextPage={() => void clientsQuery.fetchNextPage()}
                   mode="single"
                   onChange={(next) => {
                     setClient(next);
                     setWorkspace(undefined);
+                    updateQuery({ workspace_id: undefined });
                   }}
                   onSearchChange={setClientSearch}
                   options={clientOptions}
-                  placeholder={agencyId ? "All clients" : "Select an agency first"}
+                  placeholder="All clients"
                   renderOption={(option) => option.name}
                   searchPlaceholder="Search client name"
                   value={client}

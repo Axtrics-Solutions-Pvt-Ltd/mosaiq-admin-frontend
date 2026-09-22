@@ -13,10 +13,12 @@ export async function listInvitations(
   agencyId: number,
   page: number,
   status: InvitationStatus | "all",
+  workspaceId?: number,
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({ page: String(page) });
   if (status !== "all") params.set("status", status);
+  if (workspaceId) params.set("workspace_id", String(workspaceId));
   const result = await apiRequest<unknown>(
     `${invitationPaths.collection(agencyId)}?${params}`,
     { signal },

@@ -9,7 +9,7 @@ import {
 describe("navigation configuration", () => {
   it("keeps every authenticated screen group in one unique configuration", () => {
     expect(navigationGroups).toHaveLength(5);
-    expect(navigationItems).toHaveLength(10);
+    expect(navigationItems).toHaveLength(11);
     expect(new Set(navigationItems.map((item) => item.href)).size).toBe(
       navigationItems.length,
     );

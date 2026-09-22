@@ -2,6 +2,7 @@ export type Capability =
   | "dashboard.view"
   | "agencies.manage"
   | "agencies.create"
+  | "clients.manage"
   | "workspaces.manage"
   | "users.manage"
   | "roles.view"
@@ -14,6 +15,7 @@ export type Capability =
 const orgAdminCapabilities: readonly Capability[] = [
   "dashboard.view",
   "agencies.manage",
+  "clients.manage",
   "workspaces.manage",
   "users.manage",
   "roles.view",

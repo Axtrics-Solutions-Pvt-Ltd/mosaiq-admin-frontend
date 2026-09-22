@@ -11,6 +11,8 @@ import {
   getClient,
   getWorkspace,
   listAgencyWorkspaces,
+  listAllClients,
+  listAllWorkspaces,
   listClients,
   listWorkspaces,
   updateWorkspace,
@@ -42,25 +44,40 @@ export function useClients(agencyId: number, page = 1) {
 }
 
 export function useInfiniteClients(agencyId: number, search: string) {
+  const isAllAgencies = !valid(agencyId);
   return useInfiniteQuery({
-    queryKey: ["workspaces", "client-selector", agencyId, search] as const,
+    queryKey: [
+      "workspaces",
+      "client-selector",
+      isAllAgencies ? "all" : agencyId,
+      search,
+    ] as const,
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
-      listClients(
-        agencyId,
-        {
-          search: search || undefined,
-          status: "active",
-          page: pageParam,
-          per_page: 40,
-        },
-        signal,
-      ),
+      isAllAgencies
+        ? listAllClients(
+            {
+              search: search || undefined,
+              status: "active",
+              page: pageParam,
+              per_page: 40,
+            },
+            signal,
+          )
+        : listClients(
+            agencyId,
+            {
+              search: search || undefined,
+              status: "active",
+              page: pageParam,
+              per_page: 40,
+            },
+            signal,
+          ),
     getNextPageParam: (page) =>
       page.meta.current_page < page.meta.last_page
         ? page.meta.current_page + 1
         : undefined,
-    enabled: valid(agencyId),
   });
 }
 export function useClient(agencyId: number, clientId: number) {
@@ -91,6 +108,23 @@ export function useAgencyWorkspaces(
     queryKey: workspaceKeys.byAgency(agencyId, filters),
     queryFn: ({ signal }) => listAgencyWorkspaces(agencyId, filters, signal),
     enabled: valid(agencyId),
+  });
+}
+
+export function useAllWorkspaces(
+  agencyId: number | undefined,
+  filters: WorkspaceListFilters,
+) {
+  const scopedAgencyId = valid(agencyId ?? 0) ? agencyId : undefined;
+  return useQuery({
+    queryKey: [
+      "workspaces",
+      "all",
+      scopedAgencyId ?? "all",
+      filters,
+    ] as const,
+    queryFn: ({ signal }) =>
+      listAllWorkspaces({ ...filters, agency_id: scopedAgencyId }, signal),
   });
 }
 

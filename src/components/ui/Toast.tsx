@@ -96,8 +96,9 @@ function getSnapshot() {
   return toasts;
 }
 
+const emptyToasts: ToastRecord[] = [];
 function getServerSnapshot(): ToastRecord[] {
-  return [];
+  return emptyToasts;
 }
 
 function isClientRendered() {

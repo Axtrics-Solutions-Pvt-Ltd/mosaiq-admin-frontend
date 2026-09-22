@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api/client";
-import { workspacePaths } from "@/lib/api/paths";
+import { clientPaths, workspacePaths } from "@/lib/api/paths";
 
 import {
   clientListSchema,
@@ -36,6 +36,16 @@ export async function listClients(
   );
   return clientListSchema.parse(result);
 }
+export async function listAllClients(
+  filters: ClientListFilters & { agency_id?: number },
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    withQuery(clientPaths.allCollection, filters),
+    { signal },
+  );
+  return clientListSchema.parse(result);
+}
 export async function getClient(
   agencyId: number,
   clientId: number,
@@ -61,6 +71,16 @@ export async function listWorkspaces(
 ) {
   const result = await apiRequest<unknown>(
     withQuery(workspacePaths.collection(agencyId, clientId), filters),
+    { signal },
+  );
+  return workspaceListSchema.parse(result);
+}
+export async function listAllWorkspaces(
+  filters: WorkspaceListFilters & { agency_id?: number },
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    withQuery(workspacePaths.allCollection, filters),
     { signal },
   );
   return workspaceListSchema.parse(result);

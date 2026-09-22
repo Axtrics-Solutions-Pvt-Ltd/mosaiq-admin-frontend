@@ -4,6 +4,7 @@ import {
   type AgencyUserFilters,
   getAgencyUser,
   listAgencyUsers,
+  listAllAgencyUsers,
   updateAgencyUser,
 } from "./api";
 import type { UpdateAgencyUserPayload } from "./contracts";
@@ -12,15 +13,24 @@ export const userKeys = {
   all: ["agency-users"] as const,
   list: (agencyId: number, filters: AgencyUserFilters) =>
     ["agency-users", "list", agencyId, filters] as const,
+  listAll: (filters: AgencyUserFilters) =>
+    ["agency-users", "list-all", filters] as const,
   detail: (agencyId: number, userId: number) =>
     ["agency-users", "detail", agencyId, userId] as const,
 };
 
-export function useAgencyUsers(agencyId: number, filters: AgencyUserFilters) {
+export function useAgencyUsers(
+  agencyId: number | undefined,
+  filters: AgencyUserFilters,
+) {
   return useQuery({
-    queryKey: userKeys.list(agencyId, filters),
-    queryFn: ({ signal }) => listAgencyUsers(agencyId, filters, signal),
-    enabled: Number.isSafeInteger(agencyId) && agencyId > 0,
+    queryKey: agencyId
+      ? userKeys.list(agencyId, filters)
+      : userKeys.listAll(filters),
+    queryFn: ({ signal }) =>
+      agencyId
+        ? listAgencyUsers(agencyId, filters, signal)
+        : listAllAgencyUsers(filters, signal),
   });
 }
 

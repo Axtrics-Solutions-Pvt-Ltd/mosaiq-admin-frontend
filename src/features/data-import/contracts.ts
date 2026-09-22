@@ -1,6 +1,20 @@
 import { z } from "zod";
 
-export const csvImportTypes = ["reporting", "marketing", "mmm"] as const;
+export const csvImportTypes = [
+  "reporting",
+  "marketing",
+  "mmm",
+  "mmm_channel_performance",
+  "geography",
+  "audience_segments",
+  "campaigns",
+  "creative_assets",
+  "audience_overview",
+  "cultural_identity",
+  "demographics",
+  "data_readiness",
+  "model_input_readiness",
+] as const;
 export const csvImportTypeSchema = z.enum(csvImportTypes);
 export type CsvImportType = z.infer<typeof csvImportTypeSchema>;
 
@@ -8,6 +22,16 @@ export const datasetTypeLabels: Record<CsvImportType, string> = {
   reporting: "Reporting",
   marketing: "Marketing Intelligence",
   mmm: "Media Mix Model",
+  mmm_channel_performance: "MMM Channel Performance",
+  geography: "Geography",
+  audience_segments: "Audience Segments",
+  campaigns: "Campaigns",
+  creative_assets: "Creative Assets",
+  audience_overview: "Audience Overview",
+  cultural_identity: "Cultural Identity",
+  demographics: "Demographics",
+  data_readiness: "Data Readiness",
+  model_input_readiness: "Model Input Readiness",
 };
 
 export const csvImportModes = ["append", "replace"] as const;
@@ -81,52 +105,47 @@ export const importHistoryStatuses = [
 export type ImportHistoryStatus = (typeof importHistoryStatuses)[number];
 
 /**
- * Column reference only; the API does not expose a machine-readable
- * template. This is documentation copy, not sample or fixture data.
+ * A single accepted template version for a dataset type, as served by
+ * `GET csv-templates`. `columns` is the server's header for the *current*
+ * `version`; older `accepted_versions` are still valid uploads but their
+ * column lists are not repeated here.
  */
-export const datasetColumnGuides: Record<
-  CsvImportType,
-  { description: string; columns: readonly string[] }
-> = {
-  reporting: {
-    description: "Campaign performance by date, channel, and campaign.",
-    columns: [
-      "date",
-      "channel",
-      "campaign",
-      "impressions",
-      "clicks",
-      "spend",
-      "revenue",
-    ],
-  },
-  marketing: {
-    description: "Lead and conversion performance by date, channel, and campaign.",
-    columns: ["date", "channel", "campaign", "spend", "leads", "conversions"],
-  },
-  mmm: {
-    description: "Time series spend and outcome inputs by date and channel.",
-    columns: ["date", "channel", "spend", "outcome"],
-  },
-};
+export const csvTemplateSchema = z.object({
+  type: z.string(),
+  version: z.number().int(),
+  accepted_versions: z.array(z.number().int()),
+  columns: z.array(z.string()),
+});
+export type CsvTemplate = z.infer<typeof csvTemplateSchema>;
+export const csvTemplateListResponseSchema = z.object({
+  data: z.array(csvTemplateSchema),
+});
 
-/**
- * Illustrative rows for the downloadable sample CSV template only. Not used
- * to render any preview or validation UI. Dates use ISO 8601 (YYYY-MM-DD).
- */
-export const datasetSampleRows: Record<CsvImportType, readonly (readonly string[])[]> = {
-  reporting: [
-    ["2026-01-15", "Paid Social", "Spring Launch", "120000", "3400", "1500.00", "8600.00"],
-    ["2026-01-16", "Search", "Spring Launch", "45000", "1200", "980.50", "4200.00"],
-  ],
-  marketing: [
-    ["2026-01-15", "Paid Social", "Spring Launch", "1500.00", "45", "20"],
-    ["2026-01-16", "Search", "Spring Launch", "980.50", "30", "12"],
-  ],
-  mmm: [
-    ["2026-01-15", "Paid Social", "1500.00", "8600.00"],
-    ["2026-01-16", "Search", "980.50", "4200.00"],
-  ],
-};
+export function csvTemplateColumns(template: CsvTemplate): string[] {
+  return template.columns;
+}
+
+export const creativeAssetSchema = z.object({
+  id: z.number().int().positive(),
+  agency_id: z.number().int().positive(),
+  workspace_id: z.number().int().positive(),
+  title: z.string(),
+  campaign_name: z.string(),
+  channel: z.string(),
+  status: z.string().nullable(),
+  impressions: z.number().int().nonnegative(),
+  clicks: z.number().int().nonnegative(),
+  conversions: z.number().int().nonnegative(),
+  spend: z.string(),
+  asset_url: z.string().nullable(),
+});
+export type CreativeAssetRecord = z.infer<typeof creativeAssetSchema>;
+export const creativeAssetListResponseSchema = z.object({
+  data: z.array(creativeAssetSchema),
+});
+export const creativeAssetResponseSchema = z.object({
+  data: creativeAssetSchema,
+});
 
 export const maxCsvImportFileSizeBytes = 2048 * 1024;
+export const maxCreativeAssetFileSizeBytes = 10240 * 1024;

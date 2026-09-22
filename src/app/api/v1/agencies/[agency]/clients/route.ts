@@ -1,12 +1,18 @@
+import { clientCreateSchema } from "@/features/clients/contracts";
 import { forwardAgencyRequest } from "@/lib/api/agency-server";
 import { workspacePaths } from "@/lib/api/paths";
+
+function validAgencyId(value: string) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+}
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ agency: string }> },
 ) {
-  const agencyId = Number((await params).agency);
-  if (!Number.isSafeInteger(agencyId) || agencyId <= 0)
+  const agencyId = validAgencyId((await params).agency);
+  if (!agencyId)
     return Response.json({ message: "Invalid agency." }, { status: 400 });
   const incoming = new URL(request.url).searchParams;
   const query = new URLSearchParams();
@@ -18,5 +24,32 @@ export async function GET(
     request,
     workspacePaths.clients(agencyId) + (query.size ? "?" + query : ""),
     "GET",
+  );
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ agency: string }> },
+) {
+  const agencyId = validAgencyId((await params).agency);
+  if (!agencyId)
+    return Response.json({ message: "Invalid agency." }, { status: 400 });
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ message: "Invalid request body." }, { status: 400 });
+  }
+  const parsed = clientCreateSchema.safeParse(body);
+  if (!parsed.success)
+    return Response.json(
+      { message: "Invalid client details." },
+      { status: 422 },
+    );
+  return forwardAgencyRequest(
+    request,
+    workspacePaths.clients(agencyId),
+    "POST",
+    parsed.data,
   );
 }

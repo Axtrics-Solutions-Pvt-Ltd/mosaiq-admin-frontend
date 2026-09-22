@@ -9,6 +9,8 @@ import {
 } from "./contracts";
 
 export type AgencyUserFilters = {
+  agency_id?: number;
+  workspace_id?: number;
   search?: string;
   status?: "invited" | "active" | "inactive";
   role?: AgencyUser["role_code"];
@@ -27,6 +29,21 @@ export async function listAgencyUsers(
   }
   const result = await apiRequest<unknown>(
     `${userPaths.collection(agencyId)}${params.size ? `?${params}` : ""}`,
+    { signal },
+  );
+  return agencyUserListResponseSchema.parse(result);
+}
+
+export async function listAllAgencyUsers(
+  filters: AgencyUserFilters,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  const result = await apiRequest<unknown>(
+    `${userPaths.allCollection}${params.size ? `?${params}` : ""}`,
     { signal },
   );
   return agencyUserListResponseSchema.parse(result);

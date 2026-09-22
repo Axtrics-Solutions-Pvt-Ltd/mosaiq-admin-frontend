@@ -109,6 +109,36 @@ export async function forwardAdminRequest(
   }
 }
 
+export async function forwardAdminFileDownload(request: Request, path: string) {
+  try {
+    const config = getServerApiConfig();
+    const headers = buildForwardHeaders(request, config, "GET", false);
+    const upstream = await fetch(new URL(path, config.apiOrigin), {
+      method: "GET",
+      headers,
+      credentials: "include",
+      cache: "no-store",
+      redirect: "manual",
+    });
+    if (!upstream.ok) return relayUpstream(upstream);
+    const responseHeaders = new Headers({ "Cache-Control": "no-store" });
+    const contentType = upstream.headers.get("Content-Type");
+    if (contentType) responseHeaders.set("Content-Type", contentType);
+    const contentDisposition = upstream.headers.get("Content-Disposition");
+    if (contentDisposition)
+      responseHeaders.set("Content-Disposition", contentDisposition);
+    return new Response(await upstream.text(), {
+      status: upstream.status,
+      headers: responseHeaders,
+    });
+  } catch {
+    return Response.json(
+      { message: "The service is unavailable." },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+
 export async function forwardAdminUpload(
   request: Request,
   path: string,

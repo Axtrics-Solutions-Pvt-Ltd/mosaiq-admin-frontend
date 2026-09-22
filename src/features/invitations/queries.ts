@@ -12,8 +12,12 @@ import type { InvitationStatus, InvitePayload } from "./contracts";
 
 export const invitationKeys = {
   all: ["invitations"] as const,
-  list: (agencyId: number, page: number, status: InvitationStatus | "all") =>
-    ["invitations", "list", agencyId, status, page] as const,
+  list: (
+    agencyId: number,
+    page: number,
+    status: InvitationStatus | "all",
+    workspaceId: number | undefined,
+  ) => ["invitations", "list", agencyId, status, page, workspaceId] as const,
   inspect: (token: string) => ["invitations", "inspect", token] as const,
 };
 
@@ -21,10 +25,12 @@ export function useInvitations(
   agencyId: number,
   page: number,
   status: InvitationStatus | "all",
+  workspaceId?: number,
 ) {
   return useQuery({
-    queryKey: invitationKeys.list(agencyId, page, status),
-    queryFn: ({ signal }) => listInvitations(agencyId, page, status, signal),
+    queryKey: invitationKeys.list(agencyId, page, status, workspaceId),
+    queryFn: ({ signal }) =>
+      listInvitations(agencyId, page, status, workspaceId, signal),
     enabled: Number.isSafeInteger(agencyId) && agencyId > 0,
   });
 }

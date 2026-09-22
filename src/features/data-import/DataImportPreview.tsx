@@ -8,7 +8,9 @@ import {
   FileSpreadsheet,
   Info,
   LoaderCircle,
+  Paperclip,
   RotateCcw,
+  SquareArrowOutUpRight,
   UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,29 +28,41 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
+import { useAgencies, useAgency } from "@/features/agencies/queries";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
-import type { ClientRecord, WorkspaceRecord } from "@/features/workspaces/contracts";
-import { useInfiniteClients, useInfiniteWorkspaces } from "@/features/workspaces/queries";
+import type {
+  ClientRecord,
+  WorkspaceRecord,
+} from "@/features/workspaces/contracts";
+import {
+  useInfiniteClients,
+  useInfiniteWorkspaces,
+} from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 import { formatDate, formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils/cn";
 import { useScope } from "@/providers/ScopeProvider";
 
+import { csvTemplateDownloadUrl } from "./api";
 import {
+  type CreativeAssetRecord,
   type CsvImportMode,
   csvImportModes,
   type CsvImportType,
   csvImportTypes,
-  datasetColumnGuides,
-  datasetSampleRows,
+  csvTemplateColumns,
   datasetTypeLabels,
+  maxCreativeAssetFileSizeBytes,
   maxCsvImportFileSizeBytes,
 } from "./contracts";
 import {
   dataImportKeys,
+  useAttachCreativeAssetFile,
   useConfirmCsvImport,
+  useCreativeAssets,
   useCsvImport,
+  useCsvTemplates,
   usePreviewCsvImport,
   useRetryCsvImport,
 } from "./queries";
@@ -74,7 +88,8 @@ function ImportStatusBadge({ status }: { status: string }) {
     return (
       <StatusBadge
         status={
-          status as "previewed" | "invalid" | "processing" | "imported" | "failed"
+          status as
+            "previewed" | "invalid" | "processing" | "imported" | "failed"
         }
       />
     );
@@ -85,12 +100,14 @@ function ValidationErrorEntry({ error }: { error: unknown }) {
   if (error && typeof error === "object" && !Array.isArray(error)) {
     return (
       <div className="grid gap-1 rounded-sm border p-3 text-sm sm:grid-cols-2">
-        {Object.entries(error as Record<string, unknown>).map(([key, value]) => (
-          <p key={key}>
-            <span className="text-muted-foreground">{key}: </span>
-            {String(value)}
-          </p>
-        ))}
+        {Object.entries(error as Record<string, unknown>).map(
+          ([key, value]) => (
+            <p key={key}>
+              <span className="text-muted-foreground">{key}: </span>
+              {String(value)}
+            </p>
+          ),
+        )}
       </div>
     );
   }
@@ -148,9 +165,15 @@ export function DataImportPreview() {
 
   const agencyId = scope.agencyId;
 
+  const [pageAgencyId, setPageAgencyId] = useState<number>();
+  const effectiveAgencyId = agencyId ?? pageAgencyId;
+  const agenciesQuery = useAgencies({ page: 1, per_page: 100 });
+  const agencies = agenciesQuery.data?.data ?? [];
+  const lockedAgencyQuery = useAgency(agencyId ?? 0);
+
   const [clientSearch, setClientSearch] = useState("");
   const [client, setClient] = useState<ClientRecord>();
-  const clientsQuery = useInfiniteClients(agencyId ?? 0, clientSearch);
+  const clientsQuery = useInfiniteClients(effectiveAgencyId ?? 0, clientSearch);
   const clientOptions = uniqueById(
     clientsQuery.data?.pages.flatMap((page) => page.data) ?? [],
   );
@@ -158,13 +181,16 @@ export function DataImportPreview() {
   const [workspaceSearch, setWorkspaceSearch] = useState("");
   const [workspace, setWorkspace] = useState<WorkspaceRecord>();
   const workspacesQuery = useInfiniteWorkspaces(
-    agencyId ?? 0,
+    client?.agency_id ?? effectiveAgencyId ?? 0,
     client?.id ?? 0,
     workspaceSearch,
   );
   const workspaceOptions = uniqueById(
     workspacesQuery.data?.pages.flatMap((page) => page.data) ?? [],
   );
+
+  const resolvedAgencyId =
+    workspace?.agency_id ?? client?.agency_id ?? effectiveAgencyId;
 
   const [datasetType, setDatasetType] = useState<CsvImportType>("reporting");
   const [file, setFile] = useState<File>();
@@ -174,9 +200,15 @@ export function DataImportPreview() {
   const [mode, setMode] = useState<CsvImportMode>("append");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  const [priorAgencyId, setPriorAgencyId] = useState(agencyId);
-  if (priorAgencyId !== agencyId) {
-    setPriorAgencyId(agencyId);
+  const [priorHeaderAgencyId, setPriorHeaderAgencyId] = useState(agencyId);
+  if (priorHeaderAgencyId !== agencyId) {
+    setPriorHeaderAgencyId(agencyId);
+    setPageAgencyId(undefined);
+  }
+
+  const [priorAgencyId, setPriorAgencyId] = useState(effectiveAgencyId);
+  if (priorAgencyId !== effectiveAgencyId) {
+    setPriorAgencyId(effectiveAgencyId);
     setClient(undefined);
     setWorkspace(undefined);
     setCsvImportId(undefined);
@@ -186,13 +218,85 @@ export function DataImportPreview() {
   const confirmMutation = useConfirmCsvImport();
   const retryMutation = useRetryCsvImport();
   const importQuery = useCsvImport(
-    agencyId ?? 0,
+    resolvedAgencyId ?? 0,
     client?.id ?? 0,
     workspace?.id ?? 0,
     csvImportId,
   );
   const csvImport = importQuery.data;
-  const guide = datasetColumnGuides[datasetType];
+
+  const templatesQuery = useCsvTemplates();
+  const template = templatesQuery.data?.find(
+    (entry) => entry.type === datasetType,
+  );
+  const templateColumns = template ? csvTemplateColumns(template) : [];
+  const [templateVersion, setTemplateVersion] = useState<number>();
+  const activeTemplateVersion = templateVersion ?? template?.version;
+
+  const [creativeFiles, setCreativeFiles] = useState<Record<number, File>>({});
+  const [creativeFileErrors, setCreativeFileErrors] = useState<
+    Record<number, string>
+  >({});
+  const [pendingCreativeRowId, setPendingCreativeRowId] = useState<number>();
+  const attachCreativeAssetMutation = useAttachCreativeAssetFile();
+  const creativeAssetsQuery = useCreativeAssets(
+    resolvedAgencyId ?? 0,
+    client?.id ?? 0,
+    workspace?.id ?? 0,
+    datasetType === "creative_assets" ? csvImportId : undefined,
+  );
+
+  function selectCreativeFile(rowId: number, selected: File | undefined) {
+    setCreativeFileErrors((prev) => ({ ...prev, [rowId]: "" }));
+    if (!selected) return;
+    if (selected.size > maxCreativeAssetFileSizeBytes) {
+      setCreativeFileErrors((prev) => ({
+        ...prev,
+        [rowId]: "This file exceeds the 10,240 KB upload limit.",
+      }));
+      return;
+    }
+    setCreativeFiles((prev) => ({ ...prev, [rowId]: selected }));
+  }
+
+  async function attachCreativeFile(row: CreativeAssetRecord) {
+    const selected = creativeFiles[row.id];
+    if (
+      !resolvedAgencyId ||
+      !client ||
+      !workspace ||
+      !csvImportId ||
+      !selected
+    )
+      return;
+    setPendingCreativeRowId(row.id);
+    setCreativeFileErrors((prev) => ({ ...prev, [row.id]: "" }));
+    try {
+      await attachCreativeAssetMutation.mutateAsync({
+        agencyId: resolvedAgencyId,
+        clientId: client.id,
+        workspaceId: workspace.id,
+        creativeAssetId: row.id,
+        csvImportId,
+        file: selected,
+      });
+      setCreativeFiles((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+    } catch (error) {
+      setCreativeFileErrors((prev) => ({
+        ...prev,
+        [row.id]:
+          error instanceof ApiError
+            ? error.message
+            : "The file could not be attached. Please try again.",
+      }));
+    } finally {
+      setPendingCreativeRowId(undefined);
+    }
+  }
 
   function selectClient(next: ClientRecord) {
     setClient(next);
@@ -225,33 +329,24 @@ export function DataImportPreview() {
     rememberFile(event.dataTransfer.files[0]);
   }
 
-  function downloadSampleCsv() {
-    const rows = datasetSampleRows[datasetType];
-    const csvContent = [guide.columns.join(","), ...rows.map((row) => row.join(","))]
-      .join("\n")
-      .concat("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${datasetType}-sample-template.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   async function submitPreview() {
-    if (!agencyId || !client || !workspace || !file) return;
+    if (!resolvedAgencyId || !client || !workspace || !file) return;
     setSubmitError(undefined);
     try {
       const record = await previewMutation.mutateAsync({
-        agencyId,
+        agencyId: resolvedAgencyId,
         clientId: client.id,
         workspaceId: workspace.id,
         type: datasetType,
         file,
       });
       queryClient.setQueryData(
-        dataImportKeys.detail(agencyId, client.id, workspace.id, record.id),
+        dataImportKeys.detail(
+          resolvedAgencyId,
+          client.id,
+          workspace.id,
+          record.id,
+        ),
         record,
       );
       setCsvImportId(record.id);
@@ -266,10 +361,10 @@ export function DataImportPreview() {
   }
 
   async function confirmImport() {
-    if (!agencyId || !client || !workspace || !csvImportId) return;
+    if (!resolvedAgencyId || !client || !workspace || !csvImportId) return;
     try {
       await confirmMutation.mutateAsync({
-        agencyId,
+        agencyId: resolvedAgencyId,
         clientId: client.id,
         workspaceId: workspace.id,
         csvImportId,
@@ -281,9 +376,9 @@ export function DataImportPreview() {
   }
 
   function retryImport() {
-    if (!agencyId || !client || !workspace || !csvImportId) return;
+    if (!resolvedAgencyId || !client || !workspace || !csvImportId) return;
     void retryMutation.mutateAsync({
-      agencyId,
+      agencyId: resolvedAgencyId,
       clientId: client.id,
       workspaceId: workspace.id,
       csvImportId,
@@ -295,9 +390,12 @@ export function DataImportPreview() {
     setFileError(undefined);
     setSubmitError(undefined);
     setCsvImportId(undefined);
+    setCreativeFiles({});
+    setCreativeFileErrors({});
     previewMutation.reset();
     confirmMutation.reset();
     retryMutation.reset();
+    attachCreativeAssetMutation.reset();
   }
 
   const isValidating =
@@ -313,7 +411,9 @@ export function DataImportPreview() {
   if (currentUser.isError)
     return (
       <StatePanel
-        action={<Button onClick={() => currentUser.refetch()}>Try again</Button>}
+        action={
+          <Button onClick={() => currentUser.refetch()}>Try again</Button>
+        }
         description="Your access could not be confirmed. Please try again."
         kind="error"
         title="Data import unavailable"
@@ -358,22 +458,45 @@ export function DataImportPreview() {
               <section aria-labelledby="scope-heading">
                 <div id="scope-heading">
                   <SectionHeading
-                    description="Select the agency, client, workspace, and dataset for this import."
+                    description="Select the client, workspace, and dataset for this import."
                     number="1"
                     title="Choose destination"
                   />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {!agencyId && (
-                    <p className="text-muted-foreground md:col-span-2 text-sm">
-                      Select an agency from the header to choose a destination.
-                    </p>
-                  )}
+                  <div>
+                    <Label htmlFor="import-agency">Agency</Label>
+                    {agencyId ? (
+                      <p className="bg-muted text-muted-foreground mt-1.5 flex min-h-10 items-center rounded-sm border px-3 text-sm">
+                        {lockedAgencyQuery.data?.display_name ??
+                          `Agency #${agencyId}`}
+                      </p>
+                    ) : (
+                      <Select
+                        className="mt-1.5"
+                        id="import-agency"
+                        onChange={(event) => {
+                          setPageAgencyId(
+                            event.target.value
+                              ? Number(event.target.value)
+                              : undefined,
+                          );
+                        }}
+                        value={pageAgencyId ?? ""}
+                      >
+                        <option value="">All agencies</option>
+                        {agencies.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.display_name}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                  </div>
                   <div>
                     <Label htmlFor="import-client">Client</Label>
                     <div className="mt-1.5">
                       <PaginatedCombobox
-                        disabled={!agencyId}
                         errorMessage={
                           clientsQuery.isError
                             ? "Clients could not be loaded."
@@ -384,19 +507,19 @@ export function DataImportPreview() {
                         hasNextPage={clientsQuery.hasNextPage}
                         id="import-client"
                         isFetchingNextPage={clientsQuery.isFetchingNextPage}
-                        isLoading={clientsQuery.isPending && Boolean(agencyId)}
+                        isLoading={clientsQuery.isPending}
                         loadNextPage={() => void clientsQuery.fetchNextPage()}
                         mode="single"
                         onChange={selectClient}
                         onRetry={() => void clientsQuery.refetch()}
                         onSearchChange={setClientSearch}
                         options={clientOptions}
-                        placeholder={
-                          agencyId ? "Select a client" : "Select an agency first"
-                        }
+                        placeholder="Select a client"
                         renderOption={(option) => (
                           <span className="truncate">
-                            <span className="font-mono text-xs">#{option.id}</span>{" "}
+                            <span className="font-mono text-xs">
+                              #{option.id}
+                            </span>{" "}
                             {option.name}
                           </span>
                         )}
@@ -421,18 +544,24 @@ export function DataImportPreview() {
                         id="import-workspace"
                         isFetchingNextPage={workspacesQuery.isFetchingNextPage}
                         isLoading={workspacesQuery.isPending && Boolean(client)}
-                        loadNextPage={() => void workspacesQuery.fetchNextPage()}
+                        loadNextPage={() =>
+                          void workspacesQuery.fetchNextPage()
+                        }
                         mode="single"
                         onChange={selectWorkspace}
                         onRetry={() => void workspacesQuery.refetch()}
                         onSearchChange={setWorkspaceSearch}
                         options={workspaceOptions}
                         placeholder={
-                          client ? "Select a workspace" : "Select a client first"
+                          client
+                            ? "Select a workspace"
+                            : "Select a client first"
                         }
                         renderOption={(option) => (
                           <span className="truncate">
-                            <span className="font-mono text-xs">#{option.id}</span>{" "}
+                            <span className="font-mono text-xs">
+                              #{option.id}
+                            </span>{" "}
                             {option.name}
                           </span>
                         )}
@@ -449,6 +578,7 @@ export function DataImportPreview() {
                       onChange={(event) => {
                         setDatasetType(event.target.value as CsvImportType);
                         setCsvImportId(undefined);
+                        setTemplateVersion(undefined);
                       }}
                       value={datasetType}
                     >
@@ -468,37 +598,96 @@ export function DataImportPreview() {
               >
                 <div id="template-heading">
                   <SectionHeading
-                    description={guide.description}
+                    description="Confirm the exact header this workspace's backend expects before uploading."
                     number="2"
                     title="Check the template"
                   />
                 </div>
-                <p className="text-muted-foreground mb-3 text-sm">
-                  Expected columns for {datasetTypeLabels[datasetType]}:
-                </p>
-                <ul aria-label="Expected columns" className="flex flex-wrap gap-2">
-                  {guide.columns.map((column) => (
-                    <li key={column}>
-                      <Badge>{column}</Badge>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={downloadSampleCsv}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <Download aria-hidden className="size-4" /> Download sample CSV (
-                    {datasetTypeLabels[datasetType]})
-                  </Button>
-                  {guide.columns.includes("date") && (
-                    <span className="text-muted-foreground text-xs">
-                      Dates use the YYYY-MM-DD format, e.g. 2026-01-15.
-                    </span>
-                  )}
-                </div>
+                {templatesQuery.isPending ? (
+                  <Skeleton className="h-16 w-full" />
+                ) : templatesQuery.isError ? (
+                  <StatePanel
+                    action={
+                      <Button onClick={() => templatesQuery.refetch()}>
+                        Try again
+                      </Button>
+                    }
+                    description="The current template list could not be loaded."
+                    kind="error"
+                    title="Templates unavailable"
+                  />
+                ) : template ? (
+                  <>
+                    <p className="text-muted-foreground mb-3 text-sm">
+                      Expected columns for {datasetTypeLabels[datasetType]}
+                      (version {template.version}):
+                    </p>
+                    <ul
+                      aria-label="Expected columns"
+                      className="flex flex-wrap gap-2"
+                    >
+                      {templateColumns.map((column) => (
+                        <li key={column}>
+                          <Badge>{column}</Badge>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-4 flex flex-wrap items-end gap-3">
+                      {template.accepted_versions.length > 1 && (
+                        <div>
+                          <Label htmlFor="template-version">
+                            Sample version
+                          </Label>
+                          <Select
+                            className="mt-1.5"
+                            id="template-version"
+                            onChange={(event) =>
+                              setTemplateVersion(Number(event.target.value))
+                            }
+                            value={activeTemplateVersion}
+                          >
+                            {template.accepted_versions.map((version) => (
+                              <option key={version} value={version}>
+                                Version {version}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      )}
+                      {resolvedAgencyId && client && workspace ? (
+                        <Button asChild size="sm" type="button" variant="outline">
+                          <a
+                            download
+                            href={csvTemplateDownloadUrl(
+                              resolvedAgencyId,
+                              client.id,
+                              workspace.id,
+                              datasetType,
+                              activeTemplateVersion ?? template.version,
+                            )}
+                          >
+                            <Download aria-hidden className="size-4" /> Download
+                            sample CSV ({datasetTypeLabels[datasetType]})
+                          </a>
+                        </Button>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          Choose a client and workspace to download a sample
+                          CSV.
+                        </p>
+                      )}
+                      {templateColumns.includes("date") && (
+                        <span className="text-muted-foreground text-xs">
+                          Dates use the YYYY-MM-DD format, e.g. 2026-01-15.
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    No template is registered for this dataset type yet.
+                  </p>
+                )}
               </section>
 
               <section aria-labelledby="file-heading" className="border-t pt-6">
@@ -514,7 +703,10 @@ export function DataImportPreview() {
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={onDrop}
                 >
-                  <UploadCloud aria-hidden className="text-primary mx-auto size-8" />
+                  <UploadCloud
+                    aria-hidden
+                    className="text-primary mx-auto size-8"
+                  />
                   <p className="text-strong mt-2 font-medium">
                     Drop a file here or choose one
                   </p>
@@ -527,7 +719,9 @@ export function DataImportPreview() {
                       accept=".csv,text/csv"
                       aria-label="Choose local CSV file"
                       className="sr-only"
-                      onChange={(event) => rememberFile(event.target.files?.[0])}
+                      onChange={(event) =>
+                        rememberFile(event.target.files?.[0])
+                      }
                       type="file"
                     />
                   </label>
@@ -552,7 +746,7 @@ export function DataImportPreview() {
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   <Button
                     disabled={
-                      !agencyId ||
+                      !resolvedAgencyId ||
                       !client ||
                       !workspace ||
                       !file ||
@@ -561,7 +755,10 @@ export function DataImportPreview() {
                     onClick={submitPreview}
                   >
                     {previewMutation.isPending && (
-                      <LoaderCircle aria-hidden className="size-4 animate-spin" />
+                      <LoaderCircle
+                        aria-hidden
+                        className="size-4 animate-spin"
+                      />
                     )}
                     {previewMutation.isPending
                       ? "Uploading..."
@@ -570,9 +767,9 @@ export function DataImportPreview() {
                       <ArrowRight aria-hidden className="size-4" />
                     )}
                   </Button>
-                  {(!agencyId || !client || !workspace) && (
+                  {(!client || !workspace) && (
                     <span className="text-muted-foreground text-xs">
-                      Choose an agency, client, and workspace to continue.
+                      Choose a client and workspace to continue.
                     </span>
                   )}
                 </div>
@@ -592,7 +789,11 @@ export function DataImportPreview() {
                     />
                   </div>
                   {isValidating && !csvImport ? (
-                    <div aria-busy="true" aria-label="Validating file" className="space-y-3">
+                    <div
+                      aria-busy="true"
+                      aria-label="Validating file"
+                      className="space-y-3"
+                    >
                       <Skeleton className="h-10 w-full" />
                       <Skeleton className="h-24 w-full" />
                     </div>
@@ -620,7 +821,10 @@ export function DataImportPreview() {
                           className="text-info mt-3 flex items-center gap-2 text-sm"
                           role="status"
                         >
-                          <LoaderCircle aria-hidden className="size-4 animate-spin" />
+                          <LoaderCircle
+                            aria-hidden
+                            className="size-4 animate-spin"
+                          />
                           Validating on the server. This updates automatically.
                         </p>
                       )}
@@ -646,22 +850,25 @@ export function DataImportPreview() {
                       </dl>
                       {csvImport.failure_code && (
                         <p className="bg-destructive-soft text-destructive mt-3 rounded-sm border p-3 text-sm">
-                          <strong>Failure code:</strong> {csvImport.failure_code}
+                          <strong>Failure code:</strong>{" "}
+                          {csvImport.failure_code}
                         </p>
                       )}
                       {csvImport.file_expires_at && (
                         <p className="text-muted-foreground mt-3 text-xs">
                           The uploaded file expires{" "}
-                          {formatDate(csvImport.file_expires_at)}. Confirm or retry
-                          before then.
+                          {formatDate(csvImport.file_expires_at)}. Confirm or
+                          retry before then.
                         </p>
                       )}
                       {csvImport.validation_errors.length > 0 && (
                         <div className="mt-5 border-t pt-5">
-                          <h3 className="text-strong font-semibold">Row issues</h3>
+                          <h3 className="text-strong font-semibold">
+                            Row issues
+                          </h3>
                           <p className="text-muted-foreground mt-1 text-sm">
-                            Showing {csvImport.validation_errors.length} reported
-                            issues.
+                            Showing {csvImport.validation_errors.length}{" "}
+                            reported issues.
                           </p>
                           <div className="mt-3 space-y-2">
                             {csvImport.validation_errors.map((error, index) => (
@@ -683,10 +890,15 @@ export function DataImportPreview() {
                                 className="size-4 animate-spin"
                               />
                             )}
-                            {retryMutation.isPending ? "Retrying..." : "Retry import"}
+                            {retryMutation.isPending
+                              ? "Retrying..."
+                              : "Retry import"}
                           </Button>
                           {retryMutation.isError && (
-                            <span className="text-destructive text-sm" role="alert">
+                            <span
+                              className="text-destructive text-sm"
+                              role="alert"
+                            >
                               {retryMutation.error instanceof ApiError
                                 ? retryMutation.error.message
                                 : "Retry failed. Please try again."}
@@ -699,7 +911,10 @@ export function DataImportPreview() {
                 </section>
 
                 {canConfirm && (
-                  <section aria-labelledby="confirm-heading" className="border-t pt-5">
+                  <section
+                    aria-labelledby="confirm-heading"
+                    className="border-t pt-5"
+                  >
                     <div id="confirm-heading">
                       <SectionHeading
                         description="Choose how the validated rows should be applied."
@@ -716,7 +931,8 @@ export function DataImportPreview() {
                           <label
                             className={cn(
                               "flex cursor-pointer gap-3 rounded-lg border p-4",
-                              mode === value && "border-primary bg-primary-soft",
+                              mode === value &&
+                                "border-primary bg-primary-soft",
                             )}
                             key={value}
                           >
@@ -729,7 +945,9 @@ export function DataImportPreview() {
                             />
                             <span>
                               <span className="text-strong block font-medium">
-                                {value === "append" ? "Append rows" : "Replace dataset"}
+                                {value === "append"
+                                  ? "Append rows"
+                                  : "Replace dataset"}
                               </span>
                               <span className="text-muted-foreground mt-1 block text-sm">
                                 {value === "append"
@@ -745,13 +963,14 @@ export function DataImportPreview() {
                       <p className="bg-warning-soft text-warning mt-3 rounded-sm border p-3 text-sm">
                         <strong>Replacement consequence:</strong> the current{" "}
                         {datasetTypeLabels[datasetType]} dataset for{" "}
-                        {workspace?.name} would be deactivated. Its prior records are
-                        retained, not deleted.
+                        {workspace?.name} would be deactivated. Its prior
+                        records are retained, not deleted.
                       </p>
                     )}
                     <div className="mt-5 flex flex-wrap items-center gap-3">
                       <Button onClick={() => setIsConfirmOpen(true)}>
-                        Confirm import <ArrowRight aria-hidden className="size-4" />
+                        Confirm import{" "}
+                        <ArrowRight aria-hidden className="size-4" />
                       </Button>
                       {confirmMutation.isError && (
                         <span className="text-destructive text-sm" role="alert">
@@ -766,21 +985,160 @@ export function DataImportPreview() {
 
                 {isConfirmed && (
                   <section className="border-t pt-5 text-center">
-                    <CheckCircle2 aria-hidden className="text-success mx-auto size-10" />
+                    <CheckCircle2
+                      aria-hidden
+                      className="text-success mx-auto size-10"
+                    />
                     <h2 className="text-strong mt-3 text-xl font-semibold">
                       Import confirmed
                     </h2>
                     <p className="text-muted-foreground mx-auto mt-2 max-w-xl text-sm">
-                      {csvImport?.mode === "replace" ? "Replace" : "Append"} import
-                      for {datasetTypeLabels[datasetType]} in {workspace?.name}{" "}
+                      {csvImport?.mode === "replace" ? "Replace" : "Append"}{" "}
+                      import for {datasetTypeLabels[datasetType]} in{" "}
+                      {workspace?.name}{" "}
                       {csvImport?.completed_at
                         ? `completed ${formatDate(csvImport.completed_at)}.`
                         : "is finishing on the server."}
                     </p>
+                    {datasetType !== "creative_assets" && (
+                      <div className="mt-5 flex justify-center">
+                        <Button onClick={resetFlow} variant="outline">
+                          <RotateCcw aria-hidden className="size-4" /> Start
+                          another import
+                        </Button>
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {isConfirmed && datasetType === "creative_assets" && (
+                  <section
+                    aria-labelledby="creative-attach-heading"
+                    className="border-t pt-5 text-left"
+                  >
+                    <div id="creative-attach-heading">
+                      <SectionHeading
+                        description="Each imported row needs a media file attached. This is a separate step from the CSV import above."
+                        number="6"
+                        title="Attach creative files"
+                      />
+                    </div>
+                    {creativeAssetsQuery.isPending ? (
+                      <div
+                        aria-busy="true"
+                        aria-label="Loading imported rows"
+                        className="space-y-3"
+                      >
+                        <Skeleton className="h-14 w-full" />
+                        <Skeleton className="h-14 w-full" />
+                      </div>
+                    ) : creativeAssetsQuery.isError ? (
+                      <StatePanel
+                        action={
+                          <Button onClick={() => creativeAssetsQuery.refetch()}>
+                            Try again
+                          </Button>
+                        }
+                        description="The imported creative rows could not be loaded."
+                        kind="error"
+                        title="Rows unavailable"
+                      />
+                    ) : creativeAssetsQuery.data &&
+                      creativeAssetsQuery.data.length > 0 ? (
+                      <ul className="space-y-3">
+                        {creativeAssetsQuery.data.map((row) => {
+                          const isPending = pendingCreativeRowId === row.id;
+                          const rowError = creativeFileErrors[row.id];
+                          const selected = creativeFiles[row.id];
+                          return (
+                            <li className="rounded-lg border p-4" key={row.id}>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="text-strong truncate font-medium">
+                                    {row.title}
+                                  </p>
+                                  <p className="text-muted-foreground text-sm">
+                                    {row.campaign_name} · {row.channel}
+                                  </p>
+                                </div>
+                                {row.asset_url ? (
+                                  <a
+                                    className="text-primary inline-flex items-center gap-1.5 text-sm font-medium"
+                                    href={row.asset_url}
+                                    rel="noreferrer"
+                                    target="_blank"
+                                  >
+                                    <CheckCircle2
+                                      aria-hidden
+                                      className="size-4"
+                                    />
+                                    Attached
+                                    <SquareArrowOutUpRight
+                                      aria-hidden
+                                      className="size-3.5"
+                                    />
+                                  </a>
+                                ) : (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <label className="text-primary focus-within:ring-ring inline-flex min-h-9 cursor-pointer items-center rounded-sm border border-current px-3 py-1.5 text-sm font-medium focus-within:ring-2 focus-within:ring-offset-2">
+                                      {selected ? selected.name : "Choose file"}
+                                      <input
+                                        accept="image/*,video/*"
+                                        aria-label={`Choose media file for ${row.title}`}
+                                        className="sr-only"
+                                        onChange={(event) =>
+                                          selectCreativeFile(
+                                            row.id,
+                                            event.target.files?.[0],
+                                          )
+                                        }
+                                        type="file"
+                                      />
+                                    </label>
+                                    <Button
+                                      disabled={!selected || isPending}
+                                      onClick={() => attachCreativeFile(row)}
+                                      size="sm"
+                                      type="button"
+                                    >
+                                      {isPending && (
+                                        <LoaderCircle
+                                          aria-hidden
+                                          className="size-4 animate-spin"
+                                        />
+                                      )}
+                                      <Paperclip
+                                        aria-hidden
+                                        className="size-4"
+                                      />
+                                      {isPending ? "Attaching..." : "Attach"}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              {rowError && (
+                                <p
+                                  className="text-destructive mt-2 text-sm"
+                                  role="alert"
+                                >
+                                  {rowError}
+                                </p>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <StatePanel
+                        description="No creative asset rows were found for this import."
+                        kind="empty"
+                        title="No rows to attach"
+                      />
+                    )}
                     <div className="mt-5 flex justify-center">
                       <Button onClick={resetFlow} variant="outline">
-                        <RotateCcw aria-hidden className="size-4" /> Start another
-                        import
+                        <RotateCcw aria-hidden className="size-4" /> Start
+                        another import
                       </Button>
                     </div>
                   </section>
@@ -790,7 +1148,10 @@ export function DataImportPreview() {
           )}
         </div>
 
-        <aside aria-label="Import summary" className="space-y-4 xl:sticky xl:top-20">
+        <aside
+          aria-label="Import summary"
+          className="space-y-4 xl:sticky xl:top-20"
+        >
           <Card>
             <CardHeader>
               <CardTitle>Summary</CardTitle>
@@ -829,8 +1190,8 @@ export function DataImportPreview() {
           <div className="bg-info-soft text-info flex gap-3 rounded-lg border border-current/20 p-4 text-sm">
             <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
             <p>
-              Confirming an import changes live workspace data. Review row counts
-              and errors carefully before choosing append or replace.
+              Confirming an import changes live workspace data. Review row
+              counts and errors carefully before choosing append or replace.
             </p>
           </div>
         </aside>
@@ -844,7 +1205,9 @@ export function DataImportPreview() {
               : `Appending will add ${csvImport ? formatNumber(csvImport.valid_count) : ""} valid rows to the current ${datasetTypeLabels[datasetType]} dataset for ${workspace?.name ?? "this workspace"}.`}
           </p>
         }
-        confirmLabel={confirmMutation.isPending ? "Confirming..." : "Confirm import"}
+        confirmLabel={
+          confirmMutation.isPending ? "Confirming..." : "Confirm import"
+        }
         description={
           mode === "replace"
             ? "This deactivates the current dataset and cannot be undone from this screen."

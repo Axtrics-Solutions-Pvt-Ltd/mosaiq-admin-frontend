@@ -1,12 +1,20 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { csvImportPaths, importHistoryPaths } from "@/lib/api/paths";
+import {
+  creativeAssetPaths,
+  csvImportPaths,
+  csvTemplatePaths,
+  importHistoryPaths,
+} from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 
 import {
+  attachCreativeAssetFile,
   confirmCsvImport,
   getCsvImport,
+  listCreativeAssets,
+  listCsvTemplates,
   listImportHistory,
   previewCsvImport,
   retryCsvImport,
@@ -121,5 +129,88 @@ describe("csv import API", () => {
     expect(query).toContain("workspace_id=7");
     expect(result.data[0]?.original_filename).toBe("campaign-data.csv");
     expect(result.meta.total).toBe(1);
+  });
+
+  it("lists csv templates for the current workspace", async () => {
+    server.use(
+      http.get(csvTemplatePaths.collection(12, 4, 7), () =>
+        HttpResponse.json({
+          data: [
+            {
+              type: "reporting",
+              version: 2,
+              accepted_versions: [1, 2],
+              columns: ["date", "channel", "campaign", "status"],
+            },
+          ],
+        }),
+      ),
+    );
+    const result = await listCsvTemplates(12, 4, 7);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.version).toBe(2);
+  });
+
+  it("lists creative asset rows created by a confirmed import", async () => {
+    let query = "";
+    server.use(
+      http.get(creativeAssetPaths.collection(12, 4, 7), ({ request }) => {
+        query = new URL(request.url).search;
+        return HttpResponse.json({
+          data: [
+            {
+              id: 501,
+              agency_id: 12,
+              workspace_id: 7,
+              title: "Spring banner",
+              campaign_name: "Spring Launch",
+              channel: "Paid Social",
+              status: null,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0,
+              spend: "0.00",
+              asset_url: null,
+            },
+          ],
+        });
+      }),
+    );
+    const result = await listCreativeAssets(12, 4, 7, 90);
+    expect(query).toContain("csv_import_id=90");
+    expect(result[0]?.title).toBe("Spring banner");
+  });
+
+  it("attaches a file to a creative asset row", async () => {
+    let receivedFileName: unknown;
+    server.use(
+      http.post(
+        creativeAssetPaths.attachAsset(12, 4, 7, 501),
+        async ({ request }) => {
+          const formData = await request.formData();
+          receivedFileName = (formData.get("file") as File).name;
+          return HttpResponse.json({
+            data: {
+              id: 501,
+              agency_id: 12,
+              workspace_id: 7,
+              title: "Spring banner",
+              campaign_name: "Spring Launch",
+              channel: "Paid Social",
+              status: null,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0,
+              spend: "0.00",
+              asset_url: "https://cdn.example.com/spring.jpg",
+            },
+          });
+        },
+      ),
+    );
+    const file = new File(["binary"], "spring.jpg", { type: "image/jpeg" });
+    const result = await attachCreativeAssetFile(12, 4, 7, 501, file);
+    expect(receivedFileName).toBe("spring.jpg");
+    expect(result.asset_url).toBe("https://cdn.example.com/spring.jpg");
   });
 });

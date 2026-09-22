@@ -23,6 +23,20 @@ const viewer = {
     },
   },
 };
+const agencyAdmin = {
+  data: {
+    id: 3,
+    name: "Agency Admin",
+    email: "agency@example.test",
+    platform_role_code: null,
+    membership: {
+      agency_id: 1,
+      role_code: "AGENCY_ADMIN",
+      client_id: null,
+      workspace_ids: [],
+    },
+  },
+};
 const json = (response, status, body, headers = {}) => {
   response.writeHead(status, {
     "Content-Type": "application/json",
@@ -33,6 +47,7 @@ const json = (response, status, body, headers = {}) => {
 
 const updatedAgencies = new Map();
 const updatedWorkspaces = new Map();
+const updatedClients = new Map();
 const agencyRows = [
   {
     id: 1,
@@ -120,11 +135,14 @@ createServer(async (request, response) => {
     if (!body.email || !body.password)
       return json(response, 422, { errors: { email: ["Invalid input"] } });
     const isViewer = body.email === "viewer@example.test";
-    return json(response, 200, isViewer ? viewer : user, {
-      "Set-Cookie": `mosaiq-session=${isViewer ? "active-viewer-session" : "active-session"}; Path=/; HttpOnly; SameSite=Lax`,
+    const isAgencyAdmin = body.email === "agency@example.test";
+    return json(response, 200, isViewer ? viewer : isAgencyAdmin ? agencyAdmin : user, {
+      "Set-Cookie": `mosaiq-session=${isViewer ? "active-viewer-session" : isAgencyAdmin ? "active-agency-session" : "active-session"}; Path=/; HttpOnly; SameSite=Lax`,
     });
   }
   if (request.method === "GET" && request.url === "/api/v1/auth/me") {
+    if (request.headers.cookie?.includes("mosaiq-session=active-agency-session"))
+      return json(response, 200, agencyAdmin);
     if (
       request.headers.cookie?.includes("mosaiq-session=active-viewer-session")
     )
@@ -144,7 +162,37 @@ createServer(async (request, response) => {
     });
     return response.end();
   }
+  if (request.method === "POST" && request.url === "/api/v1/auth/change-password") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    if (!request.headers.cookie?.includes("mosaiq-session=active-"))
+      return json(response, 401, { error_code: "UNAUTHENTICATED" });
+    const body = await readJson(request);
+    if (body.current_password !== "correct-current")
+      return json(response, 422, { errors: { current_password: ["The current password is incorrect."] } });
+    response.writeHead(204);
+    return response.end();
+  }
   const url = new URL(request.url ?? "/", "http://localhost");
+  const ownUserMatch = url.pathname.match(/^\/api\/v1\/agencies\/(\d+)\/users\/(\d+)$/);
+  if (ownUserMatch && request.method === "PUT") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    if (!request.headers.cookie?.includes("mosaiq-session=active-agency-session"))
+      return json(response, 403, { message: "Forbidden" });
+    const body = await readJson(request);
+    if (ownUserMatch[1] !== "1" || ownUserMatch[2] !== "3" || Object.keys(body).some((key) => key !== "name"))
+      return json(response, 403, { message: "Forbidden" });
+    if (!body.name?.trim())
+      return json(response, 422, { errors: { name: ["Enter a name."] } });
+    agencyAdmin.data.name = body.name.trim();
+    return json(response, 200, { data: {
+      id: 3, name: agencyAdmin.data.name, email: agencyAdmin.data.email,
+      status: "active", agency_id: 1, membership_status: "active",
+      role_code: "AGENCY_ADMIN", client_id: null, workspace_ids: [],
+      invited_at: null, accepted_at: null,
+    } });
+  }
   if (url.pathname === "/api/v1/agencies" && request.method === "GET") {
     if (!request.headers.cookie?.includes("mosaiq-session=active-session"))
       return json(response, 401, { error_code: "UNAUTHENTICATED" });
@@ -249,41 +297,6 @@ createServer(async (request, response) => {
     updatedAgencies.set(row.id, updated);
     return json(response, 200, { data: updated });
   }
-  const clientCollection = url.pathname.match(
-    /^\/api\/v1\/agencies\/(\d+)\/clients$/,
-  );
-  if (clientCollection && request.method === "GET") {
-    return json(response, 200, {
-      data: [
-        {
-          id: 20,
-          agency_id: Number(clientCollection[1]),
-          name: "Northstar Client",
-          status: "active",
-          workspace_count: 1,
-          created_at: null,
-          updated_at: null,
-        },
-      ],
-      meta: { current_page: 1, last_page: 1, total: 1 },
-    });
-  }
-  const clientDetail = url.pathname.match(
-    /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)$/,
-  );
-  if (clientDetail && request.method === "GET") {
-    return json(response, 200, {
-      data: {
-        id: Number(clientDetail[2]),
-        agency_id: Number(clientDetail[1]),
-        name: "Northstar Client",
-        status: "active",
-        created_at: null,
-        updated_at: null,
-        workspaces: [],
-      },
-    });
-  }
   const workspaceRows = [
     {
       id: 10,
@@ -301,6 +314,123 @@ createServer(async (request, response) => {
     const index = workspaceRows.findIndex((row) => row.id === id);
     if (index >= 0) workspaceRows[index] = record;
     else workspaceRows.push(record);
+  }
+  const clientRows = [
+    {
+      id: 20,
+      agency_id: 1,
+      name: "Northstar Client",
+      status: "active",
+      workspace_count: 1,
+      created_at: null,
+      updated_at: null,
+    },
+  ];
+  for (const [id, record] of updatedClients) {
+    const index = clientRows.findIndex((row) => row.id === id);
+    if (index >= 0) clientRows[index] = record;
+    else clientRows.push(record);
+  }
+  function clientWithWorkspaces(row) {
+    return {
+      ...row,
+      workspaces: workspaceRows.filter((w) => w.client_id === row.id),
+    };
+  }
+  if (url.pathname === "/api/v1/clients" && request.method === "GET") {
+    let rows = clientRows;
+    const agencyId = url.searchParams.get("agency_id");
+    if (agencyId) rows = rows.filter((row) => row.agency_id === Number(agencyId));
+    const search = url.searchParams.get("search")?.toLowerCase();
+    if (search)
+      rows = rows.filter((row) => row.name.toLowerCase().includes(search));
+    const status = url.searchParams.get("status");
+    if (status) rows = rows.filter((row) => row.status === status);
+    return json(response, 200, {
+      data: rows,
+      meta: { current_page: 1, last_page: 1, total: rows.length },
+    });
+  }
+  const clientCollection = url.pathname.match(
+    /^\/api\/v1\/agencies\/(\d+)\/clients$/,
+  );
+  if (clientCollection && request.method === "GET") {
+    const agencyId = Number(clientCollection[1]);
+    let rows = clientRows.filter((row) => row.agency_id === agencyId);
+    const search = url.searchParams.get("search")?.toLowerCase();
+    if (search)
+      rows = rows.filter((row) => row.name.toLowerCase().includes(search));
+    const status = url.searchParams.get("status");
+    if (status) rows = rows.filter((row) => row.status === status);
+    return json(response, 200, {
+      data: rows,
+      meta: { current_page: 1, last_page: 1, total: rows.length },
+    });
+  }
+  if (clientCollection && request.method === "POST") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    const agencyId = Number(clientCollection[1]);
+    const body = await readJson(request);
+    if (!body.name)
+      return json(response, 422, {
+        errors: { name: ["The name is required."] },
+      });
+    const agency = agencyRows.find((row) => row.id === agencyId);
+    const clientId = 20 + updatedClients.size + 1;
+    const workspaceId = 100 + updatedClients.size;
+    const defaultWorkspace = {
+      id: workspaceId,
+      agency_id: agencyId,
+      client_id: clientId,
+      name: `${body.name} Launch`,
+      timezone: "Europe/London",
+      currency: agency?.default_currency ?? "USD",
+      status: "active",
+      created_at: null,
+      updated_at: null,
+    };
+    updatedWorkspaces.set(workspaceId, defaultWorkspace);
+    const clientRecord = {
+      id: clientId,
+      agency_id: agencyId,
+      name: body.name,
+      status: body.status ?? "active",
+      workspace_count: 1,
+      created_at: null,
+      updated_at: null,
+    };
+    updatedClients.set(clientId, clientRecord);
+    return json(response, 201, {
+      data: { ...clientRecord, workspaces: [defaultWorkspace] },
+    });
+  }
+  const clientDetail = url.pathname.match(
+    /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)$/,
+  );
+  if (clientDetail && request.method === "GET") {
+    const row = clientRows.find(
+      (entry) =>
+        entry.agency_id === Number(clientDetail[1]) &&
+        entry.id === Number(clientDetail[2]),
+    );
+    return row
+      ? json(response, 200, { data: clientWithWorkspaces(row) })
+      : json(response, 404, { message: "Client not found" });
+  }
+  if (clientDetail && request.method === "PUT") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    const row = clientRows.find(
+      (entry) =>
+        entry.agency_id === Number(clientDetail[1]) &&
+        entry.id === Number(clientDetail[2]),
+    );
+    if (!row) return json(response, 404, { message: "Client not found" });
+    const body = await readJson(request);
+    const updated = { ...row, name: body.name, status: body.status };
+    updatedClients.set(row.id, updated);
+    return json(response, 200, { data: clientWithWorkspaces(updated) });
   }
   const workspaceCollection = url.pathname.match(
     /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)\/workspaces$/,

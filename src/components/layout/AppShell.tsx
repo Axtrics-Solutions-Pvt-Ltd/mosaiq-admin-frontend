@@ -4,6 +4,7 @@ import {
   Bell,
   ChevronsLeft,
   ChevronsRight,
+  KeyRound,
   LogOut,
   Menu,
   Search,
@@ -94,6 +95,10 @@ function AppShellContent({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
   const current = getNavigationItem(pathname);
+  const currentLabel =
+    pathname === routes.profile
+      ? "Profile"
+      : (current?.label ?? "Design system");
   return (
     <div
       className="min-h-screen lg:grid"
@@ -152,10 +157,10 @@ function AppShellContent({ children }: { children: ReactNode }) {
           </Button>
           <div className="hidden min-w-0 sm:block">
             <p className="text-strong truncate text-sm font-medium">
-              {current?.label ?? "Design system"}
+              {currentLabel}
             </p>
             <p className="text-muted-foreground text-xs">
-              Admin / {current?.label ?? "Preview"}
+              Admin / {currentLabel}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -255,10 +260,17 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 </div>
                 <Link
                   className="hover:bg-muted mt-1 flex items-center gap-2 rounded-sm px-3 py-2"
-                  href={routes.designSystem}
+                  href={routes.profile}
                 >
-                  <UserRound className="size-4" />
-                  Component preview
+                  <UserRound aria-hidden className="size-4" />
+                  Edit profile
+                </Link>
+                <Link
+                  className="hover:bg-muted mt-1 flex items-center gap-2 rounded-sm px-3 py-2"
+                  href={`${routes.profile}#change-password`}
+                >
+                  <KeyRound aria-hidden className="size-4" />
+                  Change password
                 </Link>
                 <button
                   className="hover:bg-muted mt-1 flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left disabled:opacity-50"

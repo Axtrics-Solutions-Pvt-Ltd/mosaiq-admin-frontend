@@ -15,7 +15,9 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes } from "@/config/routes";
+import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
+import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { formatDate } from "@/lib/formatters";
 import { useScope } from "@/providers/ScopeProvider";
 
@@ -182,8 +184,35 @@ export function InvitationDirectory({
   const scope = useScope();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
   const agencyId = scope.agencyId;
-  const invitationsQuery = useInvitations(agencyId ?? 0, page, status);
+  const agenciesQuery = useAgencies({ page: 1 }, { enabled: isSuperAdmin });
+  const agencies = agenciesQuery.data?.data ?? [];
+  const workspaceId = scope.workspaceId;
+  const workspacesQuery = useAgencyWorkspaces(agencyId ?? 0, {
+    status: "active",
+    per_page: 100,
+  });
+  const workspaces = workspacesQuery.data?.data ?? [];
+  const invitationsQuery = useInvitations(agencyId ?? 0, page, status, workspaceId);
   const invitations = invitationsQuery.data?.data ?? [];
+
+  function changeAgency(value: string) {
+    const nextAgencyId = value ? Number(value) : undefined;
+    scope.setAgencyId(nextAgencyId);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("page");
+    router.replace(
+      `${routes.users.invitations}${params.size ? `?${params}` : ""}`,
+    );
+  }
+
+  function changeWorkspace(value: string) {
+    scope.setWorkspaceId(value ? Number(value) : undefined);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("page");
+    router.replace(
+      `${routes.users.invitations}${params.size ? `?${params}` : ""}`,
+    );
+  }
 
   function changeStatus(nextStatus: string) {
     const params = new URLSearchParams(window.location.search);
@@ -220,8 +249,50 @@ export function InvitationDirectory({
         description="Review agency invitations, track accepted and rejected responses, and revoke access before it is accepted."
         title="Invitations"
       />
-      <FilterBar>
-        <div className="w-full max-w-xs">
+      <FilterBar
+        className={
+          isSuperAdmin ? "sm:grid sm:grid-cols-3" : "sm:grid sm:grid-cols-2"
+        }
+      >
+        {isSuperAdmin && (
+          <div>
+            <Label htmlFor="invitation-agency">Agency</Label>
+            <Select
+              className="mt-1.5"
+              id="invitation-agency"
+              onChange={(event) => changeAgency(event.target.value)}
+              value={agencyId ? String(agencyId) : ""}
+            >
+              <option value="">Select an agency</option>
+              {agencies.map((agency) => (
+                <option key={agency.id} value={agency.id}>
+                  {agency.display_name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+        <div>
+          <Label htmlFor="invitation-workspace">Workspace</Label>
+          <Select
+            className="mt-1.5"
+            disabled={!agencyId || workspacesQuery.isPending}
+            id="invitation-workspace"
+            onChange={(event) => changeWorkspace(event.target.value)}
+            title={
+              agencyId ? undefined : "Choose an agency to filter by workspace"
+            }
+            value={workspaceId ? String(workspaceId) : ""}
+          >
+            <option value="">All workspaces</option>
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
           <Label htmlFor="invitation-status">Status</Label>
           <Select
             className="mt-1.5"
@@ -248,13 +319,26 @@ export function InvitationDirectory({
           title="Users unavailable"
         />
       )}
-      {currentUser.isSuccess && isSuperAdmin && !agencyId && (
+      {currentUser.isSuccess && isSuperAdmin && agenciesQuery.isError && (
         <StatePanel
-          description="Select an agency from the header to review its unaccepted invitations."
-          kind="empty"
-          title="Choose an agency"
+          action={
+            <Button onClick={() => agenciesQuery.refetch()}>Try again</Button>
+          }
+          description="The agency list could not be loaded."
+          kind="error"
+          title="Agencies unavailable"
         />
       )}
+      {currentUser.isSuccess &&
+        isSuperAdmin &&
+        agenciesQuery.isSuccess &&
+        !agencyId && (
+          <StatePanel
+            description="Choose an agency above to review its unaccepted invitations."
+            kind="empty"
+            title="Choose an agency"
+          />
+        )}
       {currentUser.isSuccess && agencyId && invitationsQuery.isPending && (
         <LoadingInvitations />
       )}

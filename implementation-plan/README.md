@@ -32,6 +32,15 @@ Read with [the screen specification](../MOSAIQ-Admin-Frontend-Screen-Spec.md) an
 
 Sequence is 01 → 02 → 03 → 04–11 → 12. Once 02 is accepted, feature screens can be designed in a different order if product review requires it. Keep the shared shell and visual tokens stable enough to avoid screen-by-screen drift.
 
+### Follow-up phases (after 01–12, functional not visual-prototype)
+
+| Phase | Delivery | Acceptance |
+|---|---|---|
+| [13](PHASE-13-EXPANDED-DATA-IMPORT.md) | Expanded data import | Every backend-registered CSV type (client-portal work) uploadable from `/data-import`; creative-asset file attach flow working; import history reflects new types |
+| [14](PHASE-14-SCOPE-AWARE-LIST-VIEWS.md) | Scope-aware list views | With header scope = All Agencies, Data Import/Import History/Workspaces/Users load open and unrestricted; with a specific agency selected, pages narrow and pre-fill to it |
+| [15](PHASE-15-CLIENT-MANAGEMENT.md) | Client management | `/clients` list/create/detail/edit wired to the live `Client` API; workspace creation no longer dead-ends on a zero-client agency |
+| [16](PHASE-16-ACCOUNT-SELF-SERVICE.md) | Account self-service | `/profile` edits the signed-in user's own name (agency-scoped roles) and changes their own password via the live `change-password` API; profile-menu "Component preview" replaced with real Edit profile / Change password actions |
+
 ## Delivery gates and working method
 
 1. **Foundation gate:** scaffold the approved stack, configure scripts, and run dev server, typecheck, lint, test runner, and production build. Install dependencies only when Phase 01 starts, not merely because this plan exists.

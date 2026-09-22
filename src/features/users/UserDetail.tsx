@@ -13,16 +13,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { routes, userEditUrl } from "@/config/routes";
 import { formatDate } from "@/lib/formatters";
 
-import type { AgencyUser } from "./contracts";
 import { useAgencyUser } from "./queries";
-
-const roleLabels: Record<AgencyUser["role_code"], string> = {
-  AGENCY_ADMIN: "Agency Admin",
-  MANAGER: "Manager",
-  ANALYST: "Analyst",
-  VIEWER: "Viewer",
-  CLIENT_USER: "Client User",
-};
+import { roleLabels } from "./role-labels";
 
 function DetailList({
   entries,

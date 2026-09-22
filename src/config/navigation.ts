@@ -1,5 +1,6 @@
 ﻿import type { LucideIcon } from "lucide-react";
 import {
+  Building,
   Building2,
   Cable,
   DatabaseZap,
@@ -44,6 +45,12 @@ export const navigationGroups: readonly NavigationGroup[] = [
         icon: Building2,
         label: "Agencies",
         capability: "agencies.manage",
+      },
+      {
+        href: routes.clients.index,
+        icon: Building,
+        label: "Clients",
+        capability: "clients.manage",
       },
       {
         href: routes.workspaces.index,
