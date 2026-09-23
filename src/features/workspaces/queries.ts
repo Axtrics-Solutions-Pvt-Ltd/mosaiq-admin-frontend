@@ -132,7 +132,11 @@ export function useInfiniteWorkspaces(
   agencyId: number,
   clientId: number,
   search: string,
+  email?: string,
+  roleCode?: string,
 ) {
+  // The backend requires email and role_code together; drop email if role_code isn't chosen yet.
+  const effectiveEmail = email && roleCode ? email : undefined;
   return useInfiniteQuery({
     queryKey: [
       "workspaces",
@@ -140,6 +144,8 @@ export function useInfiniteWorkspaces(
       agencyId,
       clientId,
       search,
+      effectiveEmail ?? "",
+      effectiveEmail ? (roleCode ?? "") : "",
     ] as const,
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
@@ -151,6 +157,8 @@ export function useInfiniteWorkspaces(
           status: "active",
           page: pageParam,
           per_page: 40,
+          email: effectiveEmail,
+          role_code: effectiveEmail ? roleCode : undefined,
         },
         signal,
       ),

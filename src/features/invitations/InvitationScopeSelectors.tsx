@@ -24,18 +24,22 @@ export function InvitationScopeSelectors({
   agencyId,
   client,
   clientError,
+  email,
   isClientUser,
   onClientChange,
   onWorkspacesChange,
+  roleCode,
   workspaceError,
   workspaces,
 }: {
   agencyId: number;
   client?: ClientRecord;
   clientError?: string;
+  email?: string;
   isClientUser: boolean;
   onClientChange: (client: ClientRecord) => void;
   onWorkspacesChange: (workspaces: WorkspaceRecord[]) => void;
+  roleCode?: string;
   workspaceError?: string;
   workspaces: readonly WorkspaceRecord[];
 }) {
@@ -46,6 +50,8 @@ export function InvitationScopeSelectors({
     agencyId,
     client?.id ?? 0,
     workspaceSearch,
+    email,
+    roleCode,
   );
   const clients = uniqueById(
     clientsQuery.data?.pages.flatMap((page) => page.data) ?? [],
@@ -139,6 +145,10 @@ export function InvitationScopeSelectors({
           isFetchingNextPage={workspacesQuery.isFetchingNextPage}
           isInvalid={Boolean(workspaceError)}
           isLoading={workspacesQuery.isPending && Boolean(client)}
+          isOptionDisabled={(option) =>
+            option.invite_status === "added" ||
+            option.invite_status === "invited"
+          }
           loadNextPage={() => void workspacesQuery.fetchNextPage()}
           mode="multiple"
           onChange={onWorkspacesChange}
@@ -146,12 +156,34 @@ export function InvitationScopeSelectors({
           onSearchChange={changeWorkspaceSearch}
           options={workspaceOptions}
           placeholder={client ? "Select workspaces" : "Select a client first"}
-          renderOption={(option) => (
-            <span className="truncate">
-              <span className="font-mono text-xs">#{option.id}</span>{" "}
-              {option.name}
-            </span>
-          )}
+          renderOption={(option) => {
+            const statusLabel =
+              option.invite_status === "added"
+                ? "Added"
+                : option.invite_status === "invited"
+                  ? "Invited"
+                  : undefined;
+            const previouslyInvitedHint =
+              !option.invite_status && option.invite_status_reason
+                ? `Previously invited (${option.invite_status_reason})`
+                : undefined;
+            return (
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    <span className="font-mono text-xs">#{option.id}</span>{" "}
+                    {option.name}
+                  </span>
+                  {statusLabel && <Badge tone="neutral">{statusLabel}</Badge>}
+                </span>
+                {previouslyInvitedHint && (
+                  <span className="text-muted-foreground text-xs">
+                    {previouslyInvitedHint}
+                  </span>
+                )}
+              </span>
+            );
+          }}
           searchPlaceholder="Search workspace name"
           value={workspaces}
         />

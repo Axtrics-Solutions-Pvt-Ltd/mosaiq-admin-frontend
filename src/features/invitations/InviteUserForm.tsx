@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -28,7 +28,14 @@ import type {
 } from "@/features/workspaces/contracts";
 import { ApiError } from "@/lib/api/errors";
 
-import { invitationRoles, inviteSchema } from "./contracts";
+import {
+  InvitationAlreadyPendingError,
+  type InvitationConflict,
+  invitationRoles,
+  type InvitePayload,
+  inviteSchema,
+} from "./contracts";
+import { InvitationConflictDialog } from "./InvitationConflictDialog";
 import { InvitationScopeSelectors } from "./InvitationScopeSelectors";
 import { useCreateInvitation } from "./queries";
 
@@ -58,6 +65,11 @@ export function InviteUserForm() {
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<
     WorkspaceRecord[]
   >([]);
+  const [pendingConflict, setPendingConflict] = useState<{
+    agencyId: number;
+    conflict: InvitationConflict;
+    payload: InvitePayload;
+  }>();
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
   const ownAgencyId = currentUser.data?.membership?.agencyId;
   const {
@@ -78,8 +90,18 @@ export function InviteUserForm() {
     },
   });
   const roleCode = useWatch({ control, name: "roleCode" });
+  const emailValue = useWatch({ control, name: "email" });
   const roleRegistration = register("roleCode");
   const agencyId = isSuperAdmin ? selectedAgency?.id : ownAgencyId;
+
+  const [debouncedEmail, setDebouncedEmail] = useState("");
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const trimmed = emailValue.trim();
+      setDebouncedEmail(z.email().safeParse(trimmed).success ? trimmed : "");
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [emailValue]);
 
   function clearScope() {
     setSelectedClient(undefined);
@@ -111,17 +133,32 @@ export function InviteUserForm() {
       }
       return;
     }
+    await submitInvitation(targetAgencyId, parsed.data);
+  });
+
+  async function submitInvitation(
+    targetAgencyId: number,
+    payload: InvitePayload,
+  ) {
     try {
       await createMutation.mutateAsync({
         agencyId: targetAgencyId,
-        payload: parsed.data,
+        payload,
       });
       toast({
-        title: `Invitation emailed to ${parsed.data.email}.`,
+        title: `Invitation emailed to ${payload.email}.`,
         tone: "success",
       });
       router.push(userInvitationsUrl(targetAgencyId));
     } catch (error) {
+      if (error instanceof InvitationAlreadyPendingError) {
+        setPendingConflict({
+          agencyId: targetAgencyId,
+          conflict: error.conflict,
+          payload,
+        });
+        return;
+      }
       if (error instanceof ApiError) {
         const fields = error.fieldErrors;
         if (fields.email) setError("email", { message: fields.email });
@@ -131,7 +168,17 @@ export function InviteUserForm() {
           setError("clientId", { message: fields.client_id });
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
-        toast({ title: error.message, tone: "error" });
+        const serverMessage =
+          typeof error.details?.message === "string"
+            ? error.details.message
+            : undefined;
+        toast({
+          title:
+            error.errorCode === "USER_NOT_INVITABLE" && serverMessage
+              ? serverMessage
+              : error.message,
+          tone: "error",
+        });
       } else {
         toast({
           title: "The invitation could not be sent. Please try again.",
@@ -139,7 +186,22 @@ export function InviteUserForm() {
         });
       }
     }
-  });
+  }
+
+  async function handleSendToRemaining() {
+    if (!pendingConflict) return;
+    const creatableIds = new Set(
+      pendingConflict.conflict.creatable.map(
+        (workspace) => workspace.workspace_id,
+      ),
+    );
+    const { agencyId: conflictAgencyId, payload } = pendingConflict;
+    setPendingConflict(undefined);
+    await submitInvitation(conflictAgencyId, {
+      ...payload,
+      workspace_ids: payload.workspace_ids.filter((id) => creatableIds.has(id)),
+    });
+  }
 
   return (
     <PageStack>
@@ -237,7 +299,9 @@ export function InviteUserForm() {
               agencyId={agencyId ?? 0}
               client={selectedClient}
               clientError={errors.clientId?.message}
+              email={debouncedEmail || undefined}
               isClientUser={roleCode === "CLIENT_USER"}
+              roleCode={roleCode}
               onClientChange={(client) => {
                 setSelectedClient(client);
                 setSelectedWorkspaces([]);
@@ -276,6 +340,16 @@ export function InviteUserForm() {
           </form>
         </CardContent>
       </Card>
+      {pendingConflict && (
+        <InvitationConflictDialog
+          agencyId={pendingConflict.agencyId}
+          conflict={pendingConflict.conflict}
+          isOpen
+          isPending={createMutation.isPending}
+          onCancel={() => setPendingConflict(undefined)}
+          onSendToRemaining={handleSendToRemaining}
+        />
+      )}
     </PageStack>
   );
 }

@@ -1,8 +1,11 @@
 import { csrfBootstrap } from "@/features/auth/api";
 import { apiRequest } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import { invitationPaths } from "@/lib/api/paths";
 
 import {
+  InvitationAlreadyPendingError,
+  invitationConflictSchema,
   invitationInspectionSchema,
   invitationListResponseSchema,
   type InvitationStatus,
@@ -30,10 +33,22 @@ export async function createInvitation(
   agencyId: number,
   payload: InvitePayload,
 ) {
-  await apiRequest<unknown>(invitationPaths.collection(agencyId), {
-    method: "POST",
-    body: payload,
-  });
+  try {
+    await apiRequest<unknown>(invitationPaths.collection(agencyId), {
+      method: "POST",
+      body: payload,
+    });
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.errorCode === "INVITATION_ALREADY_PENDING"
+    ) {
+      throw new InvitationAlreadyPendingError(
+        invitationConflictSchema.parse(error.details),
+      );
+    }
+    throw error;
+  }
 }
 
 export async function revokeInvitation(agencyId: number, invitationId: number) {

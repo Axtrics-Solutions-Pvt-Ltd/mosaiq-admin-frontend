@@ -9,6 +9,8 @@ const workspaceSchema = z.object({
   timezone: z.string(),
   currency: z.string(),
   status: statusSchema,
+  invite_status: z.enum(["added", "invited"]).nullable(),
+  invite_status_reason: z.enum(["expired", "revoked", "rejected"]).nullable(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });

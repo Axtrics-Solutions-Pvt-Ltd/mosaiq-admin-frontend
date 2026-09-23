@@ -62,6 +62,8 @@ export type WorkspaceListFilters = {
   status?: "active" | "inactive";
   page?: number;
   per_page?: number;
+  email?: string;
+  role_code?: string;
 };
 export async function listWorkspaces(
   agencyId: number,

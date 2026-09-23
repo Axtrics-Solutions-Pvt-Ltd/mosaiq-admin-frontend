@@ -5,6 +5,7 @@
     public readonly fieldErrors: Record<string, string>,
     public readonly requestId: string | undefined,
     message: string,
+    public readonly details: Record<string, unknown> | undefined = undefined,
   ) {
     super(message);
     this.name = "ApiError";
@@ -52,6 +53,7 @@ export async function toApiError(response: Response): Promise<ApiError> {
     fieldErrors,
     requestId,
     message,
+    record,
   );
 }
 

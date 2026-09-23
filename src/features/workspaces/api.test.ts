@@ -26,6 +26,8 @@ const record = {
   timezone: profile.timezone,
   currency: profile.currency,
   status: "active",
+  invite_status: null,
+  invite_status_reason: null,
   created_at: null,
   updated_at: null,
 };

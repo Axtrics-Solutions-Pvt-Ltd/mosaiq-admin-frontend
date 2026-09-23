@@ -100,6 +100,32 @@ export const invitationListResponseSchema = z.object({
 export type InvitePayload = z.infer<typeof inviteSchema>;
 export type Invitation = z.infer<typeof invitationSchema>;
 
+export const alreadyPendingWorkspaceSchema = z.object({
+  workspace_id: z.number().int().positive(),
+  workspace_name: z.string(),
+  invitation_id: z.number().int().positive(),
+  sent_at: z.string(),
+  expires_at: z.string(),
+});
+
+export const creatableWorkspaceSchema = z.object({
+  workspace_id: z.number().int().positive(),
+  workspace_name: z.string(),
+});
+
+export const invitationConflictSchema = z.object({
+  already_pending: z.array(alreadyPendingWorkspaceSchema),
+  creatable: z.array(creatableWorkspaceSchema),
+});
+export type InvitationConflict = z.infer<typeof invitationConflictSchema>;
+
+export class InvitationAlreadyPendingError extends Error {
+  constructor(public readonly conflict: InvitationConflict) {
+    super("Some workspaces already have a pending invitation.");
+    this.name = "InvitationAlreadyPendingError";
+  }
+}
+
 export const invitationTokenRequestSchema = z.object({
   token: z.string().length(64, "Invalid invitation token."),
 });

@@ -26,6 +26,7 @@ type BaseProps<Option> = {
   isFetchingNextPage?: boolean;
   isInvalid?: boolean;
   isLoading?: boolean;
+  isOptionDisabled?: (option: Option) => boolean;
   loadNextPage?: () => void;
   onRetry?: () => void;
   onSearchChange: (search: string) => void;
@@ -126,7 +127,8 @@ export function PaginatedCombobox<Option>(props: Props<Option>) {
     if (
       event.key === "Enter" &&
       activeIndex >= 0 &&
-      props.options[activeIndex]
+      props.options[activeIndex] &&
+      !props.isOptionDisabled?.(props.options[activeIndex])
     ) {
       event.preventDefault();
       choose(props.options[activeIndex]);
@@ -239,13 +241,17 @@ export function PaginatedCombobox<Option>(props: Props<Option>) {
               props.options.map((option, index) => {
                 const key = props.getKey(option);
                 const isSelected = selectedKeys.has(key);
+                const isDisabled = props.isOptionDisabled?.(option) ?? false;
                 return (
                   <button
+                    aria-disabled={isDisabled}
                     aria-selected={isSelected}
                     className={cn(
                       "hover:bg-muted focus-visible:bg-muted flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm focus-visible:outline-none",
                       index === activeIndex && "bg-muted",
+                      isDisabled && "cursor-not-allowed opacity-60",
                     )}
+                    disabled={isDisabled}
                     id={`${listboxId}-${index}`}
                     key={key}
                     onClick={() => choose(option)}
