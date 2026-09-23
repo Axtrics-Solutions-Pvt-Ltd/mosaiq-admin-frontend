@@ -2,6 +2,7 @@ import { forwardAgencyRequest } from "@/lib/api/agency-server";
 import { workspacePaths } from "@/lib/api/paths";
 
 const allowedFilters = ["search", "status", "page", "per_page"];
+const allowedArrayFilters = ["ids"];
 
 export async function GET(
   request: Request,
@@ -15,6 +16,11 @@ export async function GET(
   for (const key of allowedFilters) {
     const value = incoming.searchParams.get(key);
     if (value !== null) query.set(key, value);
+  }
+  for (const key of allowedArrayFilters) {
+    for (const value of incoming.searchParams.getAll(`${key}[]`)) {
+      query.append(`${key}[]`, value);
+    }
   }
   const path = workspacePaths.agencyCollection(agencyId);
   return forwardAgencyRequest(

@@ -20,6 +20,7 @@ export const agencyUserSchema = z.object({
   role_code: z.enum(agencyUserRoles),
   client_id: z.number().int().positive().nullable(),
   workspace_ids: z.array(z.number().int().positive()),
+  pending_workspace_ids: z.array(z.number().int().positive()).default([]),
   invited_at: z.string().nullable(),
   accepted_at: z.string().nullable(),
 });

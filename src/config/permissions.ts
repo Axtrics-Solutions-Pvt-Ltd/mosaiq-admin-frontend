@@ -46,3 +46,8 @@ export const superAdminCapabilities: readonly Capability[] = [
   ...orgAdminCapabilities,
   "agencies.create",
 ];
+
+export function capabilitiesForRole(roleCode: string): readonly Capability[] {
+  if (roleCode === "SUPER_ADMIN") return superAdminCapabilities;
+  return capabilitiesByAgencyRole[roleCode] ?? [];
+}

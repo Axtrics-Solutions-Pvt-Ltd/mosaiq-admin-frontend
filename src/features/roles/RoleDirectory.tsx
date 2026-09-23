@@ -1,7 +1,8 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
+import { Check, ExternalLink, Minus, ShieldCheck, X } from "lucide-react";
 
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { CardGrid, PageStack } from "@/components/shared/LayoutPatterns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatePanel } from "@/components/shared/StatePanel";
@@ -9,6 +10,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { capabilitiesForRole } from "@/config/permissions";
+import { portals } from "@/config/portals";
 import { canAccessAdmin } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import { ApiError } from "@/lib/api/errors";
@@ -32,6 +35,142 @@ function permissionLabel(permission: string) {
   );
 }
 
+// Known permissions keep a stable column order; any new API permission is appended.
+function permissionColumns(roles: readonly Role[]) {
+  const known = Object.keys(permissionLabels);
+  const extra = roles
+    .flatMap((role) => role.permissions)
+    .filter((permission) => !known.includes(permission));
+  return [...known, ...new Set(extra)].filter((permission) =>
+    roles.some((role) => role.permissions.includes(permission)),
+  );
+}
+
+function roleColumns(roles: readonly Role[]): DataTableColumn<Role>[] {
+  return [
+    {
+      id: "role",
+      header: "Role",
+      render: (role) => (
+        <div>
+          <p className="text-foreground font-medium whitespace-nowrap">
+            {role.name}
+          </p>
+          <p className="text-muted-foreground text-xs">{role.code}</p>
+        </div>
+      ),
+    },
+    {
+      id: "type",
+      header: "Type",
+      render: (role) => (
+        <Badge tone={role.assignable ? "primary" : "neutral"}>
+          {role.assignable ? "Assignable" : "System role"}
+        </Badge>
+      ),
+    },
+    ...permissionColumns(roles).map((permission): DataTableColumn<Role> => ({
+      id: permission,
+      align: "center",
+      header: permissionLabel(permission),
+      render: (role) =>
+        role.permissions.includes(permission) ? (
+          <>
+            <Check aria-hidden className="text-primary mx-auto size-4" />
+            <span className="sr-only">Granted</span>
+          </>
+        ) : (
+          <>
+            <Minus
+              aria-hidden
+              className="text-muted-foreground/60 mx-auto size-4"
+            />
+            <span className="sr-only">Not granted</span>
+          </>
+        ),
+    })),
+    {
+      id: "upload-csv",
+      header: "Upload CSV?",
+      render: (role) => (
+        <DataAccess
+          allowed={capabilitiesForRole(role.code).includes("imports.create")}
+          deniedLabel="No"
+          role={role}
+        />
+      ),
+    },
+    {
+      id: "import-history",
+      header: "View import history?",
+      render: (role) => (
+        <DataAccess
+          allowed={capabilitiesForRole(role.code).includes(
+            "importHistory.view",
+          )}
+          deniedLabel="Hidden"
+          role={role}
+        />
+      ),
+    },
+    {
+      id: "portal",
+      header: "Portal",
+      render: (role) => <PortalLink role={role} />,
+    },
+  ];
+}
+
+// Import access is scoped by tier: platform-wide, the member's agency, or their assigned workspaces.
+function dataScope(role: Role) {
+  if (role.code === "SUPER_ADMIN") return "All agencies";
+  if (role.code === "AGENCY_ADMIN") return "Own agency";
+  return "Assigned workspaces";
+}
+
+function DataAccess({
+  allowed,
+  deniedLabel,
+  role,
+}: {
+  allowed: boolean;
+  deniedLabel: string;
+  role: Role;
+}) {
+  if (!allowed) {
+    return (
+      <span className="text-muted-foreground inline-flex items-center gap-1.5 whitespace-nowrap">
+        <X aria-hidden className="size-4" />
+        {deniedLabel}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <Check aria-hidden className="text-primary size-4" />
+      Yes
+      <span className="text-muted-foreground">· {dataScope(role)}</span>
+    </span>
+  );
+}
+
+function PortalLink({ role }: { role: Role }) {
+  // Client users sign in to the customer-facing portal; every other role uses admin.
+  const portal = role.code === "CLIENT_USER" ? portals.user : portals.admin;
+  return (
+    <a
+      className="text-primary inline-flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
+      href={portal.url}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      {portal.label}
+      <ExternalLink aria-hidden className="size-3.5" />
+      <span className="sr-only">(opens in a new tab)</span>
+    </a>
+  );
+}
+
 function RoleCard({ role }: { role: Role }) {
   return (
     <Card>
@@ -52,6 +191,35 @@ function RoleCard({ role }: { role: Role }) {
             </li>
           ))}
         </ul>
+        <dl className="mt-4 grid gap-2 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <dt className="text-muted-foreground">Upload CSV?</dt>
+            <dd>
+              <DataAccess
+                allowed={capabilitiesForRole(role.code).includes(
+                  "imports.create",
+                )}
+                deniedLabel="No"
+                role={role}
+              />
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <dt className="text-muted-foreground">View import history?</dt>
+            <dd>
+              <DataAccess
+                allowed={capabilitiesForRole(role.code).includes(
+                  "importHistory.view",
+                )}
+                deniedLabel="Hidden"
+                role={role}
+              />
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-4 text-sm">
+          <PortalLink role={role} />
+        </p>
       </CardContent>
     </Card>
   );
@@ -131,11 +299,13 @@ export function RoleDirectory() {
             {rolesQuery.data.length} fixed role
             {rolesQuery.data.length === 1 ? "" : "s"}
           </p>
-          <CardGrid>
-            {rolesQuery.data.map((role) => (
-              <RoleCard key={role.code} role={role} />
-            ))}
-          </CardGrid>
+          <DataTable
+            caption="Roles and the permissions each one grants"
+            columns={roleColumns(rolesQuery.data)}
+            getRowKey={(role) => role.code}
+            mobileCard={(role) => <RoleCard role={role} />}
+            rows={rolesQuery.data}
+          />
         </>
       )}
     </PageStack>

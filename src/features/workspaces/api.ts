@@ -11,11 +11,16 @@ import {
 
 function withQuery(
   path: string,
-  values: Record<string, string | number | undefined>,
+  values: Record<string, string | number | readonly number[] | undefined>,
 ) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
-    if (value !== undefined && value !== "") params.set(key, String(value));
+    if (value === undefined || value === "") continue;
+    if (Array.isArray(value)) {
+      for (const entry of value) params.append(`${key}[]`, String(entry));
+    } else {
+      params.set(key, String(value));
+    }
   }
   return path + (params.size ? "?" + params : "");
 }
@@ -64,6 +69,7 @@ export type WorkspaceListFilters = {
   per_page?: number;
   email?: string;
   role_code?: string;
+  ids?: readonly number[];
 };
 export async function listWorkspaces(
   agencyId: number,

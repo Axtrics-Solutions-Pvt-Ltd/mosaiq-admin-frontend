@@ -65,7 +65,6 @@ export function UserEditForm({
   const clientQuery = useClient(agencyId, userQuery.data?.client_id ?? 0);
   const workspacesQuery = useWorkspacesByIds(
     agencyId,
-    userQuery.data?.client_id ?? 0,
     userQuery.data?.workspace_ids ?? [],
   );
   const selectedClient = scopeTouched ? touchedClient : clientQuery.data;

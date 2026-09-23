@@ -7,10 +7,12 @@ import { PageStack } from "@/components/shared/LayoutPatterns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatePanel } from "@/components/shared/StatePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes, userEditUrl } from "@/config/routes";
+import { useWorkspacesByIds } from "@/features/workspaces/queries";
 import { formatDate } from "@/lib/formatters";
 
 import { useAgencyUser } from "./queries";
@@ -45,6 +47,15 @@ export function UserDetail({
   userId: number;
 }) {
   const userQuery = useAgencyUser(agencyId, userId);
+  const confirmedWorkspaceIds = userQuery.data?.workspace_ids ?? [];
+  const pendingWorkspaceIds = userQuery.data?.pending_workspace_ids ?? [];
+  const workspaceIds = [
+    ...new Set([...confirmedWorkspaceIds, ...pendingWorkspaceIds]),
+  ];
+  const workspacesQuery = useWorkspacesByIds(agencyId, workspaceIds);
+  const workspacesById = new Map(
+    workspacesQuery.data.map((workspace) => [workspace.id, workspace]),
+  );
 
   if (!agencyId) {
     return (
@@ -123,12 +134,6 @@ export function UserDetail({
                   : "Agency access",
               },
               {
-                label: "Workspaces",
-                value: user.workspace_ids.length
-                  ? user.workspace_ids.map((id) => `#${id}`).join(", ")
-                  : "None",
-              },
-              {
                 label: "Invited",
                 value: user.invited_at ? formatDate(user.invited_at) : "--",
               },
@@ -138,6 +143,35 @@ export function UserDetail({
               },
             ]}
           />
+          <div>
+            <p className="text-muted-foreground text-xs font-medium">
+              Workspace access
+            </p>
+            {confirmedWorkspaceIds.length === 0 &&
+            pendingWorkspaceIds.length === 0 ? (
+              <p className="text-strong mt-1 font-medium">
+                {user.client_id ? "None" : "Agency-wide access"}
+              </p>
+            ) : (
+              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Workspaces">
+                {confirmedWorkspaceIds.map((id) => (
+                  <li key={id}>
+                    <Badge tone="success">
+                      #{id} {workspacesById.get(id)?.name ?? "Workspace"}
+                    </Badge>
+                  </li>
+                ))}
+                {pendingWorkspaceIds.map((id) => (
+                  <li key={id}>
+                    <Badge tone="warning">
+                      #{id} {workspacesById.get(id)?.name ?? "Workspace"}{" "}
+                      &middot; Invite not accepted
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </CardContent>
       </Card>
     </PageStack>

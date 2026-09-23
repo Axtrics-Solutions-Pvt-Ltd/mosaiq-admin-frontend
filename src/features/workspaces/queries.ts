@@ -1,7 +1,6 @@
 import {
   useInfiniteQuery,
   useMutation,
-  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -18,7 +17,7 @@ import {
   updateWorkspace,
   type WorkspaceListFilters,
 } from "./api";
-import type { WorkspaceProfile, WorkspaceRecord } from "./contracts";
+import type { WorkspaceProfile } from "./contracts";
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -32,6 +31,8 @@ export const workspaceKeys = {
     ["workspaces", "detail", agencyId, clientId, workspaceId] as const,
   byAgency: (agencyId: number, filters: WorkspaceListFilters) =>
     ["workspaces", "by-agency", agencyId, filters] as const,
+  byIds: (agencyId: number, workspaceIds: readonly number[]) =>
+    ["workspaces", "by-ids", agencyId, workspaceIds] as const,
 };
 const valid = (id: number) => Number.isSafeInteger(id) && id > 0;
 export function useClients(agencyId: number, page = 1) {
@@ -171,23 +172,24 @@ export function useInfiniteWorkspaces(
 }
 export function useWorkspacesByIds(
   agencyId: number,
-  clientId: number,
   workspaceIds: readonly number[],
 ) {
-  return useQueries({
-    combine: (results) => ({
-      data: results
-        .map((result) => result.data)
-        .filter((record): record is WorkspaceRecord => Boolean(record)),
-      isPending: results.some((result) => result.isPending),
-    }),
-    queries: workspaceIds.map((workspaceId) => ({
-      queryKey: workspaceKeys.detail(agencyId, clientId, workspaceId),
-      queryFn: ({ signal }: { signal?: AbortSignal }) =>
-        getWorkspace(agencyId, clientId, workspaceId, signal),
-      enabled: valid(agencyId) && valid(clientId) && valid(workspaceId),
-    })),
+  const ids = [...workspaceIds].sort((a, b) => a - b);
+  const query = useQuery({
+    queryKey: workspaceKeys.byIds(agencyId, ids),
+    queryFn: ({ signal }) =>
+      listAgencyWorkspaces(
+        agencyId,
+        { ids, per_page: Math.max(ids.length, 1) },
+        signal,
+      ),
+    enabled: valid(agencyId) && ids.length > 0,
+    select: (page) => page.data,
   });
+  return {
+    data: query.data ?? [],
+    isPending: ids.length > 0 && query.isPending,
+  };
 }
 export function useWorkspace(
   agencyId: number,

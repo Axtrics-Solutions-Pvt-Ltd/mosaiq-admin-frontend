@@ -4,7 +4,7 @@ import { TableSurface } from "@/components/shared/LayoutPatterns";
 import { cn } from "@/lib/utils/cn";
 
 export type DataTableColumn<Row> = {
-  align?: "left" | "right";
+  align?: "left" | "center" | "right";
   header: ReactNode;
   id: string;
   render: (row: Row) => ReactNode;
@@ -34,6 +34,7 @@ export function DataTable<Row>({
                 <th
                   className={cn(
                     "px-4 py-3 whitespace-nowrap",
+                    column.align === "center" && "text-center",
                     column.align === "right" && "text-right",
                   )}
                   key={column.id}
@@ -51,6 +52,7 @@ export function DataTable<Row>({
                   <td
                     className={cn(
                       "px-4 py-3 align-middle",
+                      column.align === "center" && "text-center",
                       column.align === "right" && "text-right tabular-nums",
                     )}
                     key={column.id}
