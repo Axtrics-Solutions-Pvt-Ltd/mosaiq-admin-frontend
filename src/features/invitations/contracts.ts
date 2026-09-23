@@ -23,11 +23,16 @@ export const inviteSchema = z
         message: "Choose a client for this user.",
       });
     }
-    if (value.role_code === "CLIENT_USER" && !value.workspace_ids.length) {
+    // Agency Admins have agency-wide access, so workspace restrictions are
+    // optional for them only; every other role must be scoped.
+    if (value.role_code !== "AGENCY_ADMIN" && !value.workspace_ids.length) {
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Choose at least one workspace for this client.",
+        message:
+          value.role_code === "CLIENT_USER"
+            ? "Choose at least one workspace for this client."
+            : "Choose at least one workspace for this user.",
       });
     }
     if (value.role_code !== "CLIENT_USER" && value.client_id !== undefined) {

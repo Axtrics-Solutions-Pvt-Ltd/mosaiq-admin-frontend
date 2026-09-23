@@ -136,6 +136,74 @@ it("locks Agency Admin to their agency and requires Client User scope before sen
   expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
 });
 
+it("sends Agency Admin invitations without scope but requires it for other roles", async () => {
+  const user = userEvent.setup();
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(authKeys.me(), {
+    id: 1,
+    name: "Agency Admin",
+    email: "admin@example.test",
+    platformRoleCode: null,
+    membership: {
+      agencyId: 12,
+      roleCode: "AGENCY_ADMIN",
+      clientId: null,
+      workspaceIds: [],
+    },
+  });
+  let received: unknown;
+  server.use(
+    http.get(workspacePaths.clients(12), () =>
+      HttpResponse.json({
+        data: [],
+        meta: { current_page: 1, last_page: 1, total: 0 },
+      }),
+    ),
+    http.post(invitationPaths.collection(12), async ({ request }) => {
+      received = await request.json();
+      return new HttpResponse(null, { status: 201 });
+    }),
+  );
+  render(
+    <QueryClientProvider client={queryClient}>
+      <InviteUserForm />
+      <Toaster />
+    </QueryClientProvider>,
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: /Email/ }),
+    "viewer@example.test",
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Role/ }),
+    "VIEWER",
+  );
+  await user.click(screen.getByRole("button", { name: "Send invitation" }));
+  expect(
+    await screen.findByText("Choose a client to select workspaces."),
+  ).toBeVisible();
+  expect(
+    screen.getByText("Choose at least one workspace for this user."),
+  ).toBeVisible();
+  expect(received).toBeUndefined();
+
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Role/ }),
+    "AGENCY_ADMIN",
+  );
+  await user.click(screen.getByRole("button", { name: "Send invitation" }));
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Invitation emailed to viewer@example.test.",
+  );
+  expect(received).toEqual({
+    email: "viewer@example.test",
+    role_code: "AGENCY_ADMIN",
+    workspace_ids: [],
+  });
+});
+
 it("shows already-pending workspaces on conflict and resubmits only the creatable ones", async () => {
   const user = userEvent.setup();
   const queryClient = new QueryClient({

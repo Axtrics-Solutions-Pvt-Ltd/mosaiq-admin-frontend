@@ -84,7 +84,7 @@ export async function listWorkspaces(
   return workspaceListSchema.parse(result);
 }
 export async function listAllWorkspaces(
-  filters: WorkspaceListFilters & { agency_id?: number },
+  filters: WorkspaceListFilters,
   signal?: AbortSignal,
 ) {
   const result = await apiRequest<unknown>(

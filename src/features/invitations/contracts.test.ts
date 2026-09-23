@@ -13,6 +13,24 @@ describe("invitation contract", () => {
     ).toBe(false);
   });
 
+  it("makes workspaces optional only for Agency Admin", () => {
+    expect(
+      inviteSchema.safeParse({
+        email: "admin@example.test",
+        role_code: "AGENCY_ADMIN",
+        workspace_ids: [],
+      }).success,
+    ).toBe(true);
+    const result = inviteSchema.safeParse({
+      email: "viewer@example.test",
+      role_code: "VIEWER",
+      workspace_ids: [],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success)
+      expect(result.error.issues[0]?.path).toEqual(["workspace_ids"]);
+  });
+
   it("rejects client_id for non-Client roles", () => {
     const result = inviteSchema.safeParse({
       email: "viewer@example.test",

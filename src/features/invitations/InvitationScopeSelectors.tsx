@@ -26,6 +26,7 @@ export function InvitationScopeSelectors({
   clientError,
   email,
   isClientUser,
+  isScopeRequired,
   onClientChange,
   onWorkspacesChange,
   roleCode,
@@ -37,6 +38,7 @@ export function InvitationScopeSelectors({
   clientError?: string;
   email?: string;
   isClientUser: boolean;
+  isScopeRequired: boolean;
   onClientChange: (client: ClientRecord) => void;
   onWorkspacesChange: (workspaces: WorkspaceRecord[]) => void;
   roleCode?: string;
@@ -72,12 +74,14 @@ export function InvitationScopeSelectors({
         description={
           isClientUser
             ? "Required. Only active clients in the selected agency are available."
-            : "Choose an active client to browse optional workspace restrictions. The client is not submitted for this role."
+            : isScopeRequired
+              ? "Required. Choose an active client to browse its workspaces. The client is not submitted for this role."
+              : "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role."
         }
         error={clientError}
         id="invite-client"
         label={isClientUser ? "Client" : "Workspace client"}
-        required={isClientUser}
+        required={isScopeRequired}
       >
         <PaginatedCombobox
           ariaDescribedBy={
@@ -119,12 +123,14 @@ export function InvitationScopeSelectors({
         description={
           isClientUser
             ? "Choose at least one active workspace belonging to this client."
-            : "Optional. Selected workspaces restrict this user's access."
+            : isScopeRequired
+              ? "Choose at least one active workspace this user can access."
+              : "Optional. Agency Admins have agency-wide access; selected workspaces restrict it."
         }
         error={workspaceError}
         id="invite-workspaces"
         label="Workspace access"
-        required={isClientUser}
+        required={isScopeRequired}
       >
         <PaginatedCombobox
           ariaDescribedBy={

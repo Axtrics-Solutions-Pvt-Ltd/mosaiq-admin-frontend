@@ -116,6 +116,15 @@ export function InviteUserForm() {
       setError("agencyId", { message: "Choose an agency." });
       return;
     }
+    // Non-client roles pick a client only to browse workspaces; it is not
+    // submitted, so the payload schema cannot flag it as missing.
+    const isClientMissing =
+      values.roleCode !== "AGENCY_ADMIN" &&
+      values.roleCode !== "CLIENT_USER" &&
+      !values.clientId;
+    if (isClientMissing) {
+      setError("clientId", { message: "Choose a client to select workspaces." });
+    }
     const parsed = inviteSchema.safeParse({
       email: values.email.trim(),
       role_code: values.roleCode,
@@ -133,6 +142,7 @@ export function InviteUserForm() {
       }
       return;
     }
+    if (isClientMissing) return;
     await submitInvitation(targetAgencyId, parsed.data);
   });
 
@@ -301,6 +311,7 @@ export function InviteUserForm() {
               clientError={errors.clientId?.message}
               email={debouncedEmail || undefined}
               isClientUser={roleCode === "CLIENT_USER"}
+              isScopeRequired={roleCode !== "AGENCY_ADMIN"}
               roleCode={roleCode}
               onClientChange={(client) => {
                 setSelectedClient(client);

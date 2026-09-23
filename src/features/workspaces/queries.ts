@@ -124,8 +124,11 @@ export function useAllWorkspaces(
       scopedAgencyId ?? "all",
       filters,
     ] as const,
+    // The cross-agency endpoint is Super Admin only; scoped roles use the per-agency one.
     queryFn: ({ signal }) =>
-      listAllWorkspaces({ ...filters, agency_id: scopedAgencyId }, signal),
+      scopedAgencyId
+        ? listAgencyWorkspaces(scopedAgencyId, filters, signal)
+        : listAllWorkspaces(filters, signal),
   });
 }
 

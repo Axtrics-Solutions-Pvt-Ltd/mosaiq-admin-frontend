@@ -274,6 +274,7 @@ export function UserEditForm({
               client={selectedClient}
               clientError={errors.clientId?.message}
               isClientUser={roleCode === "CLIENT_USER"}
+              isScopeRequired={roleCode === "CLIENT_USER"}
               onClientChange={(client) => {
                 setScopeTouched(true);
                 setTouchedClient(client);
