@@ -4,7 +4,9 @@ import {
   canAccessAdmin,
   canSignIntoAdmin,
   hasCapability,
+  needsPendingInvitations,
   parseCurrentUser,
+  postLoginDestination,
 } from "./contracts";
 
 function response(
@@ -63,6 +65,56 @@ describe("admin portal sign-in eligibility", () => {
     expect(
       canSignIntoAdmin(parseCurrentUser(response(null, "CLIENT_USER"))),
     ).toBe(false);
+  });
+});
+
+describe("post-login destination", () => {
+  const invitePath = `/accept-invitation?token=${"a".repeat(64)}`;
+
+  it("sends a user without a membership to their pending invitations", () => {
+    const user = parseCurrentUser(response(null, null));
+    expect(needsPendingInvitations(user)).toBe(true);
+    expect(postLoginDestination(user)).toBe("/invitations/pending");
+  });
+
+  it("does not treat a Super Admin's null membership as a pending invitee", () => {
+    const superAdmin = parseCurrentUser(response("SUPER_ADMIN", null));
+    expect(needsPendingInvitations(superAdmin)).toBe(false);
+    expect(postLoginDestination(superAdmin)).toBe("/dashboard");
+  });
+
+  it("keeps existing role routing for members", () => {
+    expect(postLoginDestination(parseCurrentUser(response(null, "VIEWER")))).toBe(
+      "/dashboard",
+    );
+    expect(
+      postLoginDestination(parseCurrentUser(response(null, "CLIENT_USER"))),
+    ).toBe("/forbidden?reason=client-portal");
+  });
+
+  it("returns to the invitation the user was accepting", () => {
+    for (const account of [
+      response(null, null),
+      response(null, "VIEWER"),
+      response("SUPER_ADMIN", null),
+    ]) {
+      expect(postLoginDestination(parseCurrentUser(account), invitePath)).toBe(
+        invitePath,
+      );
+    }
+  });
+
+  it("ignores return paths outside the allowlist", () => {
+    const viewer = parseCurrentUser(response(null, "VIEWER"));
+    for (const next of [
+      "https://evil.example/accept-invitation",
+      "//evil.example/accept-invitation",
+      "/\\evil.example/accept-invitation",
+      "/users",
+      "accept-invitation",
+    ]) {
+      expect(postLoginDestination(viewer, next)).toBe("/dashboard");
+    }
   });
 });
 

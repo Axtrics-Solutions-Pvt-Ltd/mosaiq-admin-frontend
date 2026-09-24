@@ -1,4 +1,4 @@
-import { invitationStatuses } from "@/features/invitations/contracts";
+import { parseInvitationStatusFilter } from "@/features/invitations/contracts";
 import { InvitationDirectory } from "@/features/invitations/InvitationDirectory";
 
 function positive(value: string | string[] | undefined) {
@@ -7,8 +7,9 @@ function positive(value: string | string[] | undefined) {
 }
 
 function statusFilter(value: string | string[] | undefined) {
-  const candidate = typeof value === "string" ? value : undefined;
-  return invitationStatuses.find((status) => status === candidate) ?? "all";
+  return parseInvitationStatusFilter(
+    typeof value === "string" ? value : undefined,
+  );
 }
 
 export default async function InvitationsPage({

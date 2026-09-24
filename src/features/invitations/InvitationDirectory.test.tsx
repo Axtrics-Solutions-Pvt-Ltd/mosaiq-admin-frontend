@@ -4,8 +4,8 @@ import { expect, it, vi } from "vitest";
 
 import { agencyPaths, invitationPaths, workspacePaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
-import { renderWithScope } from "@/test/renderWithScope";
 import { useScope } from "@/providers/ScopeProvider";
+import { renderWithScope } from "@/test/renderWithScope";
 
 import { InvitationDirectory } from "./InvitationDirectory";
 
@@ -164,6 +164,63 @@ it("does not change the header's agency scope when the page-level agency filter 
   });
   await screen.findByText("No invitations found");
   expect(screen.getByText("Header scope agency: none")).toBeVisible();
+});
+
+it("resends an expired invitation and updates its row in place", async () => {
+  const row = {
+    id: 34,
+    email: "late.user@example.test",
+    agency_id: 12,
+    client_id: null,
+    role_code: "VIEWER",
+    workspace_id: 9,
+    workspace_name: "Retail",
+    expires_at: "2026-09-01T10:00:00Z",
+    accepted_at: null,
+    revoked_at: null,
+    rejected_at: null,
+    status: "expired",
+    can_resend: true,
+  };
+  server.use(
+    http.get(invitationPaths.collection(12), () =>
+      HttpResponse.json({
+        data: [row],
+        meta: { current_page: 1, last_page: 1, total: 1 },
+      }),
+    ),
+    http.post(invitationPaths.resend(12, 34), () =>
+      HttpResponse.json({
+        data: {
+          ...row,
+          expires_at: "2026-09-30T10:00:00Z",
+          status: "pending",
+          can_resend: false,
+        },
+      }),
+    ),
+  );
+  renderWithScope(
+    <InvitationDirectory
+      agencyId={undefined}
+      page={1}
+      status="open"
+      workspaceId={undefined}
+    />,
+    { membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" } },
+  );
+  const resendButtons = await screen.findAllByRole("button", {
+    name: "Resend invitation to late.user@example.test",
+  });
+  fireEvent.click(resendButtons[0] as HTMLElement);
+  await waitFor(() =>
+    expect(
+      screen.queryAllByRole("button", {
+        name: "Resend invitation to late.user@example.test",
+      }),
+    ).toHaveLength(0),
+  );
+  expect(screen.getAllByLabelText("Status: Pending")[0]).toBeVisible();
 });
 
 it("filters invitations by workspace for an Agency Admin", async () => {

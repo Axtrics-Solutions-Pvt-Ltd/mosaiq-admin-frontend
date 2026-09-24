@@ -24,5 +24,6 @@ export const config = {
     "/curation/:path*",
     "/governance/:path*",
     "/design-system/:path*",
+    "/invitations/:path*",
   ],
 };

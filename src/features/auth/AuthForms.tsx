@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
-import { routes } from "@/config/routes";
+import { routes, safeReturnPath } from "@/config/routes";
 import { AuthAlert } from "@/features/auth/AuthAlert";
-import { canSignIntoAdmin } from "@/features/auth/contracts";
+import { postLoginDestination } from "@/features/auth/contracts";
 import { PasswordInput } from "@/features/auth/PasswordInput";
 import { useLogin } from "@/features/auth/queries";
 import { ApiError } from "@/lib/api/errors";
@@ -41,7 +41,13 @@ const loginSchema = z.object({
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
-export function LoginForm({ reason }: { reason?: string }) {
+export function LoginForm({
+  next,
+  reason,
+}: {
+  next?: string;
+  reason?: string;
+}) {
   const router = useRouter();
   const loginMutation = useLogin();
   const {
@@ -56,11 +62,7 @@ export function LoginForm({ reason }: { reason?: string }) {
   const onSubmit = handleSubmit(async (values) => {
     try {
       const user = await loginMutation.mutateAsync(values);
-      router.replace(
-        canSignIntoAdmin(user)
-          ? routes.dashboard
-          : `${routes.forbidden}?reason=client-portal`,
-      );
+      router.replace(postLoginDestination(user, next));
       router.refresh();
     } catch (error) {
       if (error instanceof ApiError) {
@@ -81,6 +83,12 @@ export function LoginForm({ reason }: { reason?: string }) {
       {reason === "session-expired" && (
         <AuthAlert>
           Your session has ended. Sign in again to continue.
+        </AuthAlert>
+      )}
+      {!reason && safeReturnPath(next) && (
+        <AuthAlert>
+          Sign in to continue with your invitation. You will return to it
+          afterwards.
         </AuthAlert>
       )}
       {apiError && (

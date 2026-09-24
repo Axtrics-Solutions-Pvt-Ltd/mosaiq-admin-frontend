@@ -13,9 +13,19 @@ export const invitationPaths = {
     `/api/v1/admin/agencies/${agencyId}/invitations`,
   detail: (agencyId: number, invitationId: number) =>
     `/api/v1/admin/agencies/${agencyId}/invitations/${invitationId}`,
+  resend: (agencyId: number, invitationId: number) =>
+    `/api/v1/admin/agencies/${agencyId}/invitations/${invitationId}/resend`,
   inspect: "/api/v1/invitations/inspect",
   accept: "/api/v1/invitations/accept",
   reject: "/api/v1/invitations/reject",
+} as const;
+
+export const myInvitationPaths = {
+  collection: "/api/v1/me/invitations",
+  accept: (invitationId: number) =>
+    `/api/v1/me/invitations/${invitationId}/accept`,
+  reject: (invitationId: number) =>
+    `/api/v1/me/invitations/${invitationId}/reject`,
 } as const;
 
 export const agencyPaths = {

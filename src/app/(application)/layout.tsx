@@ -13,6 +13,7 @@ import { routes } from "@/config/routes";
 import {
   canSignIntoAdmin,
   currentUserSchema,
+  needsPendingInvitations,
   normalizeCurrentUser,
 } from "@/features/auth/contracts";
 import { authKeys } from "@/features/auth/queries";
@@ -66,6 +67,7 @@ export default async function ApplicationLayout({
       </div>
     );
   const user = normalizeCurrentUser(parsed.data.data);
+  if (needsPendingInvitations(user)) redirect(routes.pendingInvitations);
   if (!canSignIntoAdmin(user))
     redirect(`${routes.forbidden}?reason=client-portal`);
   const queryClient = new QueryClient();

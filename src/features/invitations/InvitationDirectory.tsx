@@ -25,30 +25,49 @@ import { useScope } from "@/providers/ScopeProvider";
 import {
   getInvitationStatus,
   type Invitation,
-  type InvitationStatus,
+  type InvitationStatusFilter,
 } from "./contracts";
+import { invitationRoleLabels as roleLabels } from "./labels";
 import { useInvitations } from "./queries";
+import { ResendInvitationButton } from "./ResendInvitationButton";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
 
 const statusFilterOptions: readonly {
   label: string;
-  value: InvitationStatus | "all";
+  value: InvitationStatusFilter;
 }[] = [
-  { label: "All invitations", value: "all" },
+  { label: "Open (pending and expired)", value: "open" },
   { label: "Pending", value: "pending" },
+  { label: "Expired", value: "expired" },
   { label: "Accepted", value: "accepted" },
   { label: "Rejected", value: "rejected" },
   { label: "Revoked", value: "revoked" },
-  { label: "Expired", value: "expired" },
+  { label: "All invitations", value: "all" },
 ];
 
-const roleLabels: Record<Invitation["role_code"], string> = {
-  AGENCY_ADMIN: "Agency Admin",
-  MANAGER: "Manager",
-  ANALYST: "Analyst",
-  VIEWER: "Viewer",
-  CLIENT_USER: "Client User",
-};
+function InvitationActions({ invitation }: { invitation: Invitation }) {
+  const canRevoke = getInvitationStatus(invitation) === "pending";
+  const canResend = invitation.can_resend === true;
+  if (!canRevoke && !canResend)
+    return <span className="text-muted-foreground text-sm">No action</span>;
+  return (
+    <div className="flex flex-wrap items-start gap-2">
+      {canResend && (
+        <ResendInvitationButton
+          agencyId={invitation.agency_id}
+          email={invitation.email}
+          invitationId={invitation.id}
+        />
+      )}
+      {canRevoke && (
+        <RevokeInvitationButton
+          agencyId={invitation.agency_id}
+          invitationId={invitation.id}
+        />
+      )}
+    </div>
+  );
+}
 
 function Scope({ invitation }: { invitation: Invitation }) {
   if (invitation.client_id) {
@@ -106,13 +125,7 @@ const columns: readonly DataTableColumn<Invitation>[] = [
   {
     header: <span className="sr-only">Actions</span>,
     id: "actions",
-    render: (invitation) => (
-      <RevokeInvitationButton
-        agencyId={invitation.agency_id}
-        canRevoke={getInvitationStatus(invitation) === "pending"}
-        invitationId={invitation.id}
-      />
-    ),
+    render: (invitation) => <InvitationActions invitation={invitation} />,
   },
 ];
 
@@ -149,11 +162,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
           </div>
         </dl>
         <div className="mt-4 border-t pt-4">
-          <RevokeInvitationButton
-            agencyId={invitation.agency_id}
-            canRevoke={status === "pending"}
-            invitationId={invitation.id}
-          />
+          <InvitationActions invitation={invitation} />
         </div>
       </CardContent>
     </Card>
@@ -183,7 +192,7 @@ export function InvitationDirectory({
 }: {
   agencyId: number | undefined;
   page: number;
-  status: InvitationStatus | "all";
+  status: InvitationStatusFilter;
   workspaceId: number | undefined;
 }) {
   const router = useRouter();
@@ -234,7 +243,7 @@ export function InvitationDirectory({
 
   function changeStatus(nextStatus: string) {
     const params = new URLSearchParams(window.location.search);
-    if (nextStatus === "all") params.delete("status");
+    if (nextStatus === "open") params.delete("status");
     else params.set("status", nextStatus);
     params.delete("page");
     router.replace(
@@ -264,7 +273,7 @@ export function InvitationDirectory({
             Users
           </Link>
         }
-        description="Review agency invitations, track accepted and rejected responses, and revoke access before it is accepted."
+        description="Review agency invitations, resend expired ones, track accepted and declined responses, and revoke access before it is accepted."
         title="Invitations"
       />
       <FilterBar
@@ -385,7 +394,9 @@ export function InvitationDirectory({
             description={
               status === "all"
                 ? "New invitations will appear here once sent."
-                : `No invitations currently have the "${
+                : status === "open"
+                  ? "No invitations are waiting for a response or ready to resend."
+                  : `No invitations currently have the "${
                     statusFilterOptions.find(
                       (option) => option.value === status,
                     )?.label ?? status

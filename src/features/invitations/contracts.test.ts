@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
 
-import { inviteSchema } from "./contracts";
+import {
+  invitationStatusQuery,
+  inviteSchema,
+  parseInvitationStatusFilter,
+} from "./contracts";
+
+describe("invitation status filter", () => {
+  it("defaults to open invitations, which include expired ones to resend", () => {
+    expect(parseInvitationStatusFilter(undefined)).toBe("open");
+    expect(parseInvitationStatusFilter("unknown")).toBe("open");
+    expect(invitationStatusQuery("open")).toBe("pending,expired");
+  });
+
+  it("omits the status parameter only for all invitations", () => {
+    expect(parseInvitationStatusFilter("all")).toBe("all");
+    expect(invitationStatusQuery("all")).toBeUndefined();
+    expect(parseInvitationStatusFilter("rejected")).toBe("rejected");
+    expect(invitationStatusQuery("rejected")).toBe("rejected");
+  });
+});
 
 describe("invitation contract", () => {
   it("requires an active-scope shape for Client User", () => {

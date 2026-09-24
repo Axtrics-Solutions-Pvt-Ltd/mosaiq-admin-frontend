@@ -1,10 +1,18 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { invitationPaths } from "@/lib/api/paths";
+import { invitationPaths, myInvitationPaths } from "@/lib/api/paths";
 import { server } from "@/mocks/server";
 
-import { createInvitation, listInvitations, revokeInvitation } from "./api";
+import {
+  acceptMyInvitation,
+  createInvitation,
+  listInvitations,
+  listMyInvitations,
+  rejectMyInvitation,
+  resendInvitation,
+  revokeInvitation,
+} from "./api";
 
 describe("invitation API", () => {
   it("lists the selected agency's invitations with pagination", async () => {
@@ -50,6 +58,82 @@ describe("invitation API", () => {
     );
     await listInvitations(12, 1, "rejected");
     expect(query).toBe("?page=1&status=rejected");
+  });
+
+  it("requests pending and expired invitations for the open filter", async () => {
+    let status: string | null = null;
+    server.use(
+      http.get(invitationPaths.collection(12), ({ request }) => {
+        status = new URL(request.url).searchParams.get("status");
+        return HttpResponse.json({
+          data: [],
+          meta: { current_page: 1, last_page: 1, total: 0 },
+        });
+      }),
+    );
+    await listInvitations(12, 1, "open");
+    expect(status).toBe("pending,expired");
+  });
+
+  it("returns the resent invitation row", async () => {
+    server.use(
+      http.post(invitationPaths.resend(12, 34), () =>
+        HttpResponse.json({
+          data: {
+            id: 34,
+            email: "person@example.test",
+            agency_id: 12,
+            client_id: null,
+            role_code: "VIEWER",
+            workspace_id: 9,
+            workspace_name: "Growth",
+            expires_at: "2026-09-30T10:00:00Z",
+            accepted_at: null,
+            revoked_at: null,
+            rejected_at: null,
+            status: "pending",
+            can_resend: false,
+          },
+        }),
+      ),
+    );
+    const invitation = await resendInvitation(12, 34);
+    expect(invitation).toMatchObject({ id: 34, status: "pending" });
+  });
+
+  it("lists, accepts and rejects the signed-in user's invitations by id", async () => {
+    const calls: string[] = [];
+    server.use(
+      http.get(myInvitationPaths.collection, () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: 5,
+              agency_id: 12,
+              agency_name: "Northstar",
+              role_code: "ANALYST",
+              client_id: null,
+              client_name: null,
+              workspace_id: 9,
+              workspace_name: "Growth",
+              expires_at: "2026-09-30T10:00:00Z",
+            },
+          ],
+        }),
+      ),
+      http.post(myInvitationPaths.accept(5), () => {
+        calls.push("accept");
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.post(myInvitationPaths.reject(5), () => {
+        calls.push("reject");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    expect((await listMyInvitations())[0]?.workspace_name).toBe("Growth");
+    await acceptMyInvitation(5);
+    await rejectMyInvitation(5);
+    expect(calls).toEqual(["accept", "reject"]);
   });
 
   it("posts the confirmed payload and accepts an empty success response", async () => {

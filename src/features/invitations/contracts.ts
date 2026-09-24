@@ -60,6 +60,24 @@ export const invitationStatuses = [
 ] as const;
 export type InvitationStatus = (typeof invitationStatuses)[number];
 
+// "open" is the admin list default: invitations still waiting on the invitee,
+// including expired ones an admin may want to resend.
+export type InvitationStatusFilter = "open" | "all" | InvitationStatus;
+const openInvitationStatuses = ["pending", "expired"] as const;
+
+export function parseInvitationStatusFilter(
+  value: string | undefined,
+): InvitationStatusFilter {
+  if (value === "all") return "all";
+  return invitationStatuses.find((status) => status === value) ?? "open";
+}
+
+export function invitationStatusQuery(filter: InvitationStatusFilter) {
+  if (filter === "all") return undefined;
+  if (filter === "open") return openInvitationStatuses.join(",");
+  return filter;
+}
+
 export const invitationSchema = z.object({
   id: z.number().int().positive(),
   email: z.email(),
@@ -71,12 +89,12 @@ export const invitationSchema = z.object({
   expires_at: z.string().min(1),
   accepted_at: z.string().nullable(),
   revoked_at: z.string().nullable(),
-  // Backend does not yet return this field. Once the reject endpoint records
-  // a timestamp, this becomes required — see InvitationDirectory handoff note.
   rejected_at: z.string().nullable().optional(),
-  // Backend may eventually compute this directly; when present it wins over
+  // The backend is adding a computed status; when present it wins over
   // client-side derivation from the timestamp fields above.
   status: z.enum(invitationStatuses).optional(),
+  // Laravel decides whether a row can be resent; do not derive it from status.
+  can_resend: z.boolean().optional(),
 });
 
 export function getInvitationStatus(
@@ -102,8 +120,27 @@ export const invitationListResponseSchema = z.object({
   }),
 });
 
+export const invitationResponseSchema = z.object({ data: invitationSchema });
+
 export type InvitePayload = z.infer<typeof inviteSchema>;
 export type Invitation = z.infer<typeof invitationSchema>;
+
+export const myInvitationSchema = z.object({
+  id: z.number().int().positive(),
+  agency_id: z.number().int().positive(),
+  agency_name: z.string(),
+  role_code: z.enum(invitationRoles),
+  client_id: z.number().int().positive().nullable(),
+  client_name: z.string().nullable(),
+  workspace_id: z.number().int().positive().nullable(),
+  workspace_name: z.string().nullable(),
+  expires_at: z.string().min(1),
+});
+export type MyInvitation = z.infer<typeof myInvitationSchema>;
+
+export const myInvitationListResponseSchema = z.object({
+  data: z.array(myInvitationSchema),
+});
 
 export const alreadyPendingWorkspaceSchema = z.object({
   workspace_id: z.number().int().positive(),
@@ -148,6 +185,9 @@ export const invitationInspectionSchema = z.object({
   role_code: z.enum(invitationRoles),
   expires_at: z.string().min(1),
   requires_existing_login: z.boolean(),
+  // Being added by the backend; optional until every environment returns them.
+  workspace_name: z.string().nullable().optional(),
+  client_name: z.string().nullable().optional(),
 });
 export type InvitationInspection = z.infer<typeof invitationInspectionSchema>;
 

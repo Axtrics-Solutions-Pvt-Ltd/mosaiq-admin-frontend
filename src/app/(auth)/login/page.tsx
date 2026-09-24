@@ -7,9 +7,11 @@ import { LoginForm } from "@/features/auth/AuthForms";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { reason } = await searchParams;
+  const params = await searchParams;
+  const reason = typeof params.reason === "string" ? params.reason : undefined;
+  const next = typeof params.next === "string" ? params.next : undefined;
   return (
     <AuthCard
       description="Sign in to manage agencies, workspaces, access, and operational data."
@@ -33,7 +35,7 @@ export default async function LoginPage({
       }
       title="Welcome back"
     >
-      <LoginForm reason={reason} />
+      <LoginForm next={next} reason={reason} />
     </AuthCard>
   );
 }

@@ -5,6 +5,7 @@ import {
   type Capability,
   superAdminCapabilities,
 } from "@/config/permissions";
+import { routes, safeReturnPath } from "@/config/routes";
 
 export const currentUserSchema = z.object({
   data: z.object({
@@ -72,6 +73,21 @@ export function isClientUser(user: CurrentUser) {
 
 export function canSignIntoAdmin(user: CurrentUser) {
   return !isClientUser(user);
+}
+
+// Super Admins also have no membership, so a null membership alone does not
+// mean the account is waiting on an invitation.
+export function needsPendingInvitations(user: CurrentUser) {
+  return user.membership === null && user.platformRoleCode !== "SUPER_ADMIN";
+}
+
+export function postLoginDestination(user: CurrentUser, next?: string) {
+  const returnPath = safeReturnPath(next);
+  if (returnPath) return returnPath;
+  if (needsPendingInvitations(user)) return routes.pendingInvitations;
+  return canSignIntoAdmin(user)
+    ? routes.dashboard
+    : `${routes.forbidden}?reason=client-portal`;
 }
 
 export function userCapabilities(user: CurrentUser): readonly Capability[] {

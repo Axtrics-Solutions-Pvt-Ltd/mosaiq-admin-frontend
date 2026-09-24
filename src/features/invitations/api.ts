@@ -1,26 +1,30 @@
 import { csrfBootstrap } from "@/features/auth/api";
 import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
-import { invitationPaths } from "@/lib/api/paths";
+import { invitationPaths, myInvitationPaths } from "@/lib/api/paths";
 
 import {
   InvitationAlreadyPendingError,
   invitationConflictSchema,
   invitationInspectionSchema,
   invitationListResponseSchema,
-  type InvitationStatus,
+  invitationResponseSchema,
+  type InvitationStatusFilter,
+  invitationStatusQuery,
   type InvitePayload,
+  myInvitationListResponseSchema,
 } from "./contracts";
 
 export async function listInvitations(
   agencyId: number,
   page: number,
-  status: InvitationStatus | "all",
+  status: InvitationStatusFilter,
   workspaceId?: number,
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({ page: String(page) });
-  if (status !== "all") params.set("status", status);
+  const statusQuery = invitationStatusQuery(status);
+  if (statusQuery) params.set("status", statusQuery);
   if (workspaceId) params.set("workspace_id", String(workspaceId));
   const result = await apiRequest<unknown>(
     `${invitationPaths.collection(agencyId)}?${params}`,
@@ -54,6 +58,36 @@ export async function createInvitation(
 export async function revokeInvitation(agencyId: number, invitationId: number) {
   await apiRequest<unknown>(invitationPaths.detail(agencyId, invitationId), {
     method: "DELETE",
+  });
+}
+
+export async function resendInvitation(
+  agencyId: number,
+  invitationId: number,
+) {
+  const result = await apiRequest<unknown>(
+    invitationPaths.resend(agencyId, invitationId),
+    { method: "POST" },
+  );
+  return invitationResponseSchema.parse(result).data;
+}
+
+export async function listMyInvitations(signal?: AbortSignal) {
+  const result = await apiRequest<unknown>(myInvitationPaths.collection, {
+    signal,
+  });
+  return myInvitationListResponseSchema.parse(result).data;
+}
+
+export async function acceptMyInvitation(invitationId: number) {
+  await apiRequest<unknown>(myInvitationPaths.accept(invitationId), {
+    method: "POST",
+  });
+}
+
+export async function rejectMyInvitation(invitationId: number) {
+  await apiRequest<unknown>(myInvitationPaths.reject(invitationId), {
+    method: "POST",
   });
 }
 

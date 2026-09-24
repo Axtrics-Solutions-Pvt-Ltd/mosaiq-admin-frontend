@@ -37,6 +37,48 @@ const agencyAdmin = {
     },
   },
 };
+// A user with no membership who signs in to accept a pending invitation. Each
+// sign-in gets its own session so parallel Playwright projects do not share
+// acceptance state.
+const returningSessions = new Map();
+let returningSessionCount = 0;
+function returningSession(request) {
+  const match = request.headers.cookie?.match(
+    /mosaiq-session=active-returning-(\d+)/,
+  );
+  return match ? returningSessions.get(match[1]) : undefined;
+}
+function returningUser(session) {
+  return {
+    data: {
+      id: 4,
+      name: "Returning User",
+      email: "returning@example.test",
+      platform_role_code: null,
+      membership: session.hasMembership
+        ? {
+            agency_id: 1,
+            role_code: "ANALYST",
+            client_id: null,
+            workspace_ids: [101],
+          }
+        : null,
+    },
+  };
+}
+const pendingInvitation = {
+  id: 71,
+  agency_id: 1,
+  agency_name: "Northstar Digital",
+  role_code: "ANALYST",
+  client_id: null,
+  client_name: null,
+  workspace_id: 101,
+  workspace_name: "Growth",
+  expires_at: "2026-12-31T10:00:00Z",
+};
+const invitationToken = "e".repeat(64);
+
 const json = (response, status, body, headers = {}) => {
   response.writeHead(status, {
     "Content-Type": "application/json",
@@ -105,10 +147,14 @@ async function readJson(request) {
 createServer(async (request, response) => {
   if (request.url === "/health") return json(response, 200, { ok: true });
   if (request.method === "GET" && request.url === "/sanctum/csrf-cookie") {
+    // Like Laravel, refreshing the CSRF cookie keeps an existing session.
+    const hasSession = request.headers.cookie?.includes("mosaiq-session=active-");
     response.writeHead(204, {
       "Set-Cookie": [
         "XSRF-TOKEN=browser-token%3D; Path=/; SameSite=Lax",
-        "mosaiq-session=pre-session; Path=/; HttpOnly; SameSite=Lax",
+        ...(hasSession
+          ? []
+          : ["mosaiq-session=pre-session; Path=/; HttpOnly; SameSite=Lax"]),
       ],
     });
     return response.end();
@@ -134,6 +180,13 @@ createServer(async (request, response) => {
     }
     if (!body.email || !body.password)
       return json(response, 422, { errors: { email: ["Invalid input"] } });
+    if (body.email === "returning@example.test") {
+      const sessionId = String((returningSessionCount += 1));
+      returningSessions.set(sessionId, { hasMembership: false });
+      return json(response, 200, returningUser(returningSessions.get(sessionId)), {
+        "Set-Cookie": `mosaiq-session=active-returning-${sessionId}; Path=/; HttpOnly; SameSite=Lax`,
+      });
+    }
     const isViewer = body.email === "viewer@example.test";
     const isAgencyAdmin = body.email === "agency@example.test";
     return json(response, 200, isViewer ? viewer : isAgencyAdmin ? agencyAdmin : user, {
@@ -141,6 +194,8 @@ createServer(async (request, response) => {
     });
   }
   if (request.method === "GET" && request.url === "/api/v1/auth/me") {
+    const returning = returningSession(request);
+    if (returning) return json(response, 200, returningUser(returning));
     if (request.headers.cookie?.includes("mosaiq-session=active-agency-session"))
       return json(response, 200, agencyAdmin);
     if (
@@ -174,6 +229,61 @@ createServer(async (request, response) => {
     return response.end();
   }
   const url = new URL(request.url ?? "/", "http://localhost");
+  if (url.pathname === "/api/v1/invitations/inspect" && request.method === "POST") {
+    const body = await readJson(request);
+    if (body.token !== invitationToken)
+      return json(response, 404, { error_code: "NOT_FOUND" });
+    return json(response, 200, {
+      data: {
+        email: "agency@example.test",
+        agency_name: "Northstar Digital",
+        agency_status: "active",
+        role_code: "AGENCY_ADMIN",
+        expires_at: "2026-12-31T10:00:00Z",
+        requires_existing_login: true,
+        workspace_name: "Retail",
+        client_name: null,
+      },
+    });
+  }
+  if (url.pathname === "/api/v1/invitations/accept" && request.method === "POST") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    const body = await readJson(request);
+    if (body.token !== invitationToken)
+      return json(response, 404, { error_code: "NOT_FOUND" });
+    if (!request.headers.cookie?.includes("mosaiq-session=active-agency-session"))
+      return json(response, 401, { error_code: "UNAUTHENTICATED" });
+    response.writeHead(204);
+    return response.end();
+  }
+  if (url.pathname === "/api/v1/me/invitations" && request.method === "GET") {
+    const returning = returningSession(request);
+    if (returning)
+      return json(response, 200, {
+        data: returning.hasMembership ? [] : [pendingInvitation],
+      });
+    if (!request.headers.cookie?.includes("mosaiq-session=active-"))
+      return json(response, 401, { error_code: "UNAUTHENTICATED" });
+    return json(response, 200, { data: [] });
+  }
+  const myInvitationAccept = url.pathname.match(
+    /^\/api\/v1\/me\/invitations\/(\d+)\/accept$/,
+  );
+  if (myInvitationAccept && request.method === "POST") {
+    if (request.headers["x-xsrf-token"] !== "browser-token=")
+      return json(response, 419, { message: "CSRF mismatch" });
+    const returning = returningSession(request);
+    if (!returning) return json(response, 401, { error_code: "UNAUTHENTICATED" });
+    if (
+      returning.hasMembership ||
+      Number(myInvitationAccept[1]) !== pendingInvitation.id
+    )
+      return json(response, 404, { error_code: "NOT_FOUND" });
+    returning.hasMembership = true;
+    response.writeHead(204);
+    return response.end();
+  }
   const ownUserMatch = url.pathname.match(/^\/api\/v1\/agencies\/(\d+)\/users\/(\d+)$/);
   if (ownUserMatch && request.method === "PUT") {
     if (request.headers["x-xsrf-token"] !== "browser-token=")

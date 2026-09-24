@@ -7,6 +7,7 @@ export const routes = {
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
   acceptInvitation: "/accept-invitation",
+  pendingInvitations: "/invitations/pending",
   forbidden: "/forbidden",
   signedOut: "/login?reason=signed-out",
   sessionExpired: "/login?reason=session-expired",
@@ -45,6 +46,32 @@ export const routes = {
   governance: "/governance",
   designSystem: "/design-system",
 } as const;
+
+export function acceptInvitationUrl(token: string) {
+  return `${routes.acceptInvitation}?${new URLSearchParams({ token })}`;
+}
+
+export function loginWithReturnUrl(returnPath: string) {
+  return `${routes.login}?${new URLSearchParams({ next: returnPath })}`;
+}
+
+// Only these pages may be targeted by the post-login `next` parameter, so the
+// sign-in form cannot be used as an open redirect.
+const allowedReturnPaths: readonly string[] = [routes.acceptInvitation];
+const returnPathBase = "http://return-path.invalid";
+
+export function safeReturnPath(value: string | undefined) {
+  if (!value?.startsWith("/") || value.startsWith("//")) return undefined;
+  let url: URL;
+  try {
+    url = new URL(value, returnPathBase);
+  } catch {
+    return undefined;
+  }
+  if (url.origin !== returnPathBase || !allowedReturnPaths.includes(url.pathname))
+    return undefined;
+  return `${url.pathname}${url.search}`;
+}
 
 export function clientScope(agencyId: number) {
   const params = new URLSearchParams({ agency: String(agencyId) });

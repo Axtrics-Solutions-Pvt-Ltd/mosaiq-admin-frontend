@@ -24,6 +24,7 @@ import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
 import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
+import { PendingInvitationsDialog } from "@/features/invitations/PendingInvitationsDialog";
 import { currentUserRoleLabel } from "@/features/users/role-labels";
 import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
@@ -296,6 +297,9 @@ function AppShellContent({ children }: { children: ReactNode }) {
             </details>
           </div>
         </header>
+        {currentUser.data && (
+          <PendingInvitationsDialog user={currentUser.data} />
+        )}
         <main
           className="min-h-[calc(100vh-4rem)] p-[var(--page-padding)]"
           id="main-content"
