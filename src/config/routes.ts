@@ -31,6 +31,14 @@ export const routes = {
     detail: (id: string) => routeWithId("/workspaces", id),
     edit: (id: string) => `${routeWithId("/workspaces", id)}/edit` as const,
   },
+  reports: {
+    index: "/reports",
+    new: "/reports/new",
+    detail: (id: string) => routeWithId("/reports", id),
+    settings: (id: string) =>
+      `${routeWithId("/reports", id)}/settings` as const,
+    links: (id: string) => `${routeWithId("/reports", id)}/links` as const,
+  },
   users: {
     index: "/users",
     invite: "/users/invite",
@@ -39,9 +47,7 @@ export const routes = {
     edit: (id: string) => `${routeWithId("/users", id)}/edit` as const,
   },
   roles: "/roles",
-  dataImport: "/data-import",
-  importHistory: "/import-history",
-  connectors: "/connectors",
+  channels: "/channels",
   curation: "/curation",
   governance: "/governance",
   designSystem: "/design-system",
@@ -68,7 +74,10 @@ export function safeReturnPath(value: string | undefined) {
   } catch {
     return undefined;
   }
-  if (url.origin !== returnPathBase || !allowedReturnPaths.includes(url.pathname))
+  if (
+    url.origin !== returnPathBase ||
+    !allowedReturnPaths.includes(url.pathname)
+  )
     return undefined;
   return `${url.pathname}${url.search}`;
 }
@@ -109,6 +118,44 @@ export function workspaceEditUrl(
     routes.workspaces.edit(String(workspaceId)) +
     workspaceScope(agencyId, clientId)
   );
+}
+// Reports belong to a client, so their routes carry the same scope as
+// workspaces.
+export function reportScope(agencyId: number, clientId: number) {
+  return workspaceScope(agencyId, clientId);
+}
+export function reportUrl(
+  reportId: number,
+  agencyId: number,
+  clientId: number,
+) {
+  return (
+    routes.reports.detail(String(reportId)) + reportScope(agencyId, clientId)
+  );
+}
+export function reportSettingsUrl(
+  reportId: number,
+  agencyId: number,
+  clientId: number,
+) {
+  return (
+    routes.reports.settings(String(reportId)) + reportScope(agencyId, clientId)
+  );
+}
+export function reportLinksUrl(
+  reportId: number,
+  agencyId: number,
+  clientId: number,
+) {
+  return (
+    routes.reports.links(String(reportId)) + reportScope(agencyId, clientId)
+  );
+}
+export function reportsIndexUrl(agencyId: number, clientId: number) {
+  return routes.reports.index + reportScope(agencyId, clientId);
+}
+export function newReportUrl(agencyId: number, clientId: number) {
+  return routes.reports.new + reportScope(agencyId, clientId);
 }
 export function userDetailUrl(userId: number, agencyId: number) {
   return `${routes.users.detail(String(userId))}?agency=${agencyId}`;

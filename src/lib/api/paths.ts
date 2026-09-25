@@ -48,63 +48,6 @@ export const rolePaths = {
   collection: "/api/v1/admin/roles",
 } as const;
 
-export const csvImportPaths = {
-  preview: (agencyId: number, clientId: number, workspaceId: number) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-imports/preview`,
-  detail: (
-    agencyId: number,
-    clientId: number,
-    workspaceId: number,
-    csvImportId: number,
-  ) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-imports/${csvImportId}`,
-  confirm: (
-    agencyId: number,
-    clientId: number,
-    workspaceId: number,
-    csvImportId: number,
-  ) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-imports/${csvImportId}/confirm`,
-  retry: (
-    agencyId: number,
-    clientId: number,
-    workspaceId: number,
-    csvImportId: number,
-  ) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-imports/${csvImportId}/retry`,
-} as const;
-
-export const importHistoryPaths = {
-  collection: "/api/v1/import-history",
-} as const;
-
-export const csvTemplatePaths = {
-  collection: (agencyId: number, clientId: number, workspaceId: number) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-templates`,
-  download: (
-    agencyId: number,
-    clientId: number,
-    workspaceId: number,
-    type: string,
-    version: number,
-  ) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/csv-templates/${type}/versions/${version}`,
-  allCollection: "/api/v1/csv-templates",
-} as const;
-
-export const creativeAssetPaths = {
-  collection: (agencyId: number, clientId: number, workspaceId: number) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/creative-assets`,
-  attachAsset: (
-    agencyId: number,
-    clientId: number,
-    workspaceId: number,
-    creativeAssetId: number,
-  ) =>
-    `/api/v1/admin/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/creative-assets/${creativeAssetId}/asset`,
-  allCollection: "/api/v1/creative-assets",
-} as const;
-
 export const curationPaths = {
   detail: (workspaceId: number) =>
     `/api/v1/admin/workspaces/${workspaceId}/curation`,
@@ -126,8 +69,88 @@ export const workspacePaths = {
   agencyCollection: (agencyId: number) =>
     "/api/v1/agencies/" + agencyId + "/workspaces",
   allCollection: "/api/v1/workspaces",
+  credentials: (agencyId: number, clientId: number, workspaceId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/credentials`,
+  fetch: (agencyId: number, clientId: number, workspaceId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/fetch`,
+} as const;
+
+export const channelPaths = {
+  collection: "/api/v1/channels",
+  adminCollection: "/api/v1/admin/channels",
+  adminDetail: (channelId: number) => `/api/v1/admin/channels/${channelId}`,
 } as const;
 
 export const clientPaths = {
   allCollection: "/api/v1/clients",
+} as const;
+
+const reportBase = (agencyId: number, clientId: number, reportId: number) =>
+  `/api/v1/agencies/${agencyId}/clients/${clientId}/reports/${reportId}`;
+
+export const reportPaths = {
+  collection: (agencyId: number, clientId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/reports`,
+  detail: reportBase,
+  workspaces: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/workspaces`,
+  duplicate: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/duplicate`,
+  layout: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout`,
+  layoutOrder: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout/order`,
+  layoutItem: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}`,
+  layoutItemReset: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/reset`,
+  previewMeta: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/preview/meta`,
+  previewTab: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    tabCode: string,
+  ) =>
+    `${reportBase(agencyId, clientId, reportId)}/preview/tabs/${encodeURIComponent(tabCode)}`,
+  links: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/links`,
+  link: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    linkId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/links/${linkId}`,
+  linkRevoke: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    linkId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/links/${linkId}/revoke`,
+  linkRegenerate: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    linkId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/links/${linkId}/regenerate`,
+} as const;
+
+export const correctionPaths = {
+  collection: (agencyId: number, clientId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/metric-corrections`,
+  detail: (agencyId: number, clientId: number, correctionId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/metric-corrections/${correctionId}`,
+} as const;
+
+export const budgetPaths = {
+  collection: (agencyId: number, clientId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/budgets`,
 } as const;

@@ -1,7 +1,8 @@
 "use client";
 
-import { Activity, Database, Pencil, Power, UsersRound } from "lucide-react";
+import { Activity, Pencil, Power, Trash2, UsersRound } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
@@ -12,13 +13,25 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { FormField } from "@/components/ui/FormField";
+import { Input } from "@/components/ui/Input";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
-import { routes, workspaceEditUrl } from "@/config/routes";
+import { toast } from "@/components/ui/Toast";
+import { clientDetailUrl, routes, workspaceEditUrl } from "@/config/routes";
 import { useAgency } from "@/features/agencies/queries";
+import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
+import { ChannelBadge } from "@/features/channels/ChannelBadge";
 import { formatDate } from "@/lib/formatters";
 
-import { useClient, useUpdateWorkspace, useWorkspace } from "./queries";
+import { ConnectionCard } from "./ConnectionCard";
+import type { WorkspaceRecord } from "./contracts";
+import {
+  useClient,
+  useDeleteWorkspace,
+  useUpdateWorkspace,
+  useWorkspace,
+} from "./queries";
 
 function Preview({
   title,
@@ -60,6 +73,80 @@ function DetailList({
     </dl>
   );
 }
+function DeleteWorkspaceDialog({
+  record,
+  isOpen,
+  onClose,
+}: {
+  record: WorkspaceRecord;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const mutation = useDeleteWorkspace();
+  const [typedName, setTypedName] = useState("");
+  const [error, setError] = useState("");
+  function close() {
+    setTypedName("");
+    setError("");
+    onClose();
+  }
+  async function confirm() {
+    setError("");
+    try {
+      await mutation.mutateAsync({
+        agencyId: record.agency_id,
+        clientId: record.client_id,
+        workspaceId: record.id,
+      });
+      toast({
+        title: "Workspace deleted",
+        description: `${record.name} was removed from reports and its access was revoked.`,
+        tone: "success",
+      });
+      router.push(clientDetailUrl(record.client_id, record.agency_id));
+    } catch {
+      setError("The workspace could not be deleted. Please try again.");
+    }
+  }
+  return (
+    <ConfirmationDialog
+      body={
+        <div className="space-y-4">
+          <p>
+            {record.name} is removed from all reports, and everyone&apos;s
+            access to it is revoked, including pending invitations. Its stored
+            credentials are deleted. The channel data is kept for recovery.
+          </p>
+          <FormField
+            id="delete-workspace-name"
+            label={`Type ${record.name} to confirm`}
+          >
+            <Input
+              autoComplete="off"
+              id="delete-workspace-name"
+              onChange={(event) => setTypedName(event.target.value)}
+              value={typedName}
+            />
+          </FormField>
+          {error && (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+      }
+      confirmLabel="Delete workspace"
+      description="This removes the workspace for everyone."
+      isConfirmDisabled={typedName !== record.name}
+      isOpen={isOpen}
+      isPending={mutation.isPending}
+      onCancel={close}
+      onConfirm={confirm}
+      title={`Delete ${record.name}?`}
+    />
+  );
+}
 export function WorkspaceDetails({
   workspaceId,
   agencyId,
@@ -75,6 +162,7 @@ export function WorkspaceDetails({
   const user = useCurrentUser();
   const mutation = useUpdateWorkspace();
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   if (
     ![workspaceId, agencyId, clientId].every(
@@ -104,18 +192,24 @@ export function WorkspaceDetails({
       />
     );
   const record = workspace.data;
-  const canManage =
-    user.data?.platformRoleCode === "SUPER_ADMIN" ||
-    (user.data?.membership?.roleCode === "AGENCY_ADMIN" &&
-      user.data.membership.agencyId === agencyId);
+  const canManage = Boolean(
+    user.data && hasCapability(user.data, "workspaces.manage"),
+  );
+  const canDelete = Boolean(
+    user.data && hasCapability(user.data, "workspaces.delete"),
+  );
+  const connectorId = record.connector_id;
   async function changeStatus() {
     setError("");
+    // A legacy workspace must choose its channel (on Edit) before other saves.
+    if (!connectorId) return;
     try {
       await mutation.mutateAsync({
         agencyId,
         clientId,
         workspaceId,
         payload: {
+          connector_id: connectorId,
           name: record.name,
           timezone: record.timezone,
           currency: record.currency,
@@ -141,6 +235,10 @@ export function WorkspaceDetails({
               <DetailList
                 values={[
                   { label: "Workspace", value: record.name },
+                  {
+                    label: "Channel",
+                    value: record.connector?.name ?? "Not assigned",
+                  },
                   {
                     label: "Client",
                     value: client.data?.name ?? "Loading client",
@@ -178,6 +276,11 @@ export function WorkspaceDetails({
           </Card>
         </div>
       ),
+    },
+    {
+      value: "connection",
+      label: "Connection",
+      content: <ConnectionCard canManage={canManage} workspace={record} />,
     },
     {
       value: "market",
@@ -243,31 +346,6 @@ export function WorkspaceDetails({
       ),
     },
     {
-      value: "data",
-      label: "Data",
-      content: (
-        <Preview
-          title="Workspace data"
-          description="Active dataset, source type, and latest import are not returned by this API."
-        >
-          <div className="flex items-center gap-3">
-            <Database aria-hidden className="text-primary size-5" />
-            <span className="text-muted-foreground">
-              No dataset information available.
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href={routes.dataImport}>Open data import</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={routes.importHistory}>Open import history</Link>
-            </Button>
-          </div>
-        </Preview>
-      ),
-    },
-    {
       value: "activity",
       label: "Activity",
       content: (
@@ -304,19 +382,28 @@ export function WorkspaceDetails({
                   <Pencil aria-hidden className="size-4" /> Edit
                 </Link>
               </Button>
-              <Button variant="outline" onClick={() => setIsConfirming(true)}>
-                <Power aria-hidden className="size-4" />{" "}
-                {record.status === "active" ? "Deactivate" : "Activate"}
-              </Button>
+              {connectorId && (
+                <Button variant="outline" onClick={() => setIsConfirming(true)}>
+                  <Power aria-hidden className="size-4" />{" "}
+                  {record.status === "active" ? "Deactivate" : "Activate"}
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleting(true)}
+                >
+                  <Trash2 aria-hidden className="size-4" /> Delete workspace
+                </Button>
+              )}
             </>
           ) : undefined
         }
       />
       <div className="flex flex-wrap gap-2">
         <StatusBadge status={record.status} />
-        <Badge tone="neutral">Client workspace</Badge>
-        <Badge tone="neutral">Data source unavailable</Badge>
-        <Badge tone="primary">Live profile</Badge>
+        <ChannelBadge channel={record.connector} />
+        {record.connection && <StatusBadge status={record.connection.status} />}
       </div>
       {error && (
         <p role="alert" className="text-destructive text-sm">
@@ -339,6 +426,11 @@ export function WorkspaceDetails({
         confirmLabel={record.status === "active" ? "Deactivate" : "Activate"}
         onCancel={() => setIsConfirming(false)}
         onConfirm={changeStatus}
+      />
+      <DeleteWorkspaceDialog
+        isOpen={isDeleting}
+        onClose={() => setIsDeleting(false)}
+        record={record}
       />
     </PageStack>
   );

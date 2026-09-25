@@ -7,17 +7,25 @@ import {
 
 import {
   createWorkspace,
+  deleteWorkspace,
+  disconnectWorkspace,
+  fetchWorkspaceData,
   getClient,
   getWorkspace,
+  getWorkspaceCredentials,
   listAgencyWorkspaces,
   listAllClients,
   listAllWorkspaces,
   listClients,
   listWorkspaces,
+  saveWorkspaceCredentials,
   updateWorkspace,
   type WorkspaceListFilters,
 } from "./api";
-import type { WorkspaceProfile } from "./contracts";
+import type {
+  WorkspaceCredentialsPayload,
+  WorkspaceProfile,
+} from "./contracts";
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -33,6 +41,13 @@ export const workspaceKeys = {
     ["workspaces", "by-agency", agencyId, filters] as const,
   byIds: (agencyId: number, workspaceIds: readonly number[]) =>
     ["workspaces", "by-ids", agencyId, workspaceIds] as const,
+  credentials: (agencyId: number, clientId: number, workspaceId: number) =>
+    ["workspaces", "credentials", agencyId, clientId, workspaceId] as const,
+};
+type WorkspaceScope = {
+  agencyId: number;
+  clientId: number;
+  workspaceId: number;
 };
 const valid = (id: number) => Number.isSafeInteger(id) && id > 0;
 export function useClients(agencyId: number, page = 1) {
@@ -118,12 +133,7 @@ export function useAllWorkspaces(
 ) {
   const scopedAgencyId = valid(agencyId ?? 0) ? agencyId : undefined;
   return useQuery({
-    queryKey: [
-      "workspaces",
-      "all",
-      scopedAgencyId ?? "all",
-      filters,
-    ] as const,
+    queryKey: ["workspaces", "all", scopedAgencyId ?? "all", filters] as const,
     // The cross-agency endpoint is Super Admin only; scoped roles use the per-agency one.
     queryFn: ({ signal }) =>
       scopedAgencyId
@@ -243,4 +253,99 @@ export function useUpdateWorkspace() {
       client.invalidateQueries({ queryKey: workspaceKeys.all });
     },
   });
+}
+export function useDeleteWorkspace() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agencyId, clientId, workspaceId }: WorkspaceScope) =>
+      deleteWorkspace(agencyId, clientId, workspaceId),
+    onSuccess: (_, { workspaceId }) => {
+      // The deleted workspace's own detail and credentials would only 404, and
+      // the screen showing them is about to navigate away.
+      const isDeletedWorkspace = (key: readonly unknown[]) =>
+        (key[1] === "detail" || key[1] === "credentials") &&
+        key[4] === workspaceId;
+      // Client detail and selectors live under workspace keys; the client
+      // directory's workspace counts under its own; reports list their
+      // sources and preview their data.
+      client.invalidateQueries({
+        queryKey: workspaceKeys.all,
+        predicate: (query) => !isDeletedWorkspace(query.queryKey),
+      });
+      client.invalidateQueries({ queryKey: ["clients"] });
+      client.invalidateQueries({ queryKey: ["reports"] });
+    },
+  });
+}
+export function useWorkspaceCredentials(
+  { agencyId, clientId, workspaceId }: WorkspaceScope,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: workspaceKeys.credentials(agencyId, clientId, workspaceId),
+    queryFn: ({ signal }) =>
+      getWorkspaceCredentials(agencyId, clientId, workspaceId, signal),
+    enabled:
+      (options?.enabled ?? true) &&
+      valid(agencyId) &&
+      valid(clientId) &&
+      valid(workspaceId),
+  });
+}
+// Variables defaults to void so argument-less actions call mutateAsync().
+function useConnectionMutation<Variables = void, Result = unknown>(
+  mutationFn: (variables: Variables) => Promise<Result>,
+  onResult?: (result: Result) => void,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (result) => onResult?.(result),
+    // Connection status and last fetch time also show on workspace lists,
+    // client cards and detail, and a failed fetch records its error on the
+    // credentials, so refresh every workspace query either way.
+    onSettled: () => client.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}
+export function useSaveWorkspaceCredentials(scope: WorkspaceScope) {
+  const client = useQueryClient();
+  return useConnectionMutation(
+    (payload: WorkspaceCredentialsPayload) =>
+      saveWorkspaceCredentials(
+        scope.agencyId,
+        scope.clientId,
+        scope.workspaceId,
+        payload,
+      ),
+    (credentials) =>
+      client.setQueryData(
+        workspaceKeys.credentials(
+          scope.agencyId,
+          scope.clientId,
+          scope.workspaceId,
+        ),
+        credentials,
+      ),
+  );
+}
+export function useDisconnectWorkspace(scope: WorkspaceScope) {
+  const client = useQueryClient();
+  return useConnectionMutation(
+    () =>
+      disconnectWorkspace(scope.agencyId, scope.clientId, scope.workspaceId),
+    (credentials) =>
+      client.setQueryData(
+        workspaceKeys.credentials(
+          scope.agencyId,
+          scope.clientId,
+          scope.workspaceId,
+        ),
+        credentials,
+      ),
+  );
+}
+export function useFetchWorkspaceData(scope: WorkspaceScope) {
+  return useConnectionMutation(() =>
+    fetchWorkspaceData(scope.agencyId, scope.clientId, scope.workspaceId),
+  );
 }

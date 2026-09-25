@@ -24,8 +24,11 @@ import {
   workspaceDetailUrl,
   workspaceScope,
 } from "@/config/routes";
-import { useAgencies } from "@/features/agencies/queries";
+import { useAgencies, useAgency } from "@/features/agencies/queries";
+import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
+import { ChannelBadge } from "@/features/channels/ChannelBadge";
+import { useChannels } from "@/features/channels/queries";
 import { ApiError } from "@/lib/api/errors";
 
 import {
@@ -64,30 +67,43 @@ function PreviewSection({
     </Card>
   );
 }
+function suggestedWorkspaceName(clientName: string, channelName: string) {
+  return `${clientName} – ${channelName}`;
+}
 function WorkspaceForm({
   mode,
   agencyId,
   clientId,
+  clientName,
   record,
 }: {
   mode: "create" | "edit";
   agencyId: number;
   clientId: number;
+  clientName?: string;
   record?: WorkspaceRecord;
 }) {
   const router = useRouter();
   const createMutation = useCreateWorkspace();
   const updateMutation = useUpdateWorkspace();
+  // Only a new workspace, or a legacy one without a channel, picks a channel.
+  const isChannelLocked = Boolean(record?.connector_id);
+  const channels = useChannels({ enabled: !isChannelLocked });
   const [submitError, setSubmitError] = useState("");
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [lastSuggestedName, setLastSuggestedName] = useState("");
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
+    getValues,
+    watch,
     formState: { errors, isDirty },
   } = useForm<WorkspaceProfile>({
     resolver: zodResolver(workspaceProfileSchema),
     defaultValues: {
+      connector_id: record?.connector_id ?? undefined,
       name: record?.name ?? "",
       timezone: record?.timezone ?? "Europe/London",
       currency: record?.currency ?? "USD",
@@ -107,6 +123,21 @@ function WorkspaceForm({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [isDirty]);
+  const activeChannels = channels.data ?? [];
+  const selectedChannelId = watch("connector_id");
+  const selectedChannel = activeChannels.find(
+    (channel) => channel.id === selectedChannelId,
+  );
+  // Suggest "{Client} – {Channel}" until the name is edited by hand.
+  function suggestName(channelId: number) {
+    const channel = activeChannels.find((entry) => entry.id === channelId);
+    if (mode !== "create" || !channel || !clientName) return;
+    const suggestion = suggestedWorkspaceName(clientName, channel.name);
+    const currentName = getValues("name");
+    if (!currentName.trim() || currentName === lastSuggestedName)
+      setValue("name", suggestion, { shouldDirty: true, shouldValidate: true });
+    setLastSuggestedName(suggestion);
+  }
   async function submit(values: WorkspaceProfile) {
     setSubmitError("");
     try {
@@ -128,6 +159,7 @@ function WorkspaceForm({
     } catch (error) {
       if (error instanceof ApiError) {
         for (const field of [
+          "connector_id",
           "name",
           "timezone",
           "currency",
@@ -156,6 +188,82 @@ function WorkspaceForm({
           </CardHeader>
           <CardContent>
             <FormGrid>
+              {isChannelLocked ? (
+                <div className="md:col-span-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    Channel
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <ChannelBadge channel={record?.connector ?? null} />
+                    <span className="text-muted-foreground text-xs">
+                      A workspace&apos;s channel can&apos;t be changed.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="md:col-span-2">
+                  <FormField
+                    description={
+                      mode === "edit"
+                        ? "This workspace was created before channels. Choose its channel once; it can't be changed later."
+                        : "Each workspace reports one channel for its client."
+                    }
+                    error={
+                      errors.connector_id?.message ??
+                      (channels.isError
+                        ? "Channels could not be loaded. Reload the page to try again."
+                        : undefined)
+                    }
+                    id="connector_id"
+                    label="Channel"
+                    required
+                  >
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Select
+                        aria-describedby={
+                          errors.connector_id
+                            ? "connector_id-error"
+                            : "connector_id-description"
+                        }
+                        aria-invalid={Boolean(errors.connector_id)}
+                        className="min-w-60"
+                        disabled={!channels.isSuccess}
+                        id="connector_id"
+                        {...register("connector_id", {
+                          setValueAs: (value: string | number | undefined) =>
+                            value === "" || value === undefined
+                              ? undefined
+                              : Number(value),
+                          onChange: (event) =>
+                            suggestName(Number(event.target.value)),
+                        })}
+                      >
+                        <option value="">
+                          {channels.isPending
+                            ? "Loading channels..."
+                            : activeChannels.length === 0
+                              ? "No active channels"
+                              : "Select a channel"}
+                        </option>
+                        {activeChannels.map((channel) => (
+                          <option key={channel.id} value={channel.id}>
+                            {channel.name}
+                          </option>
+                        ))}
+                      </Select>
+                      {selectedChannel && (
+                        <ChannelBadge channel={selectedChannel} />
+                      )}
+                    </div>
+                  </FormField>
+                  {channels.isSuccess && activeChannels.length === 0 && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      A Super Admin must add an active channel before workspaces
+                      can be created.
+                    </p>
+                  )}
+                </div>
+              )}
               <FormField
                 id="name"
                 label="Workspace name"
@@ -320,40 +428,12 @@ function WorkspaceForm({
       ),
     },
     {
-      value: "data",
-      label: "Data",
-      content: (
-        <PreviewSection
-          title="Data"
-          description="Data source, active dataset, and import history are not part of the workspace profile API."
-        >
-          <FormGrid>
-            <FormField id="preview-source" label="Data source">
-              <Select id="preview-source" disabled>
-                <option>Not available</option>
-                <option>Seeded</option>
-                <option>CSV Imported</option>
-                <option>Future Connector</option>
-              </Select>
-            </FormField>
-            <FormField id="preview-dataset" label="Active dataset">
-              <Input
-                id="preview-dataset"
-                disabled
-                placeholder="No dataset available"
-              />
-            </FormField>
-          </FormGrid>
-        </PreviewSection>
-      ),
-    },
-    {
       value: "activity",
       label: "Activity",
       content: (
         <PreviewSection
           title="Activity"
-          description="Workspace changes and import events will appear here when an activity endpoint is available."
+          description="Workspace changes will appear here when an activity endpoint is available."
         >
           <p className="text-muted-foreground rounded-lg border p-4 text-sm">
             No activity feed available.
@@ -443,12 +523,14 @@ export function WorkspaceCreateScreen({
 }) {
   const router = useRouter();
   const user = useCurrentUser();
-  const agencies = useAgencies({ page: 1 });
-  const agencyId =
-    requestedAgencyId ||
-    user.data?.membership?.agencyId ||
-    agencies.data?.data[0]?.id ||
-    0;
+  const isSuperAdmin = user.data?.platformRoleCode === "SUPER_ADMIN";
+  // Only a Super Admin can list agencies; everyone else works in their own.
+  const agencies = useAgencies({ page: 1 }, { enabled: isSuperAdmin });
+  const agencyId = isSuperAdmin
+    ? requestedAgencyId || agencies.data?.data[0]?.id || 0
+    : (user.data?.membership?.agencyId ?? 0);
+  const ownAgency = useAgency(isSuperAdmin ? 0 : agencyId);
+  // For a Manager the API lists only the clients they can view.
   const clients = useClients(agencyId);
   const clientId =
     requestedClientId ||
@@ -457,16 +539,21 @@ export function WorkspaceCreateScreen({
       : null) ||
     clients.data?.data[0]?.id ||
     0;
-  const canManage =
-    user.data?.platformRoleCode === "SUPER_ADMIN" ||
-    (user.data?.membership?.roleCode === "AGENCY_ADMIN" &&
-      user.data.membership.agencyId === agencyId);
+  const clientName = clients.data?.data.find(
+    (client) => client.id === clientId,
+  )?.name;
+  const canManage = Boolean(
+    user.data && hasCapability(user.data, "workspaces.manage"),
+  );
+  const canAddClient = Boolean(
+    user.data && hasCapability(user.data, "clients.manage"),
+  );
   function select(agency: number, client: number) {
     router.replace(routes.workspaces.new + workspaceScope(agency, client));
   }
   if (
     user.isPending ||
-    agencies.isPending ||
+    (isSuperAdmin && agencies.isPending) ||
     (agencyId > 0 && clients.isPending)
   )
     return <p aria-busy="true">Loading workspace setup...</p>;
@@ -505,31 +592,44 @@ export function WorkspaceCreateScreen({
         <CardContent>
           <FormGrid>
             <FormField id="create-workspace-agency" label="Agency">
-              <Select
-                id="create-workspace-agency"
-                value={agencyId || ""}
-                onChange={(event) => select(Number(event.target.value), 0)}
-                disabled={user.data?.platformRoleCode !== "SUPER_ADMIN"}
-              >
-                <option value="">Select agency</option>
-                {agencies.data?.data.map((agency) => (
-                  <option key={agency.id} value={agency.id}>
-                    {agency.display_name}
-                  </option>
-                ))}
-              </Select>
+              {isSuperAdmin ? (
+                <Select
+                  id="create-workspace-agency"
+                  value={agencyId || ""}
+                  onChange={(event) => select(Number(event.target.value), 0)}
+                >
+                  <option value="">Select agency</option>
+                  {agencies.data?.data.map((agency) => (
+                    <option key={agency.id} value={agency.id}>
+                      {agency.display_name}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  id="create-workspace-agency"
+                  readOnly
+                  value={ownAgency.data?.display_name ?? ""}
+                />
+              )}
             </FormField>
             <FormField id="create-workspace-client" label="Client">
               {clients.data?.data.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
-                  This agency has no clients yet.{" "}
-                  <Link
-                    className="text-primary hover:underline"
-                    href={routes.clients.new + clientScope(agencyId)}
-                  >
-                    Add a client
-                  </Link>{" "}
-                  before creating a workspace.
+                  {canAddClient ? (
+                    <>
+                      This agency has no clients yet.{" "}
+                      <Link
+                        className="text-primary hover:underline"
+                        href={routes.clients.new + clientScope(agencyId)}
+                      >
+                        Add a client
+                      </Link>{" "}
+                      before creating a workspace.
+                    </>
+                  ) : (
+                    "There are no clients you can add a workspace to."
+                  )}
                 </p>
               ) : (
                 <div className="flex items-center gap-2">
@@ -548,11 +648,13 @@ export function WorkspaceCreateScreen({
                       </option>
                     ))}
                   </Select>
-                  <Button asChild size="sm" type="button" variant="outline">
-                    <Link href={routes.clients.new + clientScope(agencyId)}>
-                      Add client
-                    </Link>
-                  </Button>
+                  {canAddClient && (
+                    <Button asChild size="sm" type="button" variant="outline">
+                      <Link href={routes.clients.new + clientScope(agencyId)}>
+                        Add client
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               )}
             </FormField>
@@ -563,13 +665,19 @@ export function WorkspaceCreateScreen({
         <StatePanel
           kind="empty"
           title="This agency has no clients yet"
-          description="Create a client for this agency first; a default workspace is created for it automatically."
+          description={
+            canAddClient
+              ? "Create a client for this agency first."
+              : "Ask an Agency Admin to add a client or give you access to one."
+          }
           action={
-            <Button asChild>
-              <Link href={routes.clients.new + clientScope(agencyId)}>
-                Add client
-              </Link>
-            </Button>
+            canAddClient ? (
+              <Button asChild>
+                <Link href={routes.clients.new + clientScope(agencyId)}>
+                  Add client
+                </Link>
+              </Button>
+            ) : undefined
           }
         />
       ) : clientId ? (
@@ -578,6 +686,7 @@ export function WorkspaceCreateScreen({
           mode="create"
           agencyId={agencyId}
           clientId={clientId}
+          clientName={clientName}
         />
       ) : (
         <StatePanel
@@ -628,10 +737,9 @@ export function WorkspaceEditScreen({
         action={<Button onClick={() => query.refetch()}>Try again</Button>}
       />
     );
-  const canManage =
-    user.data?.platformRoleCode === "SUPER_ADMIN" ||
-    (user.data?.membership?.roleCode === "AGENCY_ADMIN" &&
-      user.data.membership.agencyId === agencyId);
+  const canManage = Boolean(
+    user.data && hasCapability(user.data, "workspaces.manage"),
+  );
   if (!canManage)
     return (
       <StatePanel

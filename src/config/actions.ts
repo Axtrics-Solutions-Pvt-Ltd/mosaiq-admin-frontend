@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, Plus, Upload, UserPlus } from "lucide-react";
+import { Building2, Plus, UserPlus } from "lucide-react";
 
 import type { Capability } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -33,13 +33,6 @@ export const quickActions: readonly ActionDefinition[] = [
     href: routes.users.invite,
     icon: UserPlus,
     capability: "users.manage",
-  },
-  {
-    id: "import-data",
-    label: "Import data",
-    href: routes.dataImport,
-    icon: Upload,
-    capability: "imports.create",
   },
 ];
 

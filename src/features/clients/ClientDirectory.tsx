@@ -33,7 +33,7 @@ import {
   routes,
   workspaceScope,
 } from "@/config/routes";
-import { useAgencies } from "@/features/agencies/queries";
+import { useAgencies, useAgency } from "@/features/agencies/queries";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import { formatDate, formatNumber } from "@/lib/formatters";
@@ -49,7 +49,15 @@ type Filters = {
   page: number;
 };
 
-function ClientActions({ client }: { client: ClientSummary }) {
+type ClientPermissions = { canManageClient: boolean; canAddWorkspace: boolean };
+
+function ClientActions({
+  client,
+  permissions,
+}: {
+  client: ClientSummary;
+  permissions: ClientPermissions;
+}) {
   return (
     <details className="relative">
       <summary
@@ -65,27 +73,31 @@ function ClientActions({ client }: { client: ClientSummary }) {
         >
           <Eye aria-hidden className="size-4" /> View client
         </Link>
-        <Link
-          className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
-          href={clientEditUrl(Number(client.id), client.agencyId)}
-        >
-          <Pencil aria-hidden className="size-4" /> Edit client
-        </Link>
+        {permissions.canManageClient && (
+          <Link
+            className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
+            href={clientEditUrl(Number(client.id), client.agencyId)}
+          >
+            <Pencil aria-hidden className="size-4" /> Edit client
+          </Link>
+        )}
         <Link
           className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
           href={`${routes.workspaces.index}?agency=${client.agencyId}&client=${client.id}`}
         >
           <Gauge aria-hidden className="size-4" /> Open workspaces
         </Link>
-        <Link
-          className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
-          href={
-            routes.workspaces.new +
-            workspaceScope(client.agencyId, Number(client.id))
-          }
-        >
-          <Plus aria-hidden className="size-4" /> Add workspace
-        </Link>
+        {permissions.canAddWorkspace && (
+          <Link
+            className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
+            href={
+              routes.workspaces.new +
+              workspaceScope(client.agencyId, Number(client.id))
+            }
+          >
+            <Plus aria-hidden className="size-4" /> Add workspace
+          </Link>
+        )}
       </div>
     </details>
   );
@@ -105,13 +117,19 @@ function ClientIdentity({ client }: { client: ClientSummary }) {
   );
 }
 
-function ClientCard({ client }: { client: ClientSummary }) {
+function ClientCard({
+  client,
+  permissions,
+}: {
+  client: ClientSummary;
+  permissions: ClientPermissions;
+}) {
   return (
     <Card>
       <CardContent className="pt-4 sm:pt-5">
         <div className="flex items-start justify-between gap-3">
           <ClientIdentity client={client} />
-          <ClientActions client={client} />
+          <ClientActions client={client} permissions={permissions} />
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-sm">
           <div>
@@ -148,8 +166,17 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
   const scope = useScope();
-  const agenciesQuery = useAgencies({ page: 1 });
-  const agencies = agenciesQuery.data?.data ?? [];
+  // Only a Super Admin can list agencies; everyone else sees their own.
+  const agenciesQuery = useAgencies(
+    { page: 1 },
+    { enabled: scope.isSuperAdmin },
+  );
+  const ownAgency = useAgency(scope.isSuperAdmin ? 0 : (scope.agencyId ?? 0));
+  const agencies = scope.isSuperAdmin
+    ? (agenciesQuery.data?.data ?? [])
+    : ownAgency.data
+      ? [ownAgency.data]
+      : [];
   const isAllAgencies = !scope.agencyId;
   const filterAgencyId = scope.agencyId ?? filters.agency;
   const query = useClientsDirectory(filterAgencyId, {
@@ -170,6 +197,12 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
   const canCreate = Boolean(
     currentUser.data && hasCapability(currentUser.data, "clients.manage"),
   );
+  const permissions: ClientPermissions = {
+    canManageClient: canCreate,
+    canAddWorkspace: Boolean(
+      currentUser.data && hasCapability(currentUser.data, "workspaces.manage"),
+    ),
+  };
   const hasFilters =
     filters.search !== "" ||
     filters.status !== "all" ||
@@ -225,7 +258,9 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
     {
       id: "actions",
       header: <span className="sr-only">Actions</span>,
-      render: (client) => <ClientActions client={client} />,
+      render: (client) => (
+        <ClientActions client={client} permissions={permissions} />
+      ),
     },
   ];
 
@@ -342,7 +377,7 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
           </div>
         )}
       </FilterBar>
-      {(agenciesQuery.isPending || query.isPending) && (
+      {((scope.isSuperAdmin && agenciesQuery.isPending) || query.isPending) && (
         <p aria-busy="true">Loading clients...</p>
       )}
       {(agenciesQuery.isError || query.isError) && (
@@ -410,7 +445,9 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
             caption="Client directory"
             columns={columns}
             getRowKey={(client) => client.id}
-            mobileCard={(client) => <ClientCard client={client} />}
+            mobileCard={(client) => (
+              <ClientCard client={client} permissions={permissions} />
+            )}
             rows={clients}
           />
           <nav

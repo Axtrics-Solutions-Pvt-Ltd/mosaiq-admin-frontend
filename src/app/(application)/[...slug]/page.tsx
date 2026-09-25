@@ -1,33 +1,25 @@
 ﻿import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { PageStack } from "@/components/shared/LayoutPatterns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatePanel } from "@/components/shared/StatePanel";
 import { Button } from "@/components/ui/Button";
-import { navigationItems } from "@/config/navigation";
+import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
-function titleFromSlug(slug: string[]) {
-  const path = `/${slug.join("/")}`;
-  const item = navigationItems.find(
-    (entry) => path === entry.href || path.startsWith(`${entry.href}/`),
-  );
-  return (
-    item?.label ??
-    slug
-      .at(-1)
-      ?.replaceAll("-", " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase()) ??
-    "Preview"
-  );
-}
+
+// Only navigation destinations without their own page get a placeholder;
+// any other path, including retired screens, is a 404.
 export default async function PlaceholderPage({
   params,
 }: {
   params: Promise<{ slug: string[] }>;
 }) {
   const { slug } = await params;
-  const title = titleFromSlug(slug);
+  const item = getNavigationItem(`/${slug.join("/")}`);
+  if (!item) notFound();
+  const title = item.label;
   return (
     <PageStack>
       <PageHeader

@@ -53,11 +53,15 @@ const baseFilters = {
 describe("ClientDirectory", () => {
   it("shows a loading state before results arrive", () => {
     server.use(
-      http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
-      http.get(clientPaths.allCollection, () => HttpResponse.json({
-        data: [],
-        meta: { current_page: 1, last_page: 1, total: 0 },
-      })),
+      http.get(agencyPaths.collection, () =>
+        HttpResponse.json(agenciesResponse),
+      ),
+      http.get(clientPaths.allCollection, () =>
+        HttpResponse.json({
+          data: [],
+          meta: { current_page: 1, last_page: 1, total: 0 },
+        }),
+      ),
     );
     renderWithScope(<ClientDirectory filters={baseFilters} />, {
       platformRoleCode: "SUPER_ADMIN",
@@ -67,7 +71,9 @@ describe("ClientDirectory", () => {
 
   it("shows an error state when the client list request fails", async () => {
     server.use(
-      http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
+      http.get(agencyPaths.collection, () =>
+        HttpResponse.json(agenciesResponse),
+      ),
       http.get(clientPaths.allCollection, () =>
         HttpResponse.json({ message: "Server error" }, { status: 500 }),
       ),
@@ -80,7 +86,9 @@ describe("ClientDirectory", () => {
 
   it("shows the empty state when there are no clients", async () => {
     server.use(
-      http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
+      http.get(agencyPaths.collection, () =>
+        HttpResponse.json(agenciesResponse),
+      ),
       http.get(clientPaths.allCollection, () =>
         HttpResponse.json({
           data: [],
@@ -96,7 +104,9 @@ describe("ClientDirectory", () => {
 
   it("lists clients across all agencies for a Super Admin with the All Agencies scope", async () => {
     server.use(
-      http.get(agencyPaths.collection, () => HttpResponse.json(agenciesResponse)),
+      http.get(agencyPaths.collection, () =>
+        HttpResponse.json(agenciesResponse),
+      ),
       http.get(clientPaths.allCollection, () =>
         HttpResponse.json({
           data: [

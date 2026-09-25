@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  invitationSchema,
   invitationStatusQuery,
   inviteSchema,
   parseInvitationStatusFilter,
@@ -22,14 +23,16 @@ describe("invitation status filter", () => {
 });
 
 describe("invitation contract", () => {
-  it("requires an active-scope shape for Client User", () => {
-    expect(
-      inviteSchema.safeParse({
-        email: "client@example.test",
-        role_code: "CLIENT_USER",
-        workspace_ids: [],
-      }).success,
-    ).toBe(false);
+  it("only invites Agency Admins or Managers", () => {
+    for (const role_code of ["ANALYST", "VIEWER", "CLIENT_USER"]) {
+      expect(
+        inviteSchema.safeParse({
+          email: "legacy@example.test",
+          role_code,
+          workspace_ids: [9],
+        }).success,
+      ).toBe(false);
+    }
   });
 
   it("makes workspaces optional only for Agency Admin", () => {
@@ -41,8 +44,8 @@ describe("invitation contract", () => {
       }).success,
     ).toBe(true);
     const result = inviteSchema.safeParse({
-      email: "viewer@example.test",
-      role_code: "VIEWER",
+      email: "manager@example.test",
+      role_code: "MANAGER",
       workspace_ids: [],
     });
     expect(result.success).toBe(false);
@@ -50,23 +53,38 @@ describe("invitation contract", () => {
       expect(result.error.issues[0]?.path).toEqual(["workspace_ids"]);
   });
 
-  it("rejects client_id for non-Client roles", () => {
+  it("does not submit a client", () => {
     const result = inviteSchema.safeParse({
-      email: "viewer@example.test",
-      role_code: "VIEWER",
+      email: "manager@example.test",
+      role_code: "MANAGER",
       client_id: 4,
       workspace_ids: [9],
     });
-    expect(result.success).toBe(false);
-    if (!result.success)
-      expect(result.error.issues[0]?.path).toEqual(["client_id"]);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data).not.toHaveProperty("client_id");
+  });
+
+  it("still reads invitations sent with a legacy role", () => {
+    expect(
+      invitationSchema.safeParse({
+        id: 3,
+        email: "viewer@example.test",
+        agency_id: 12,
+        client_id: null,
+        role_code: "VIEWER",
+        workspace_id: 9,
+        workspace_name: "Reporting",
+        expires_at: "2026-12-31T10:00:00Z",
+        accepted_at: null,
+        revoked_at: null,
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects duplicate workspace assignments", () => {
     const result = inviteSchema.safeParse({
-      email: "client@example.test",
-      role_code: "CLIENT_USER",
-      client_id: 4,
+      email: "manager@example.test",
+      role_code: "MANAGER",
       workspace_ids: [9, 9],
     });
     expect(result.success).toBe(false);

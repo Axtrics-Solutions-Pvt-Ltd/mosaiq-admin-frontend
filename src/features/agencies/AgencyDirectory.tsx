@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
 import { FilterBar, PageStack } from "@/components/shared/LayoutPatterns";
@@ -221,13 +222,37 @@ function LoadingDirectory() {
   );
 }
 
-export function AgencyDirectory({
-  filters,
-  page,
-}: {
+type AgencyDirectoryProps = {
   filters: AgencyFilters;
   page: number;
-}) {
+};
+
+// Only Super Admins manage multiple agencies; everyone else lands on the
+// "My Agency" detail page for their own membership.
+export function AgencyDirectory(props: AgencyDirectoryProps) {
+  const router = useRouter();
+  const currentUser = useCurrentUser();
+  const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  const ownAgencyId = currentUser.data?.membership?.agencyId;
+  const shouldRedirect = Boolean(currentUser.data && !isSuperAdmin);
+  useEffect(() => {
+    if (shouldRedirect && ownAgencyId)
+      router.replace(routes.agencies.detail(String(ownAgencyId)));
+  }, [ownAgencyId, router, shouldRedirect]);
+
+  if (isSuperAdmin) return <AgencyList {...props} />;
+  if (shouldRedirect && !ownAgencyId)
+    return (
+      <StatePanel
+        description="Your account is not linked to an agency."
+        kind="permission"
+        title="Agencies unavailable"
+      />
+    );
+  return <LoadingDirectory />;
+}
+
+function AgencyList({ filters, page }: AgencyDirectoryProps) {
   const router = useRouter();
   const currentUser = useCurrentUser();
   const requestFilters = {

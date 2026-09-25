@@ -8,7 +8,10 @@ import { createClient, updateClient } from "./api";
 import type { ClientCreatePayload, ClientProfile } from "./contracts";
 
 const createPayload: ClientCreatePayload = { name: "Northstar Client" };
-const updatePayload: ClientProfile = { name: "Northstar Client", status: "inactive" };
+const updatePayload: ClientProfile = {
+  name: "Northstar Client",
+  status: "inactive",
+};
 const record = {
   id: 20,
   agency_id: 1,
@@ -79,7 +82,10 @@ describe("client API", () => {
     server.use(
       http.post(workspacePaths.clients(1), () =>
         HttpResponse.json(
-          { message: "Invalid client", errors: { name: ["The name is required."] } },
+          {
+            message: "Invalid client",
+            errors: { name: ["The name is required."] },
+          },
           { status: 422 },
         ),
       ),

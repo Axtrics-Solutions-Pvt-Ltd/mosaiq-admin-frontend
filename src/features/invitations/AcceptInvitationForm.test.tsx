@@ -132,7 +132,9 @@ it("offers to switch accounts instead of the sign-up form when another user is s
   expect(
     await screen.findByRole("button", { name: "Sign out and continue" }),
   ).toBeVisible();
-  expect(screen.getByText(/signed in as someone.else@example.test/)).toBeVisible();
+  expect(
+    screen.getByText(/signed in as someone.else@example.test/),
+  ).toBeVisible();
   expect(screen.queryByLabelText(/Create password/)).not.toBeInTheDocument();
 });
 
@@ -176,9 +178,7 @@ it("declines with only the email link, without signing in", async () => {
     }),
   );
   await waitFor(() =>
-    expect(
-      screen.getByText(/You have declined this invitation/),
-    ).toBeVisible(),
+    expect(screen.getByText(/You have declined this invitation/)).toBeVisible(),
   );
   expect(received).toEqual({ token });
 });

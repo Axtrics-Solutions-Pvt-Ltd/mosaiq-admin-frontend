@@ -55,3 +55,16 @@ export async function PUT(request: Request, context: Context) {
     parsed.data,
   );
 }
+export async function DELETE(request: Request, context: Context) {
+  const ids = await scope(context);
+  if (!ids)
+    return Response.json(
+      { message: "Invalid workspace scope." },
+      { status: 400 },
+    );
+  return forwardAgencyRequest(
+    request,
+    workspacePaths.detail(ids.agencyId, ids.clientId, ids.workspaceId),
+    "DELETE",
+  );
+}

@@ -37,6 +37,7 @@ import {
 } from "./contracts";
 import { InvitationConflictDialog } from "./InvitationConflictDialog";
 import { InvitationScopeSelectors } from "./InvitationScopeSelectors";
+import { invitationRoleLabels } from "./labels";
 import { useCreateInvitation } from "./queries";
 
 const formSchema = z.object({
@@ -47,14 +48,6 @@ const formSchema = z.object({
   workspaceIds: z.array(z.number().int().positive()),
 });
 type FormValues = z.infer<typeof formSchema>;
-
-const roles = [
-  { code: "AGENCY_ADMIN", label: "Agency Admin" },
-  { code: "MANAGER", label: "Manager" },
-  { code: "ANALYST", label: "Analyst" },
-  { code: "VIEWER", label: "Viewer" },
-  { code: "CLIENT_USER", label: "Client User" },
-] as const;
 
 export function InviteUserForm() {
   const router = useRouter();
@@ -84,12 +77,14 @@ export function InviteUserForm() {
     defaultValues: {
       agencyId: null,
       email: "",
-      roleCode: "VIEWER",
+      roleCode: "MANAGER",
       clientId: null,
       workspaceIds: [],
     },
   });
-  const roleCode = useWatch({ control, name: "roleCode" });
+  // Agency Admins can only invite Managers; the picker is Super Admin only.
+  const watchedRoleCode = useWatch({ control, name: "roleCode" });
+  const roleCode = isSuperAdmin ? watchedRoleCode : "MANAGER";
   const emailValue = useWatch({ control, name: "email" });
   const roleRegistration = register("roleCode");
   const agencyId = isSuperAdmin ? selectedAgency?.id : ownAgencyId;
@@ -116,27 +111,23 @@ export function InviteUserForm() {
       setError("agencyId", { message: "Choose an agency." });
       return;
     }
-    // Non-client roles pick a client only to browse workspaces; it is not
-    // submitted, so the payload schema cannot flag it as missing.
+    const submittedRoleCode = isSuperAdmin ? values.roleCode : "MANAGER";
+    // The client is picked only to browse workspaces; it is not submitted, so
+    // the payload schema cannot flag it as missing.
     const isClientMissing =
-      values.roleCode !== "AGENCY_ADMIN" &&
-      values.roleCode !== "CLIENT_USER" &&
-      !values.clientId;
+      submittedRoleCode !== "AGENCY_ADMIN" && !values.clientId;
     if (isClientMissing) {
-      setError("clientId", { message: "Choose a client to select workspaces." });
+      setError("clientId", {
+        message: "Choose a client to select workspaces.",
+      });
     }
     const parsed = inviteSchema.safeParse({
       email: values.email.trim(),
-      role_code: values.roleCode,
-      ...(values.roleCode === "CLIENT_USER" && values.clientId
-        ? { client_id: values.clientId }
-        : {}),
+      role_code: submittedRoleCode,
       workspace_ids: values.workspaceIds,
     });
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
-        if (issue.path[0] === "client_id")
-          setError("clientId", { message: issue.message });
         if (issue.path[0] === "workspace_ids")
           setError("workspaceIds", { message: issue.message });
       }
@@ -174,8 +165,6 @@ export function InviteUserForm() {
         if (fields.email) setError("email", { message: fields.email });
         if (fields.role_code)
           setError("roleCode", { message: fields.role_code });
-        if (fields.client_id)
-          setError("clientId", { message: fields.client_id });
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
         const serverMessage =
@@ -247,27 +236,47 @@ export function InviteUserForm() {
                 {...register("email")}
               />
             </FormField>
-            <FormField
-              error={errors.roleCode?.message}
-              id="invite-role"
-              label="Role"
-              required
-            >
-              <Select
+            {isSuperAdmin ? (
+              <FormField
+                error={errors.roleCode?.message}
                 id="invite-role"
-                {...roleRegistration}
-                onChange={(event) => {
-                  roleRegistration.onChange(event);
-                  clearScope();
-                }}
+                label="Role"
+                required
               >
-                {roles.map((role) => (
-                  <option key={role.code} value={role.code}>
-                    {role.label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+                <Select
+                  id="invite-role"
+                  {...roleRegistration}
+                  onChange={(event) => {
+                    roleRegistration.onChange(event);
+                    clearScope();
+                  }}
+                >
+                  {invitationRoles.map((code) => (
+                    <option key={code} value={code}>
+                      {invitationRoleLabels[code]}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            ) : (
+              <div>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Role:</span>{" "}
+                  <span className="text-strong font-medium">
+                    {invitationRoleLabels.MANAGER}
+                  </span>
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Agency Admins invite Managers, who can access only the
+                  workspaces chosen below.
+                </p>
+                {errors.roleCode?.message && (
+                  <p className="text-destructive mt-1 text-sm" role="alert">
+                    {errors.roleCode.message}
+                  </p>
+                )}
+              </div>
+            )}
             {isSuperAdmin ? (
               <FormField
                 description="Search by agency name. Inactive agencies can receive invitations, but access begins after reactivation."
@@ -310,7 +319,6 @@ export function InviteUserForm() {
               client={selectedClient}
               clientError={errors.clientId?.message}
               email={debouncedEmail || undefined}
-              isClientUser={roleCode === "CLIENT_USER"}
               isScopeRequired={roleCode !== "AGENCY_ADMIN"}
               roleCode={roleCode}
               onClientChange={(client) => {

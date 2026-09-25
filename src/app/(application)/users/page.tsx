@@ -1,4 +1,4 @@
-import { agencyUserRoles } from "@/features/users/contracts";
+import { assignableAgencyRoles } from "@/config/permissions";
 import { UserDirectory } from "@/features/users/UserDirectory";
 
 function positive(value: string | string[] | undefined) {
@@ -18,7 +18,7 @@ function status(value: string | string[] | undefined) {
     : "all";
 }
 
-const roles = ["all", ...agencyUserRoles] as const;
+const roles = ["all", ...assignableAgencyRoles] as const;
 function role(value: string | string[] | undefined) {
   const candidate = typeof value === "string" ? value : "all";
   return roles.includes(candidate as (typeof roles)[number])

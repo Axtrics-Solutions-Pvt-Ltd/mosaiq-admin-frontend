@@ -66,6 +66,8 @@ export const handlers: RequestHandler[] = [
             agencies: 12,
             clients: 38,
             workspaces: 186,
+            reports: 24,
+            active_links: 31,
             users: 142,
           },
         })

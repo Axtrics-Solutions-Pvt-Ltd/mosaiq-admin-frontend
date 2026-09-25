@@ -130,9 +130,7 @@ it("lets a Super Admin choose an agency from the page and loads its invitations"
   fireEvent.change(await screen.findByLabelText("Agency"), {
     target: { value: "1" },
   });
-  expect(
-    (await screen.findAllByText("invited@example.test"))[0],
-  ).toBeVisible();
+  expect((await screen.findAllByText("invited@example.test"))[0]).toBeVisible();
   expect(requestedPath).toBe("/api/v1/admin/agencies/1/invitations");
 });
 

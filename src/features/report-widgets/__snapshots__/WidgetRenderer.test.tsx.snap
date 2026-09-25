@@ -1,0 +1,3112 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WidgetRenderer > renders the bar_chart contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Carryover
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="space-y-3"
+    >
+      <div
+        aria-hidden="true"
+        class="h-56"
+      >
+        <div
+          class="recharts-wrapper"
+          height="100%"
+          style="position: relative; cursor: default; width: 100%; height: 100%;"
+          width="100%"
+        >
+          <div
+            class="recharts-tooltip-wrapper"
+            style="visibility: hidden; pointer-events: none; position: absolute; top: 0px; left: 0px;"
+            tabindex="-1"
+            xmlns="http://www.w3.org/1999/xhtml"
+          >
+            <div
+              class="recharts-default-tooltip"
+              style="margin: 0px; padding: 10px; background-color: rgb(255, 255, 255); border: 1px solid rgb(204, 204, 204); white-space: nowrap;"
+            >
+              <p
+                class="recharts-tooltip-label"
+                style="margin: 0px;"
+              />
+            </div>
+          </div>
+          <svg
+            class="recharts-surface"
+            height="100"
+            style="width: 100%; height: 100%; display: block;"
+            viewBox="0 0 100 100"
+            width="100"
+          >
+            <title />
+            <desc />
+            <g
+              class="recharts-zIndex-layer_-100"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-cartesian-grid"
+              >
+                <g
+                  class="recharts-cartesian-grid-horizontal"
+                >
+                  <line
+                    fill="none"
+                    height="62"
+                    stroke="var(--border)"
+                    width="36"
+                    x="56"
+                    x1="56"
+                    x2="92"
+                    y="8"
+                    y1="70"
+                    y2="70"
+                  />
+                  <line
+                    fill="none"
+                    height="62"
+                    stroke="var(--border)"
+                    width="36"
+                    x="56"
+                    x1="56"
+                    x2="92"
+                    y="8"
+                    y1="54.5"
+                    y2="54.5"
+                  />
+                  <line
+                    fill="none"
+                    height="62"
+                    stroke="var(--border)"
+                    width="36"
+                    x="56"
+                    x1="56"
+                    x2="92"
+                    y="8"
+                    y1="39"
+                    y2="39"
+                  />
+                  <line
+                    fill="none"
+                    height="62"
+                    stroke="var(--border)"
+                    width="36"
+                    x="56"
+                    x1="56"
+                    x2="92"
+                    y="8"
+                    y1="23.5"
+                    y2="23.5"
+                  />
+                  <line
+                    fill="none"
+                    height="62"
+                    stroke="var(--border)"
+                    width="36"
+                    x="56"
+                    x1="56"
+                    x2="92"
+                    y="8"
+                    y1="8"
+                    y2="8"
+                  />
+                </g>
+              </g>
+            </g>
+            <g
+              class="recharts-zIndex-layer_-50"
+              tabindex="-1"
+            />
+            <defs>
+              <clippath
+                id="recharts10-clip"
+              >
+                <rect
+                  height="62"
+                  width="36"
+                  x="56"
+                  y="8"
+                />
+              </clippath>
+            </defs>
+            <g
+              class="recharts-zIndex-layer_100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_300"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-layer recharts-bar"
+                id="recharts-bar-_r_6_"
+              >
+                <g
+                  class="recharts-layer recharts-bar-rectangles"
+                >
+                  <g
+                    class="recharts-layer"
+                  >
+                    <g
+                      class="recharts-layer recharts-bar-rectangle"
+                    >
+                      <g
+                        class="recharts-layer recharts-inactive-bar"
+                      >
+                        <path
+                          class="recharts-rectangle"
+                          d="M57.8,12A 4,4,0,0,1,61.8,8L 67.8,8A 4,4,0,0,1,
+        71.8,12L 71.8,70L 57.8,70Z"
+                          fill="var(--chart-blue)"
+                          height="62"
+                          name="undefined"
+                          width="14"
+                          x="57.8"
+                          y="8"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      class="recharts-layer recharts-bar-rectangle"
+                    >
+                      <g
+                        class="recharts-layer recharts-inactive-bar"
+                      >
+                        <path
+                          class="recharts-rectangle"
+                          d="M75.8,35.56A 4,4,0,0,1,79.8,31.56L 85.8,31.56A 4,4,0,0,1,
+        89.8,35.56L 89.8,70L 75.8,70Z"
+                          fill="var(--chart-blue)"
+                          height="38.44"
+                          name="undefined"
+                          width="14"
+                          x="75.8"
+                          y="31.56"
+                        />
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+            <g
+              class="recharts-zIndex-layer_400"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_500"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-layer recharts-cartesian-axis recharts-xAxis xAxis"
+              >
+                <line
+                  angle="0"
+                  class="recharts-cartesian-axis-line"
+                  fill="none"
+                  font-size="12"
+                  height="30"
+                  orientation="bottom"
+                  stroke="var(--text-muted)"
+                  width="36"
+                  x="56"
+                  x1="56"
+                  x2="92"
+                  y="70"
+                  y1="70"
+                  y2="70"
+                />
+                <g
+                  class="recharts-cartesian-axis-ticks recharts-xAxis-ticks"
+                >
+                  <g
+                    class="recharts-cartesian-axis-tick-lines recharts-xAxis-tick-lines"
+                  >
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                  </g>
+                </g>
+              </g>
+              <g
+                class="recharts-layer recharts-cartesian-axis recharts-yAxis yAxis"
+              >
+                <line
+                  angle="0"
+                  class="recharts-cartesian-axis-line"
+                  fill="none"
+                  font-size="12"
+                  height="62"
+                  orientation="left"
+                  stroke="var(--text-muted)"
+                  width="56"
+                  x="0"
+                  x1="56"
+                  x2="56"
+                  y="8"
+                  y1="8"
+                  y2="70"
+                />
+                <g
+                  class="recharts-cartesian-axis-ticks recharts-yAxis-ticks"
+                >
+                  <g
+                    class="recharts-cartesian-axis-tick-lines recharts-yAxis-tick-lines"
+                  >
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                  </g>
+                </g>
+              </g>
+            </g>
+            <g
+              class="recharts-zIndex-layer_600"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1000"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_2000"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-cartesian-axis-tick-labels recharts-xAxis-tick-labels"
+              >
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="30"
+                    orientation="bottom"
+                    stroke="none"
+                    text-anchor="middle"
+                    width="36"
+                    x="65"
+                    y="78"
+                  >
+                    <tspan
+                      dy="0.71em"
+                      x="65"
+                    >
+                      Week 1
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="30"
+                    orientation="bottom"
+                    stroke="none"
+                    text-anchor="middle"
+                    width="36"
+                    x="83"
+                    y="78"
+                  >
+                    <tspan
+                      dy="0.71em"
+                      x="83"
+                    >
+                      Week 2
+                    </tspan>
+                  </text>
+                </g>
+              </g>
+              <g
+                class="recharts-cartesian-axis-tick-labels recharts-yAxis-tick-labels"
+              >
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="56"
+                    x="48"
+                    y="70"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="48"
+                    >
+                      0%
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="56"
+                    x="48"
+                    y="54.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="48"
+                    >
+                      25%
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="56"
+                    x="48"
+                    y="39"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="48"
+                    >
+                      50%
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="56"
+                    x="48"
+                    y="23.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="48"
+                    >
+                      75%
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="56"
+                    x="48"
+                    y="8"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="48"
+                    >
+                      100%
+                    </tspan>
+                  </text>
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <table
+        class="sr-only"
+      >
+        <caption>
+          Carryover
+        </caption>
+        <tbody>
+          <tr>
+            <th
+              scope="row"
+            >
+              Week 1
+            </th>
+            <td>
+              100%
+            </td>
+          </tr>
+          <tr>
+            <th
+              scope="row"
+            >
+              Week 2
+            </th>
+            <td>
+              62%
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the bullet_list contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        What Worked
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <ul
+      class="space-y-2.5"
+    >
+      <li
+        class="flex gap-2.5"
+      >
+        <span
+          class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-check size-3.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 6 9 17l-5-5"
+            />
+          </svg>
+          <span
+            class="sr-only"
+          >
+            Positive
+            : 
+          </span>
+        </span>
+        <span
+          class="whitespace-pre-line"
+        >
+          Video creative drove a 2.34% CTR
+        </span>
+      </li>
+      <li
+        class="flex gap-2.5"
+      >
+        <span
+          class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-check size-3.5"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 6 9 17l-5-5"
+            />
+          </svg>
+          <span
+            class="sr-only"
+          >
+            Positive
+            : 
+          </span>
+        </span>
+        <span
+          class="whitespace-pre-line"
+        >
+          Retargeting cut CPA by 12%
+        </span>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the channel_list contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        ROAS by Channel
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <ul
+      class="space-y-4"
+    >
+      <li
+        class="space-y-1.5"
+      >
+        <div
+          class="flex flex-wrap items-baseline justify-between gap-x-3 text-sm"
+        >
+          <span
+            class="text-strong font-medium"
+          >
+            Meta Ads
+          </span>
+          <span
+            class="flex flex-wrap items-center gap-x-3 tabular-nums"
+          >
+            <span
+              class="flex items-center gap-1"
+            >
+              <span
+                class="text-muted-foreground text-xs"
+              >
+                Spend
+              </span>
+              <span
+                class="text-strong"
+              >
+                $127.9K
+              </span>
+            </span>
+            <span
+              class="flex items-center gap-1"
+            >
+              <span
+                class="text-muted-foreground text-xs"
+              >
+                ROAS
+              </span>
+              <span
+                class="text-strong font-semibold"
+              >
+                2.18x
+              </span>
+            </span>
+          </span>
+        </div>
+        <div
+          aria-hidden="true"
+          class="bg-muted h-2 overflow-hidden rounded-full"
+        >
+          <div
+            class="h-full rounded-full"
+            style="width: 100%; background-color: var(--chart-blue);"
+          />
+        </div>
+      </li>
+      <li
+        class="space-y-1.5"
+      >
+        <div
+          class="flex flex-wrap items-baseline justify-between gap-x-3 text-sm"
+        >
+          <span
+            class="text-strong font-medium"
+          >
+            Google Ads
+          </span>
+          <span
+            class="flex flex-wrap items-center gap-x-3 tabular-nums"
+          >
+            <span
+              class="flex items-center gap-1"
+            >
+              <span
+                class="text-muted-foreground text-xs"
+              >
+                Spend
+              </span>
+              <span
+                class="text-strong"
+              >
+                $47.3K
+              </span>
+            </span>
+            <span
+              class="flex items-center gap-1"
+            >
+              <span
+                class="text-muted-foreground text-xs"
+              >
+                ROAS
+              </span>
+              <span
+                class="text-strong font-semibold"
+              >
+                3.4x
+              </span>
+            </span>
+          </span>
+        </div>
+        <div
+          aria-hidden="true"
+          class="bg-muted h-2 overflow-hidden rounded-full"
+        >
+          <div
+            class="h-full rounded-full"
+            style="width: 36.98%; background-color: var(--chart-amber);"
+          />
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the creative_grid contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Creative Performance
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <ul
+      class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+    >
+      <li
+        class="flex flex-col gap-3 rounded-lg border p-3"
+      >
+        <img
+          alt=""
+          class="bg-muted aspect-video w-full rounded-md border object-cover"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          src="https://cdn.example.test/cr_12.jpg"
+        />
+        <div
+          class="min-w-0"
+        >
+          <p
+            class="text-strong font-medium break-words"
+          >
+            Lunar New Year – Video 15s
+          </p>
+          <p
+            class="text-muted-foreground text-xs"
+          >
+            Video · Lunar New Year
+          </p>
+        </div>
+        <dl
+          class="grid grid-cols-2 gap-2 text-sm"
+        >
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              Impressions
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              820K
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              CTR
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              2.34%
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              Conversions
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              410
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              CPA
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              $31.20
+            </dd>
+          </div>
+        </dl>
+      </li>
+      <li
+        class="flex flex-col gap-3 rounded-lg border p-3"
+      >
+        <div
+          class="bg-muted text-muted-foreground flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-md border"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-gallery-horizontal size-6"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2 3v18"
+            />
+            <rect
+              height="18"
+              rx="2"
+              width="12"
+              x="6"
+              y="3"
+            />
+            <path
+              d="M22 3v18"
+            />
+          </svg>
+          <span
+            class="text-xs font-medium"
+          >
+            Carousel
+          </span>
+        </div>
+        <div
+          class="min-w-0"
+        >
+          <p
+            class="text-strong font-medium break-words"
+          >
+            Carousel – Family offers
+          </p>
+          <p
+            class="text-muted-foreground text-xs"
+          >
+            Carousel
+          </p>
+        </div>
+        <dl
+          class="grid grid-cols-2 gap-2 text-sm"
+        >
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              Impressions
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              410K
+            </dd>
+          </div>
+          <div>
+            <dt
+              class="text-muted-foreground text-xs"
+            >
+              CTR
+            </dt>
+            <dd
+              class="text-strong font-semibold tabular-nums"
+            >
+              1.1%
+            </dd>
+          </div>
+        </dl>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the data_table contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Channel Performance
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      aria-label="Channel Performance"
+      class="focus-visible:ring-ring -mx-1 overflow-x-auto rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+      role="region"
+      tabindex="0"
+    >
+      <table
+        class="w-full text-left text-sm"
+      >
+        <caption
+          class="sr-only"
+        >
+          Channel Performance
+        </caption>
+        <thead>
+          <tr>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium whitespace-nowrap"
+              scope="col"
+            >
+              Channel
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium whitespace-nowrap text-right"
+              scope="col"
+            >
+              Spend
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium whitespace-nowrap text-right"
+              scope="col"
+            >
+              ROAS
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Meta Ads
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap text-right tabular-nums"
+            >
+              <span
+                class="inline-flex items-center gap-1"
+              >
+                $127.9K
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap text-right tabular-nums"
+            >
+              <span
+                class="inline-flex items-center gap-1"
+              >
+                2.18x
+              </span>
+            </td>
+          </tr>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Google Analytics 4
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap text-right tabular-nums"
+            >
+              <span
+                class="inline-flex items-center gap-1"
+              >
+                —
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap text-right tabular-nums"
+            >
+              <span
+                class="inline-flex items-center gap-1"
+              >
+                —
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the donut contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        ROAS by Channel
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="grid items-center gap-4 sm:grid-cols-[minmax(0,12rem)_1fr]"
+    >
+      <div
+        class="relative mx-auto aspect-square w-full max-w-48"
+      >
+        <div
+          aria-hidden="true"
+          class="absolute inset-0"
+        >
+          <div
+            class="recharts-wrapper"
+            height="100%"
+            style="position: relative; cursor: default; width: 100%; height: 100%;"
+            width="100%"
+          >
+            <div
+              class="recharts-tooltip-wrapper"
+              style="visibility: hidden; pointer-events: none; position: absolute; top: 0px; left: 0px;"
+              tabindex="-1"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <div
+                class="recharts-default-tooltip"
+                style="margin: 0px; padding: 10px; background-color: rgb(255, 255, 255); border: 1px solid rgb(204, 204, 204); white-space: nowrap;"
+              >
+                <p
+                  class="recharts-tooltip-label"
+                  style="margin: 0px;"
+                />
+              </div>
+            </div>
+            <svg
+              class="recharts-surface"
+              cx="50%"
+              cy="50%"
+              height="100"
+              style="width: 100%; height: 100%; display: block;"
+              viewBox="0 0 100 100"
+              width="100"
+            >
+              <title />
+              <desc />
+              <g
+                class="recharts-zIndex-layer_-100"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_-50"
+                tabindex="-1"
+              />
+              <defs>
+                <clippath
+                  id="recharts6-clip"
+                >
+                  <rect
+                    height="90"
+                    width="90"
+                    x="5"
+                    y="5"
+                  />
+                </clippath>
+              </defs>
+              <g
+                class="recharts-zIndex-layer_100"
+                tabindex="-1"
+              >
+                <g
+                  class="recharts-layer recharts-pie"
+                  tabindex="0"
+                >
+                  <g
+                    class="recharts-layer"
+                  >
+                    <g
+                      class="recharts-layer recharts-pie-sector"
+                      tabindex="-1"
+                    >
+                      <g
+                        class="recharts-layer recharts-shape"
+                      >
+                        <path
+                          class="recharts-sector"
+                          cx="50"
+                          cy="50"
+                          d="M 91.4,50
+    A 41.4,41.4,0,
+    1,0,
+    43.7722,90.9289
+  L 45.803,77.5825
+            A 27.9,27.9,0,
+            1,1,
+            77.9,50 Z"
+                          data-recharts-item-id="recharts-pie-_r_4_"
+                          data-recharts-item-index="0"
+                          fill="var(--chart-blue)"
+                          name="Meta Ads"
+                          stroke="var(--surface)"
+                          tabindex="-1"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      class="recharts-layer recharts-pie-sector"
+                      tabindex="-1"
+                    >
+                      <g
+                        class="recharts-layer recharts-shape"
+                      >
+                        <path
+                          class="recharts-sector"
+                          cx="50"
+                          cy="50"
+                          d="M 44.4875,91.0314
+    A 41.4,41.4,0,
+    0,0,
+    91.3937,50.7225
+  L 77.8958,50.4869
+            A 27.9,27.9,0,
+            0,1,
+            46.285,77.6516 Z"
+                          data-recharts-item-id="recharts-pie-_r_4_"
+                          data-recharts-item-index="1"
+                          fill="var(--chart-amber)"
+                          name="Google Ads"
+                          stroke="var(--surface)"
+                          tabindex="-1"
+                        />
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+              <g
+                class="recharts-zIndex-layer_200"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_300"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_400"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_500"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_600"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1000"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1100"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1200"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_2000"
+                tabindex="-1"
+              />
+            </svg>
+          </div>
+        </div>
+        <div
+          class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
+        >
+          <span
+            class="text-muted-foreground text-xs"
+          >
+            Blended ROAS
+          </span>
+          <span
+            class="pointer-events-auto flex items-center gap-1"
+          >
+            <span
+              class="text-strong text-xl font-semibold tabular-nums"
+            >
+              3.2x
+            </span>
+          </span>
+        </div>
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <ul
+          class="divide-y text-sm"
+        >
+          <li
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
+          >
+            <span
+              class="flex min-w-0 items-center gap-2"
+            >
+              <svg
+                aria-hidden="true"
+                class="size-2.5 shrink-0"
+                viewBox="0 0 10 10"
+              >
+                <circle
+                  cx="5"
+                  cy="5"
+                  fill="var(--chart-blue)"
+                  r="5"
+                />
+              </svg>
+              <span
+                class="text-strong truncate font-medium"
+              >
+                Meta Ads
+              </span>
+            </span>
+            <span
+              class="flex items-center gap-2 tabular-nums"
+            >
+              <span
+                class="text-strong"
+              >
+                $127.9K
+              </span>
+              <span
+                class="text-muted-foreground w-14 text-right text-xs"
+              >
+                73%
+              </span>
+            </span>
+          </li>
+          <li
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
+          >
+            <span
+              class="flex min-w-0 items-center gap-2"
+            >
+              <svg
+                aria-hidden="true"
+                class="size-2.5 shrink-0"
+                viewBox="0 0 10 10"
+              >
+                <circle
+                  cx="5"
+                  cy="5"
+                  fill="var(--chart-amber)"
+                  r="5"
+                />
+              </svg>
+              <span
+                class="text-strong truncate font-medium"
+              >
+                Google Ads
+              </span>
+            </span>
+            <span
+              class="flex items-center gap-2 tabular-nums"
+            >
+              <span
+                class="text-strong"
+              >
+                $47.3K
+              </span>
+              <span
+                class="text-muted-foreground w-14 text-right text-xs"
+              >
+                27%
+              </span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the field_table contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Cultural Identity
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      aria-label="Cultural Identity"
+      class="focus-visible:ring-ring -mx-1 overflow-x-auto rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+      role="region"
+      tabindex="0"
+    >
+      <table
+        class="w-full text-left text-sm"
+      >
+        <caption
+          class="sr-only"
+        >
+          Cultural Identity
+        </caption>
+        <thead>
+          <tr>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Field
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Value
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Planning implication
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium"
+              scope="row"
+            >
+              Strength of cultural identity
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top text-strong"
+            >
+              High
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top text-muted-foreground min-w-40"
+            >
+              Identity remains a differentiator
+            </td>
+          </tr>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium"
+              scope="row"
+            >
+              Festivals
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top text-strong"
+            >
+              Vaisakhi, Diwali
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top text-muted-foreground min-w-40"
+            >
+              —
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the heatmap contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Cultural Values Index
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      aria-label="Cultural Values Index"
+      class="focus-visible:ring-ring -mx-1 overflow-x-auto rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+      role="region"
+      tabindex="0"
+    >
+      <table
+        class="w-full text-left text-sm"
+      >
+        <caption
+          class="sr-only"
+        >
+          Cultural Values Index
+        </caption>
+        <thead>
+          <tr>
+            <td />
+            <th
+              class="text-muted-foreground py-2 text-xs font-medium px-1 text-center whitespace-nowrap"
+              scope="col"
+            >
+              Low
+            </th>
+            <th
+              class="text-muted-foreground py-2 text-xs font-medium px-1 text-center whitespace-nowrap"
+              scope="col"
+            >
+              Medium
+            </th>
+            <th
+              class="text-muted-foreground py-2 text-xs font-medium px-1 text-center whitespace-nowrap"
+              scope="col"
+            >
+              High
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th
+              class="text-strong py-1 pr-3 text-sm font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Heritage
+            </th>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums text-strong"
+                style="background-color: color-mix(in srgb, var(--chart-blue) 12%, var(--surface));"
+              >
+                1
+              </span>
+            </td>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums text-strong"
+                style="background-color: color-mix(in srgb, var(--chart-blue) 41%, var(--surface));"
+              >
+                4
+              </span>
+            </td>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums text-white"
+                style="background-color: color-mix(in srgb, var(--chart-blue) 90%, var(--surface));"
+              >
+                9
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <th
+              class="text-strong py-1 pr-3 text-sm font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Family
+            </th>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums text-strong"
+                style="background-color: color-mix(in srgb, var(--chart-blue) 22%, var(--surface));"
+              >
+                2
+              </span>
+            </td>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums bg-muted text-strong"
+              >
+                —
+              </span>
+            </td>
+            <td
+              class="p-0.5"
+            >
+              <span
+                class="flex h-9 min-w-12 items-center justify-center rounded-md text-xs font-medium tabular-nums text-white"
+                style="background-color: color-mix(in srgb, var(--chart-blue) 71%, var(--surface));"
+              >
+                7
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the kpi contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Blended ROAS
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="flex flex-col gap-3"
+    >
+      <div
+        class="flex flex-wrap items-center gap-2"
+      >
+        <p
+          class="text-strong font-semibold tracking-tight tabular-nums text-3xl"
+        >
+          3.2x
+        </p>
+      </div>
+      <span
+        class="flex flex-wrap items-center gap-2 text-sm"
+      >
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-green-200 bg-success-soft text-success"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-arrow-up-right size-3"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M7 7h10v10"
+            />
+            <path
+              d="M7 17 17 7"
+            />
+          </svg>
+          <span
+            class="sr-only"
+          >
+            Up
+             
+          </span>
+          28%
+        </span>
+        <span
+          class="text-muted-foreground"
+        >
+          vs prev 30 days
+        </span>
+      </span>
+      <div
+        aria-hidden="true"
+        class="h-12"
+      >
+        <div
+          class="recharts-wrapper"
+          height="100%"
+          style="position: relative; cursor: default; width: 100%; height: 100%;"
+          width="100%"
+        >
+          <svg
+            class="recharts-surface"
+            height="100"
+            style="width: 100%; height: 100%; display: block;"
+            viewBox="0 0 100 100"
+            width="100"
+          >
+            <title />
+            <desc />
+            <g
+              class="recharts-zIndex-layer_-100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_-50"
+              tabindex="-1"
+            />
+            <defs>
+              <clippath
+                id="recharts1-clip"
+              >
+                <rect
+                  height="92"
+                  width="100"
+                  x="0"
+                  y="4"
+                />
+              </clippath>
+            </defs>
+            <g
+              class="recharts-zIndex-layer_100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_300"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_400"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-layer recharts-line"
+              >
+                <g
+                  class="recharts-layer recharts-shape"
+                >
+                  <path
+                    class="recharts-curve recharts-line-curve"
+                    d="M0,96L100,4"
+                    fill="none"
+                    height="92"
+                    id="recharts-line-_r_0_"
+                    stroke="var(--chart-blue)"
+                    stroke-width="2"
+                    width="100"
+                  />
+                </g>
+              </g>
+            </g>
+            <g
+              class="recharts-zIndex-layer_500"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_600"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1000"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_2000"
+              tabindex="-1"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the kpi_group contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Key Metrics
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <ul
+      class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+    >
+      <li
+        class="bg-muted/40 rounded-lg border p-3"
+      >
+        <p
+          class="text-muted-foreground mb-1 text-sm font-medium"
+        >
+          Spend
+        </p>
+        <div
+          class="flex flex-col gap-3"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <p
+              class="text-strong font-semibold tracking-tight tabular-nums text-2xl"
+            >
+              $175.2K
+            </p>
+          </div>
+          <span
+            class="flex flex-wrap items-center gap-2 text-sm"
+          >
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-border bg-muted text-foreground"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-up-right size-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7 7h10v10"
+                />
+                <path
+                  d="M7 17 17 7"
+                />
+              </svg>
+              <span
+                class="sr-only"
+              >
+                Up
+                 
+              </span>
+              12.4%
+            </span>
+            <span
+              class="text-muted-foreground"
+            >
+              vs prev 30 days
+            </span>
+          </span>
+          <div
+            aria-hidden="true"
+            class="h-10"
+          >
+            <div
+              class="recharts-wrapper"
+              height="100%"
+              style="position: relative; cursor: default; width: 100%; height: 100%;"
+              width="100%"
+            >
+              <svg
+                class="recharts-surface"
+                height="100"
+                style="width: 100%; height: 100%; display: block;"
+                viewBox="0 0 100 100"
+                width="100"
+              >
+                <title />
+                <desc />
+                <g
+                  class="recharts-zIndex-layer_-100"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_-50"
+                  tabindex="-1"
+                />
+                <defs>
+                  <clippath
+                    id="recharts8-clip"
+                  >
+                    <rect
+                      height="92"
+                      width="100"
+                      x="0"
+                      y="4"
+                    />
+                  </clippath>
+                </defs>
+                <g
+                  class="recharts-zIndex-layer_100"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_200"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_300"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_400"
+                  tabindex="-1"
+                >
+                  <g
+                    class="recharts-layer recharts-line"
+                  >
+                    <g
+                      class="recharts-layer recharts-shape"
+                    >
+                      <path
+                        class="recharts-curve recharts-line-curve"
+                        d="M0,96L100,4"
+                        fill="none"
+                        height="92"
+                        id="recharts-line-_r_5_"
+                        stroke="var(--chart-blue)"
+                        stroke-width="2"
+                        width="100"
+                      />
+                    </g>
+                  </g>
+                </g>
+                <g
+                  class="recharts-zIndex-layer_500"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_600"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_1000"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_1100"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_1200"
+                  tabindex="-1"
+                />
+                <g
+                  class="recharts-zIndex-layer_2000"
+                  tabindex="-1"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </li>
+      <li
+        class="bg-muted/40 rounded-lg border p-3"
+      >
+        <p
+          class="text-muted-foreground mb-1 text-sm font-medium"
+        >
+          CPA
+        </p>
+        <div
+          class="flex flex-col gap-3"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <p
+              class="text-strong font-semibold tracking-tight tabular-nums text-2xl"
+            >
+              $45.75
+            </p>
+          </div>
+          <span
+            class="flex flex-wrap items-center gap-2 text-sm"
+          >
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-red-200 bg-destructive-soft text-destructive"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-up-right size-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7 7h10v10"
+                />
+                <path
+                  d="M7 17 17 7"
+                />
+              </svg>
+              <span
+                class="sr-only"
+              >
+                Up
+                 
+              </span>
+              6.1%
+            </span>
+            <span
+              class="text-muted-foreground"
+            >
+              vs prev 30 days
+            </span>
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the kpi_list contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Audience Overview
+      </h3>
+      <p
+        class="text-muted-foreground mt-0.5 text-xs"
+      >
+        As of 
+        1 Sept 2026
+      </p>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <dl
+      class="grid gap-3 sm:grid-cols-2"
+    >
+      <div
+        class="bg-muted/40 rounded-lg border p-3"
+      >
+        <dt
+          class="text-muted-foreground text-sm"
+        >
+          Population
+        </dt>
+        <dd
+          class="text-strong mt-1 text-xl font-semibold tabular-nums"
+        >
+          1.8M
+        </dd>
+      </div>
+      <div
+        class="bg-muted/40 rounded-lg border p-3"
+      >
+        <dt
+          class="text-muted-foreground text-sm"
+        >
+          Median age
+        </dt>
+        <dd
+          class="text-strong mt-1 text-xl font-semibold tabular-nums"
+        >
+          34
+        </dd>
+      </div>
+    </dl>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the line_chart contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Spend vs Conversions
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="space-y-3"
+    >
+      <div
+        aria-hidden="true"
+        class="h-64"
+      >
+        <div
+          class="recharts-wrapper"
+          height="100%"
+          style="position: relative; cursor: default; width: 100%; height: 100%;"
+          width="100%"
+        >
+          <div
+            class="recharts-tooltip-wrapper"
+            style="visibility: hidden; pointer-events: none; position: absolute; top: 0px; left: 0px;"
+            tabindex="-1"
+            xmlns="http://www.w3.org/1999/xhtml"
+          >
+            <div
+              class="recharts-default-tooltip"
+              style="margin: 0px; padding: 10px; background-color: rgb(255, 255, 255); border: 1px solid rgb(204, 204, 204); white-space: nowrap;"
+            >
+              <p
+                class="recharts-tooltip-label"
+                style="margin: 0px;"
+              />
+            </div>
+          </div>
+          <svg
+            class="recharts-surface"
+            height="100"
+            style="width: 100%; height: 100%; display: block;"
+            viewBox="0 0 100 100"
+            width="100"
+          >
+            <title />
+            <desc />
+            <g
+              class="recharts-zIndex-layer_-100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_-50"
+              tabindex="-1"
+            />
+            <defs>
+              <clippath
+                id="recharts3-clip"
+              >
+                <rect
+                  height="62"
+                  width="0"
+                  x="64"
+                  y="8"
+                />
+              </clippath>
+            </defs>
+            <g
+              class="recharts-zIndex-layer_100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_300"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_400"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_500"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-layer recharts-cartesian-axis recharts-yAxis yAxis"
+              >
+                <line
+                  angle="0"
+                  class="recharts-cartesian-axis-line"
+                  fill="none"
+                  font-size="12"
+                  height="62"
+                  orientation="left"
+                  stroke="var(--text-muted)"
+                  width="64"
+                  x="0"
+                  x1="64"
+                  x2="64"
+                  y="8"
+                  y1="8"
+                  y2="70"
+                />
+                <g
+                  class="recharts-cartesian-axis-ticks recharts-yAxis-ticks"
+                >
+                  <g
+                    class="recharts-cartesian-axis-tick-lines recharts-yAxis-tick-lines"
+                  >
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                  </g>
+                </g>
+              </g>
+              <g
+                class="recharts-layer recharts-cartesian-axis recharts-yAxis yAxis"
+              >
+                <line
+                  angle="0"
+                  class="recharts-cartesian-axis-line"
+                  fill="none"
+                  font-size="12"
+                  height="62"
+                  orientation="right"
+                  stroke="var(--text-muted)"
+                  width="64"
+                  x="28"
+                  x1="28"
+                  x2="28"
+                  y="8"
+                  y1="8"
+                  y2="70"
+                />
+                <g
+                  class="recharts-cartesian-axis-ticks recharts-yAxis-ticks"
+                >
+                  <g
+                    class="recharts-cartesian-axis-tick-lines recharts-yAxis-tick-lines"
+                  >
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                    <g
+                      class="recharts-layer recharts-cartesian-axis-tick"
+                    />
+                  </g>
+                </g>
+              </g>
+            </g>
+            <g
+              class="recharts-zIndex-layer_600"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1000"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1100"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_1200"
+              tabindex="-1"
+            />
+            <g
+              class="recharts-zIndex-layer_2000"
+              tabindex="-1"
+            >
+              <g
+                class="recharts-cartesian-axis-tick-labels recharts-yAxis-tick-labels"
+              >
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="64"
+                    x="56"
+                    y="70"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="56"
+                    >
+                      $0.00
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="64"
+                    x="56"
+                    y="54.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="56"
+                    >
+                      $4.5K
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="64"
+                    x="56"
+                    y="39"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="56"
+                    >
+                      $9K
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="64"
+                    x="56"
+                    y="23.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="56"
+                    >
+                      $13.5K
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="left"
+                    stroke="none"
+                    text-anchor="end"
+                    width="64"
+                    x="56"
+                    y="8"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="56"
+                    >
+                      $18K
+                    </tspan>
+                  </text>
+                </g>
+              </g>
+              <g
+                class="recharts-cartesian-axis-tick-labels recharts-yAxis-tick-labels"
+              >
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="right"
+                    stroke="none"
+                    text-anchor="start"
+                    width="64"
+                    x="36"
+                    y="70"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="36"
+                    >
+                      0
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="right"
+                    stroke="none"
+                    text-anchor="start"
+                    width="64"
+                    x="36"
+                    y="54.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="36"
+                    >
+                      150
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="right"
+                    stroke="none"
+                    text-anchor="start"
+                    width="64"
+                    x="36"
+                    y="39"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="36"
+                    >
+                      300
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="right"
+                    stroke="none"
+                    text-anchor="start"
+                    width="64"
+                    x="36"
+                    y="23.5"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="36"
+                    >
+                      450
+                    </tspan>
+                  </text>
+                </g>
+                <g
+                  class="recharts-layer recharts-cartesian-axis-tick-label"
+                >
+                  <text
+                    class="recharts-text recharts-cartesian-axis-tick-value"
+                    fill="var(--text-muted)"
+                    font-size="12"
+                    height="62"
+                    orientation="right"
+                    stroke="none"
+                    text-anchor="start"
+                    width="64"
+                    x="36"
+                    y="8"
+                  >
+                    <tspan
+                      dy="0.355em"
+                      x="36"
+                    >
+                      600
+                    </tspan>
+                  </text>
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <ul
+        class="flex flex-wrap gap-4 text-xs"
+      >
+        <li
+          class="flex items-center gap-1.5"
+        >
+          <svg
+            aria-hidden="true"
+            class="size-2.5"
+            viewBox="0 0 10 10"
+          >
+            <circle
+              cx="5"
+              cy="5"
+              fill="var(--chart-blue)"
+              r="5"
+            />
+          </svg>
+          Spend
+          <span
+            class="text-muted-foreground"
+          >
+            (
+            left axis
+            )
+          </span>
+        </li>
+        <li
+          class="flex items-center gap-1.5"
+        >
+          <svg
+            aria-hidden="true"
+            class="size-2.5"
+            viewBox="0 0 10 10"
+          >
+            <circle
+              cx="5"
+              cy="5"
+              fill="var(--chart-amber)"
+              r="5"
+            />
+          </svg>
+          Conversions
+          <span
+            class="text-muted-foreground"
+          >
+            (
+            right axis
+            )
+          </span>
+        </li>
+      </ul>
+      <table
+        class="w-full text-left tabular-nums sr-only"
+      >
+        <caption
+          class="sr-only"
+        >
+          Spend vs Conversions
+        </caption>
+        <thead
+          class="text-muted-foreground text-xs"
+        >
+          <tr>
+            <th
+              class="py-1.5 pr-3 font-medium"
+              scope="col"
+            >
+              Period
+            </th>
+            <th
+              class="py-1.5 pr-3 font-medium"
+              scope="col"
+            >
+              Spend
+            </th>
+            <th
+              class="py-1.5 pr-3 font-medium"
+              scope="col"
+            >
+              Conversions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-1 pr-3 font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Wk1
+            </th>
+            <td
+              class="py-1 pr-3 whitespace-nowrap"
+            >
+              $15.2K
+            </td>
+            <td
+              class="py-1 pr-3 whitespace-nowrap"
+            >
+              410
+            </td>
+          </tr>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-1 pr-3 font-medium whitespace-nowrap"
+              scope="row"
+            >
+              Wk2
+            </th>
+            <td
+              class="py-1 pr-3 whitespace-nowrap"
+            >
+              $16.8K
+            </td>
+            <td
+              class="py-1 pr-3 whitespace-nowrap"
+            >
+              452
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the metric_table contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Detailed Metrics
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      aria-label="Detailed Metrics"
+      class="focus-visible:ring-ring -mx-1 overflow-x-auto rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+      role="region"
+      tabindex="0"
+    >
+      <table
+        class="w-full text-left text-sm"
+      >
+        <caption
+          class="sr-only"
+        >
+          Detailed Metrics
+        </caption>
+        <thead>
+          <tr>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Metric
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Value
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Status
+            </th>
+            <th
+              class="text-muted-foreground py-2 pr-4 text-xs font-medium"
+              scope="col"
+            >
+              Details
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium"
+              scope="row"
+            >
+              Blended ROAS
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap tabular-nums"
+            >
+              <span
+                class="flex items-center gap-1"
+              >
+                <span
+                  class="text-strong"
+                >
+                  3.2x
+                </span>
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top"
+            >
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-green-200 bg-success-soft text-success"
+              >
+                Healthy
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top text-muted-foreground min-w-40"
+            >
+              —
+            </td>
+          </tr>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium"
+              scope="row"
+            >
+              Blended CPA
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap tabular-nums"
+            >
+              <span
+                class="flex items-center gap-1"
+              >
+                <span
+                  class="text-strong"
+                >
+                  $45.75
+                </span>
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top"
+            >
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-amber-200 bg-warning-soft text-warning"
+              >
+                On watch
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top text-muted-foreground min-w-40"
+            >
+              Slightly above target
+            </td>
+          </tr>
+          <tr
+            class="border-t"
+          >
+            <th
+              class="py-2.5 pr-4 align-top text-strong font-medium"
+              scope="row"
+            >
+              CTR
+            </th>
+            <td
+              class="py-2.5 pr-4 align-top whitespace-nowrap tabular-nums"
+            >
+              <span
+                class="flex items-center gap-1"
+              >
+                <span
+                  class="text-strong"
+                >
+                  1.44%
+                </span>
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top"
+            >
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-border bg-muted text-foreground"
+              >
+                No target
+              </span>
+            </td>
+            <td
+              class="py-2.5 pr-4 align-top text-muted-foreground min-w-40"
+            >
+              —
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the progress_list contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Language & Province Mix
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="space-y-4"
+    >
+      <div
+        aria-label="Language & Province Mix groups"
+        class="bg-muted flex w-fit flex-wrap gap-1 rounded-lg border p-1"
+        role="group"
+      >
+        <button
+          aria-pressed="true"
+          class="rounded-md px-3 py-1 text-sm font-medium bg-card text-strong shadow-sm"
+          type="button"
+        >
+          Languages
+        </button>
+        <button
+          aria-pressed="false"
+          class="rounded-md px-3 py-1 text-sm font-medium text-muted-foreground hover:text-strong"
+          type="button"
+        >
+          Provinces
+        </button>
+      </div>
+      <ul
+        class="space-y-3"
+      >
+        <li
+          class="space-y-1.5"
+        >
+          <div
+            class="flex flex-wrap items-baseline justify-between gap-x-3 text-sm"
+          >
+            <span
+              class="text-strong font-medium"
+            >
+              Punjabi
+            </span>
+            <span
+              class="flex items-baseline gap-3 tabular-nums"
+            >
+              <span
+                class="text-muted-foreground text-xs"
+              >
+                Reach
+                 
+                2.3M
+              </span>
+              <span
+                class="text-strong"
+              >
+                6.4%
+              </span>
+            </span>
+          </div>
+          <div
+            aria-hidden="true"
+            class="bg-muted h-2 overflow-hidden rounded-full"
+          >
+            <div
+              class="h-full rounded-full"
+              style="width: 6.4%; background-color: var(--chart-blue);"
+            />
+          </div>
+        </li>
+      </ul>
+      <dl
+        class="grid gap-3 border-t pt-4 sm:grid-cols-2"
+      >
+        <div>
+          <dt
+            class="text-muted-foreground text-sm"
+          >
+            Total reach
+          </dt>
+          <dd
+            class="mt-1 flex flex-wrap items-center gap-2"
+          >
+            <span
+              class="text-strong text-xl font-semibold tabular-nums"
+            >
+              7.5M
+            </span>
+            <span
+              class="flex flex-wrap items-center gap-2 text-sm"
+            >
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-green-200 bg-success-soft text-success"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-arrow-up-right size-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M7 7h10v10"
+                  />
+                  <path
+                    d="M7 17 17 7"
+                  />
+                </svg>
+                <span
+                  class="sr-only"
+                >
+                  Up
+                   
+                </span>
+                12.6%
+              </span>
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the recommendation_list contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        Recommendations
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <ol
+      class="grid gap-3 md:grid-cols-2"
+    >
+      <li
+        class="bg-muted space-y-2 rounded-lg border p-4"
+      >
+        <p
+          class="text-strong font-semibold"
+        >
+          Reallocate 15% of budget into Meta Ads
+        </p>
+        <p
+          class="text-muted-foreground text-sm whitespace-pre-line"
+        >
+          Shift underperforming spend.
+        </p>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-blue-200 bg-primary-soft text-blue-800"
+        >
+          Media Buying Team
+        </span>
+      </li>
+      <li
+        class="bg-muted space-y-2 rounded-lg border p-4"
+      >
+        <p
+          class="text-strong font-semibold"
+        >
+          Refresh search copy
+        </p>
+      </li>
+    </ol>
+  </div>
+</div>
+`;
+
+exports[`WidgetRenderer > renders the text_hero contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+      >
+        AI Summary
+      </h3>
+      <p
+        class="text-muted-foreground mt-0.5 text-xs"
+      >
+        As of 
+        20 Sept 2026
+      </p>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+  >
+    <div
+      class="space-y-2"
+    >
+      <p
+        class="text-strong text-lg font-semibold"
+      >
+        Meta is leading on efficiency
+      </p>
+      <p
+        class="text-foreground whitespace-pre-line"
+      >
+        Blended ROAS rose 28% on the previous period.
+      </p>
+    </div>
+  </div>
+</div>
+`;

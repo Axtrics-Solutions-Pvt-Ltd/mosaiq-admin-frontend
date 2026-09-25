@@ -3,7 +3,9 @@
 import {
   Briefcase,
   Building2,
+  FileChartColumn,
   Gauge,
+  Link2,
   RefreshCw,
   UsersRound,
 } from "lucide-react";
@@ -26,6 +28,8 @@ const liveMetricIcons = {
   agencies: Building2,
   clients: Briefcase,
   workspaces: Gauge,
+  reports: FileChartColumn,
+  activeLinks: Link2,
   users: UsersRound,
 } as const;
 
@@ -59,6 +63,12 @@ function buildLiveMetrics(summary: DashboardSummary) {
     id: "workspaces",
     label: "Active workspaces",
     value: summary.workspaces,
+  });
+  metrics.push({ id: "reports", label: "Reports", value: summary.reports });
+  metrics.push({
+    id: "activeLinks",
+    label: "Active share links",
+    value: summary.active_links,
   });
   if (summary.users !== null)
     metrics.push({
@@ -99,7 +109,7 @@ function LiveSummary() {
             Retry
           </Button>
         }
-        description="Live agency, workspace, and user totals could not be loaded."
+        description="Live agency, workspace, report, link, and user totals could not be loaded."
         kind="error"
         title="Summary unavailable"
       />

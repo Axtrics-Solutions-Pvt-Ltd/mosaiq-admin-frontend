@@ -20,21 +20,97 @@ import {
   workspaceScope,
 } from "@/config/routes";
 import { useAgency } from "@/features/agencies/queries";
+import { hasCapability } from "@/features/auth/contracts";
+import { useCurrentUser } from "@/features/auth/queries";
+import { BudgetsCard } from "@/features/budgets/BudgetsCard";
+import { ChannelBadge } from "@/features/channels/ChannelBadge";
+import { CorrectionHistory } from "@/features/corrections/CorrectionHistory";
+import type { CorrectionHistoryFilters } from "@/features/corrections/filters";
+import { ClientReportsCard } from "@/features/reports/ClientReportsCard";
+import type { WorkspaceRecord } from "@/features/workspaces/contracts";
 import { useClient } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
-import { formatDate } from "@/lib/formatters";
+import { formatDate, formatDateTime } from "@/lib/formatters";
 
 import { useUpdateClient } from "./queries";
+
+function ChannelWorkspaceCard({
+  workspace,
+  canManage,
+}: {
+  workspace: WorkspaceRecord;
+  canManage: boolean;
+}) {
+  const lastFetchedAt = workspace.connection?.last_fetched_at;
+  return (
+    <li className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <ChannelBadge channel={workspace.connector} />
+        <StatusBadge status={workspace.status} />
+      </div>
+      <Link
+        className="text-strong hover:text-primary font-medium"
+        href={workspaceDetailUrl(
+          workspace.id,
+          workspace.agency_id,
+          workspace.client_id,
+        )}
+      >
+        {workspace.name}
+      </Link>
+      <dl className="grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <dt className="text-muted-foreground text-xs">Connection</dt>
+          <dd className="mt-1">
+            {workspace.connection ? (
+              <StatusBadge status={workspace.connection.status} />
+            ) : (
+              "--"
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">Last fetched</dt>
+          <dd className="text-strong mt-1">
+            {lastFetchedAt ? formatDateTime(lastFetchedAt) : "Never"}
+          </dd>
+        </div>
+      </dl>
+      {canManage && (
+        <Link
+          aria-label={`Edit ${workspace.name}`}
+          className="text-primary mt-auto text-sm hover:underline"
+          href={workspaceEditUrl(
+            workspace.id,
+            workspace.agency_id,
+            workspace.client_id,
+          )}
+        >
+          Edit
+        </Link>
+      )}
+    </li>
+  );
+}
 
 export function ClientDetailsScreen({
   agencyId,
   clientId,
+  correctionFilters,
 }: {
   agencyId: number;
   clientId: number;
+  correctionFilters: CorrectionHistoryFilters;
 }) {
   const query = useClient(agencyId, clientId);
   const agencyQuery = useAgency(agencyId);
+  const currentUser = useCurrentUser();
+  const canManageClient = Boolean(
+    currentUser.data && hasCapability(currentUser.data, "clients.manage"),
+  );
+  const canManageWorkspaces = Boolean(
+    currentUser.data && hasCapability(currentUser.data, "workspaces.manage"),
+  );
   const updateMutation = useUpdateClient();
   const [isConfirming, setIsConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -75,21 +151,23 @@ export function ClientDetailsScreen({
     <PageStack>
       <PageHeader
         actions={
-          <>
-            <Button
-              disabled={updateMutation.isPending}
-              onClick={() => setIsConfirming(true)}
-              variant="outline"
-            >
-              <Power aria-hidden className="size-4" />
-              {client.status === "active" ? "Deactivate" : "Activate"}
-            </Button>
-            <Button asChild>
-              <Link href={clientEditUrl(client.id, agencyId)}>
-                <Pencil aria-hidden className="size-4" /> Edit client
-              </Link>
-            </Button>
-          </>
+          canManageClient ? (
+            <>
+              <Button
+                disabled={updateMutation.isPending}
+                onClick={() => setIsConfirming(true)}
+                variant="outline"
+              >
+                <Power aria-hidden className="size-4" />
+                {client.status === "active" ? "Deactivate" : "Activate"}
+              </Button>
+              <Button asChild>
+                <Link href={clientEditUrl(client.id, agencyId)}>
+                  <Pencil aria-hidden className="size-4" /> Edit client
+                </Link>
+              </Button>
+            </>
+          ) : undefined
         }
         breadcrumbs={
           <>
@@ -130,63 +208,55 @@ export function ClientDetailsScreen({
       )}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle>Workspaces</CardTitle>
-            <Button asChild size="sm" variant="outline">
-              <Link
-                href={
-                  routes.workspaces.new + workspaceScope(agencyId, client.id)
-                }
-              >
-                <Plus aria-hidden className="size-4" /> Add workspace
-              </Link>
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>Channel workspaces</CardTitle>
+            {canManageWorkspaces && (
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={
+                    routes.workspaces.new + workspaceScope(agencyId, client.id)
+                  }
+                >
+                  <Plus aria-hidden className="size-4" /> Add channel workspace
+                </Link>
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {workspaces.length === 0 ? (
             <StatePanel
               kind="empty"
-              title="No workspaces"
-              description="This client has no workspaces yet."
+              title="No channel workspaces"
+              description="Add a workspace for each channel this client reports on."
             />
           ) : (
-            <ul className="divide-y">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {workspaces.map((workspace) => (
-                <li
-                  className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                <ChannelWorkspaceCard
+                  canManage={canManageWorkspaces}
                   key={workspace.id}
-                >
-                  <div>
-                    <Link
-                      className="text-strong hover:text-primary font-medium"
-                      href={workspaceDetailUrl(
-                        workspace.id,
-                        agencyId,
-                        client.id,
-                      )}
-                    >
-                      {workspace.name}
-                    </Link>
-                    <p className="text-muted-foreground text-xs">
-                      {workspace.currency} / {workspace.timezone}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <StatusBadge status={workspace.status} />
-                    <Link
-                      className="text-primary hover:underline"
-                      href={workspaceEditUrl(workspace.id, agencyId, client.id)}
-                    >
-                      Edit
-                    </Link>
-                  </div>
-                </li>
+                  workspace={workspace}
+                />
               ))}
             </ul>
           )}
         </CardContent>
       </Card>
+      {canManageWorkspaces && (
+        <BudgetsCard
+          agencyId={agencyId}
+          clientId={client.id}
+          workspaces={workspaces}
+        />
+      )}
+      <ClientReportsCard agencyId={agencyId} clientId={client.id} />
+      <CorrectionHistory
+        agencyId={agencyId}
+        clientId={client.id}
+        filters={correctionFilters}
+        workspaces={workspaces}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>

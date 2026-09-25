@@ -146,14 +146,12 @@ describe("invitation API", () => {
     );
     await createInvitation(12, {
       email: "person@example.test",
-      role_code: "CLIENT_USER",
-      client_id: 4,
+      role_code: "MANAGER",
       workspace_ids: [9],
     });
     expect(received).toEqual({
       email: "person@example.test",
-      role_code: "CLIENT_USER",
-      client_id: 4,
+      role_code: "MANAGER",
       workspace_ids: [9],
     });
   });
@@ -184,8 +182,7 @@ describe("invitation API", () => {
     await expect(
       createInvitation(12, {
         email: "person@example.test",
-        role_code: "CLIENT_USER",
-        client_id: 4,
+        role_code: "MANAGER",
         workspace_ids: [99],
       }),
     ).rejects.toMatchObject({

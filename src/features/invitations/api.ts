@@ -61,10 +61,7 @@ export async function revokeInvitation(agencyId: number, invitationId: number) {
   });
 }
 
-export async function resendInvitation(
-  agencyId: number,
-  invitationId: number,
-) {
+export async function resendInvitation(agencyId: number, invitationId: number) {
   const result = await apiRequest<unknown>(
     invitationPaths.resend(agencyId, invitationId),
     { method: "POST" },

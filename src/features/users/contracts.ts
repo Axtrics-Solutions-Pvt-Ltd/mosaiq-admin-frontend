@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { assignableAgencyRoles } from "@/config/permissions";
+
+// Existing memberships may still carry legacy codes, so responses accept them.
 export const agencyUserRoles = [
   "AGENCY_ADMIN",
   "MANAGER",
@@ -41,29 +44,18 @@ export const agencyUserResponseSchema = z.object({
 export const updateAgencyUserSchema = z
   .object({
     name: z.string().trim().min(1, "Enter a name.").max(255),
-    role_code: z.enum(agencyUserRoles),
-    client_id: z.number().int().positive().nullable(),
+    role_code: z.enum(assignableAgencyRoles),
+    client_id: z.null(),
     workspace_ids: z.array(z.number().int().positive()),
     status: z.enum(["active", "inactive"]),
   })
   .partial()
   .superRefine((value, context) => {
-    if (value.role_code === "CLIENT_USER" && value.client_id === undefined) {
+    if (value.role_code === "MANAGER" && value.workspace_ids?.length === 0) {
       context.addIssue({
         code: "custom",
-        path: ["client_id"],
-        message: "Choose a client for this user.",
-      });
-    }
-    if (
-      value.role_code &&
-      value.role_code !== "CLIENT_USER" &&
-      value.client_id
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["client_id"],
-        message: "A client can only be assigned to a Client User.",
+        path: ["workspace_ids"],
+        message: "Choose at least one workspace for this user.",
       });
     }
     if (

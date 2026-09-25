@@ -48,7 +48,13 @@ export function TableSurface({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("bg-card overflow-x-auto rounded-lg border", className)}
+      // `relative` makes the scroll container the containing block of
+      // visually hidden (absolutely positioned) cell text, so it scrolls with
+      // the table instead of widening the page.
+      className={cn(
+        "bg-card relative overflow-x-auto rounded-lg border",
+        className,
+      )}
       {...props}
     />
   );

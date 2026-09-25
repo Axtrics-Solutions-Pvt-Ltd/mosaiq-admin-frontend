@@ -24,6 +24,7 @@ export async function GET(request: Request, context: Context) {
   const incoming = new URL(request.url).searchParams;
   const query = new URLSearchParams();
   for (const key of [
+    "connector_id",
     "search",
     "status",
     "page",

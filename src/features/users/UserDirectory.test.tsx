@@ -66,9 +66,12 @@ it("lists an accepted user for an Agency Admin's own agency", async () => {
       });
     }),
   );
-  renderWithScope(<UserDirectory page={1} role="all" search="" status="all" />, {
-    membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
-  });
+  renderWithScope(
+    <UserDirectory page={1} role="all" search="" status="all" />,
+    {
+      membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
+    },
+  );
   expect(
     (await screen.findAllByText("new.user@example.test"))[0],
   ).toBeVisible();
@@ -123,17 +126,18 @@ it("lets a Super Admin filter users to a single agency from the page", async () 
       });
     }),
   );
-  renderWithScope(<UserDirectory page={1} role="all" search="" status="all" />, {
-    platformRoleCode: "SUPER_ADMIN",
-  });
+  renderWithScope(
+    <UserDirectory page={1} role="all" search="" status="all" />,
+    {
+      platformRoleCode: "SUPER_ADMIN",
+    },
+  );
   expect(
     (await screen.findAllByText("all.agencies@example.test"))[0],
   ).toBeVisible();
   fireEvent.change(await screen.findByLabelText("Agency"), {
     target: { value: "1" },
   });
-  expect(
-    (await screen.findAllByText("scoped@example.test"))[0],
-  ).toBeVisible();
+  expect((await screen.findAllByText("scoped@example.test"))[0]).toBeVisible();
   expect(requestedPath).toBe("/api/v1/agencies/1/users");
 });

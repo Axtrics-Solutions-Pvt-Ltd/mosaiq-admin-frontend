@@ -64,14 +64,14 @@ describe("agency user API", () => {
     );
     const user = await updateAgencyUser(12, 7, {
       name: "Jordan Analyst",
-      role_code: "ANALYST",
+      role_code: "AGENCY_ADMIN",
       client_id: null,
       workspace_ids: [],
       status: "inactive",
     });
     expect(received).toEqual({
       name: "Jordan Analyst",
-      role_code: "ANALYST",
+      role_code: "AGENCY_ADMIN",
       client_id: null,
       workspace_ids: [],
       status: "inactive",
@@ -91,7 +91,7 @@ describe("agency user API", () => {
     await expect(
       updateAgencyUser(12, 7, {
         name: "Jordan Analyst",
-        role_code: "ANALYST",
+        role_code: "AGENCY_ADMIN",
         client_id: null,
         workspace_ids: [],
         status: "active",

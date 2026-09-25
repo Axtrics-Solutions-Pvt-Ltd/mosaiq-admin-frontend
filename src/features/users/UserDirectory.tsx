@@ -15,6 +15,10 @@ import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
+import {
+  type AssignableAgencyRole,
+  assignableAgencyRoles,
+} from "@/config/permissions";
 import { routes, userDetailUrl } from "@/config/routes";
 import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
@@ -22,7 +26,7 @@ import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { formatDate } from "@/lib/formatters";
 import { useScope } from "@/providers/ScopeProvider";
 
-import { type AgencyUser, agencyUserRoles } from "./contracts";
+import type { AgencyUser } from "./contracts";
 import { useAgencyUsers } from "./queries";
 import { roleLabels } from "./role-labels";
 
@@ -167,7 +171,7 @@ export function UserDirectory({
   page: number;
   search: string;
   status: "all" | "invited" | "active" | "inactive";
-  role: "all" | AgencyUser["role_code"];
+  role: "all" | AssignableAgencyRole;
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
@@ -179,8 +183,7 @@ export function UserDirectory({
   const agencyNameById = new Map(
     agencies.map((agency) => [agency.id, agency.display_name]),
   );
-  const agencyName = (id: number) =>
-    agencyNameById.get(id) ?? `Agency #${id}`;
+  const agencyName = (id: number) => agencyNameById.get(id) ?? `Agency #${id}`;
   const workspaceId = scope.workspaceId;
   const workspacesQuery = useAgencyWorkspaces(agencyId ?? 0, {
     status: "active",
@@ -330,7 +333,7 @@ export function UserDirectory({
             value={role}
           >
             <option value="all">All roles</option>
-            {agencyUserRoles.map((roleCode) => (
+            {assignableAgencyRoles.map((roleCode) => (
               <option key={roleCode} value={roleCode}>
                 {roleLabels[roleCode]}
               </option>

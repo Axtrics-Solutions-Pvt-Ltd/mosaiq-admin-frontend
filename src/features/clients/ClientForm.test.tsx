@@ -82,7 +82,9 @@ function renderForAgencyAdmin(agencyId: number) {
 it("requires a client name before submitting", async () => {
   const user = userEvent.setup();
   renderForAgencyAdmin(12);
-  await user.click(await screen.findByRole("button", { name: "Create client" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Create client" }),
+  );
   expect(await screen.findByText("Enter a client name.")).toBeVisible();
 });
 
@@ -91,7 +93,10 @@ it("maps a server field error onto the name field", async () => {
   server.use(
     http.post(workspacePaths.clients(12), () =>
       HttpResponse.json(
-        { message: "Invalid client", errors: { name: ["Name already exists."] } },
+        {
+          message: "Invalid client",
+          errors: { name: ["Name already exists."] },
+        },
         { status: 422 },
       ),
     ),

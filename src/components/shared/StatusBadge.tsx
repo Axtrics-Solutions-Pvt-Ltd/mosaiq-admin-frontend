@@ -1,10 +1,12 @@
-﻿import {
+import {
   AlertTriangle,
+  Archive,
   CheckCircle2,
   Clock3,
   Info,
   type LucideIcon,
   MinusCircle,
+  RotateCcw,
   XCircle,
 } from "lucide-react";
 
@@ -27,7 +29,13 @@ type Status =
   | "warning"
   | "failed"
   | "previewed"
-  | "invalid";
+  | "invalid"
+  | "connected"
+  | "not_connected"
+  | "error"
+  | "partly_replaced"
+  | "reset"
+  | "archived";
 const statuses: Record<
   Status,
   {
@@ -54,6 +62,16 @@ const statuses: Record<
   failed: { icon: XCircle, label: "Failed", tone: "danger" },
   previewed: { icon: Info, label: "Previewed", tone: "info" },
   invalid: { icon: XCircle, label: "Invalid", tone: "danger" },
+  connected: { icon: CheckCircle2, label: "Connected", tone: "success" },
+  not_connected: { icon: MinusCircle, label: "Not connected", tone: "neutral" },
+  error: { icon: AlertTriangle, label: "Error", tone: "danger" },
+  partly_replaced: {
+    icon: AlertTriangle,
+    label: "Partly replaced",
+    tone: "warning",
+  },
+  reset: { icon: RotateCcw, label: "Reset", tone: "neutral" },
+  archived: { icon: Archive, label: "Archived", tone: "neutral" },
 };
 export function StatusBadge({ status }: { status: Status }) {
   const config = statuses[status];

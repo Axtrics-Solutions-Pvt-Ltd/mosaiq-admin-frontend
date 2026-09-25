@@ -9,6 +9,8 @@ const platformSummarySchema = z.object({
   agencies: countSchema,
   clients: countSchema,
   workspaces: countSchema,
+  reports: countSchema,
+  active_links: countSchema,
   users: countSchema,
 });
 
@@ -19,6 +21,8 @@ const agencySummarySchema = z.object({
   agencies: z.literal(1),
   clients: countSchema,
   workspaces: countSchema,
+  reports: countSchema,
+  active_links: countSchema,
   users: countSchema,
 });
 
@@ -29,6 +33,8 @@ const clientSummarySchema = z.object({
   agencies: countSchema,
   clients: countSchema,
   workspaces: countSchema,
+  reports: countSchema,
+  active_links: countSchema,
   users: z.null(),
 });
 
@@ -39,6 +45,8 @@ const assignedSummarySchema = z.object({
   agencies: countSchema,
   clients: countSchema,
   workspaces: countSchema,
+  reports: countSchema,
+  active_links: countSchema,
   users: z.null(),
 });
 

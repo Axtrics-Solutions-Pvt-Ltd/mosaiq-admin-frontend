@@ -20,6 +20,7 @@ import { Select } from "@/components/ui/Select";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "@/components/ui/Toast";
+import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
 import { AgencyLogo } from "@/features/agencies/AgencyLogo";
 import type {
@@ -33,6 +34,7 @@ import {
 } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
 import { ApiError } from "@/lib/api/errors";
+import { useScope } from "@/providers/ScopeProvider";
 
 const formSchema = z.object({
   displayName: z
@@ -156,6 +158,7 @@ export function AgencyForm({
     defaultValues: initialValues(record),
   });
   const values = useWatch({ control });
+  const parentNavigation = getNavigationItem(routes.agencies.index, useScope());
   const isPending = createMutation.isPending || updateMutation.isPending;
   const backHref = record
     ? routes.agencies.detail(String(record.id))
@@ -180,8 +183,7 @@ export function AgencyForm({
           ? await createMutation.mutateAsync(payload)
           : await updateMutation.mutateAsync({ agencyId: record!.id, payload });
       toast({
-        title:
-          mode === "create" ? "Agency created." : "Agency updated.",
+        title: mode === "create" ? "Agency created." : "Agency updated.",
         tone: "success",
       });
       router.push(routes.agencies.detail(String(saved.id)));
@@ -548,8 +550,11 @@ export function AgencyForm({
       <PageHeader
         breadcrumbs={
           <>
-            <Link className="hover:text-primary" href={routes.agencies.index}>
-              Agencies
+            <Link
+              className="hover:text-primary"
+              href={parentNavigation?.href ?? routes.agencies.index}
+            >
+              {parentNavigation?.label ?? "Agencies"}
             </Link>
             <span aria-hidden> / </span>
             <span>

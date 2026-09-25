@@ -68,42 +68,7 @@ it("lists fixed roles and their permissions for a Super Admin", async () => {
   ).not.toBeInTheDocument();
 });
 
-it("links client users to the user portal and other roles to admin", async () => {
-  server.use(
-    http.get(rolePaths.collection, () =>
-      HttpResponse.json({
-        data: [
-          {
-            code: "AGENCY_ADMIN",
-            name: "Agency Admin",
-            assignable: true,
-            permissions: ["dashboard_view"],
-          },
-          {
-            code: "CLIENT_USER",
-            name: "Client Viewer",
-            assignable: true,
-            permissions: ["dashboard_view"],
-          },
-        ],
-      }),
-    ),
-  );
-  renderWithUser({ platformRoleCode: "SUPER_ADMIN", membership: null });
-  const table = await screen.findByRole("table", {
-    name: "Roles and the permissions each one grants",
-  });
-  const adminRow = within(table).getByRole("row", { name: /Agency Admin/ });
-  expect(
-    within(adminRow).getByRole("link", { name: /Admin Portal/ }),
-  ).toHaveAttribute("href", "https://mosaiq-admin-frontend.vercel.app");
-  const clientRow = within(table).getByRole("row", { name: /Client Viewer/ });
-  expect(
-    within(clientRow).getByRole("link", { name: /User Portal/ }),
-  ).toHaveAttribute("href", "https://mosaiq-user-frontend.vercel.app");
-});
-
-it("shows CSV upload and import history access per role", async () => {
+it("shows only Agency Admin and Manager, each linked to the admin portal", async () => {
   server.use(
     http.get(rolePaths.collection, () =>
       HttpResponse.json({
@@ -118,19 +83,25 @@ it("shows CSV upload and import history access per role", async () => {
             code: "AGENCY_ADMIN",
             name: "Agency Admin",
             assignable: true,
-            permissions: [],
+            permissions: ["dashboard_view"],
           },
           {
             code: "MANAGER",
             name: "Manager",
             assignable: true,
-            permissions: [],
+            permissions: ["dashboard_view"],
+          },
+          {
+            code: "ANALYST",
+            name: "Analyst",
+            assignable: true,
+            permissions: ["dashboard_view"],
           },
           {
             code: "CLIENT_USER",
             name: "Client Viewer",
             assignable: true,
-            permissions: [],
+            permissions: ["dashboard_view"],
           },
         ],
       }),
@@ -140,23 +111,18 @@ it("shows CSV upload and import history access per role", async () => {
   const table = await screen.findByRole("table", {
     name: "Roles and the permissions each one grants",
   });
-  const cells = (name: RegExp) =>
-    within(within(table).getByRole("row", { name }))
-      .getAllByRole("cell")
-      .map((cell) => cell.textContent);
-
-  expect(cells(/Super Admin/)).toEqual(
-    expect.arrayContaining(["Yes· All agencies"]),
-  );
-  expect(cells(/Agency Admin/)).toEqual(
-    expect.arrayContaining(["Yes· Own agency"]),
-  );
-  expect(cells(/Manager/)).toEqual(
-    expect.arrayContaining(["No", "Yes· Assigned workspaces"]),
-  );
-  expect(cells(/Client Viewer/)).toEqual(
-    expect.arrayContaining(["No", "Hidden"]),
-  );
+  const rows = within(table).getAllByRole("row").slice(1);
+  expect(rows).toHaveLength(2);
+  expect(screen.getByText("2 fixed roles")).toBeVisible();
+  for (const name of [/Agency Admin/, /Manager/]) {
+    const row = within(table).getByRole("row", { name });
+    expect(
+      within(row).getByRole("link", { name: /Admin Portal/ }),
+    ).toHaveAttribute("href", "https://mosaiq-admin-frontend.vercel.app");
+  }
+  expect(
+    within(table).queryByRole("columnheader", { name: "Upload CSV?" }),
+  ).not.toBeInTheDocument();
 });
 
 it("hides roles from a user without admin access", async () => {

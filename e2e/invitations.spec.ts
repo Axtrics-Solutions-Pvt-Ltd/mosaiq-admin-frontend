@@ -16,7 +16,9 @@ test("an existing account signs in from the invitation link and accepts it", asy
   await expect(
     page.getByText("You now have access to Retail at Northstar Digital."),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Go to dashboard" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Go to dashboard" }),
+  ).toBeVisible();
 });
 
 test("a signed-in user without a membership accepts a pending invitation", async ({

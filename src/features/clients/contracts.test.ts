@@ -41,9 +41,7 @@ describe("client contracts", () => {
   });
 
   it("makes status optional on create but still requires name", () => {
-    expect(clientCreateSchema.safeParse({ name: "Client" }).success).toBe(
-      true,
-    );
+    expect(clientCreateSchema.safeParse({ name: "Client" }).success).toBe(true);
     expect(clientCreateSchema.safeParse({}).success).toBe(false);
   });
 });

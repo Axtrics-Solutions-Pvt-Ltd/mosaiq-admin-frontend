@@ -131,6 +131,10 @@ it("stays closed after Later for the rest of the session", async () => {
 });
 
 it("does not ask Super Admins for invitations", () => {
-  renderDialog({ ...member, platformRoleCode: "SUPER_ADMIN", membership: null });
+  renderDialog({
+    ...member,
+    platformRoleCode: "SUPER_ADMIN",
+    membership: null,
+  });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

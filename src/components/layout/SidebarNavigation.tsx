@@ -6,6 +6,7 @@ import { filterNavigationGroups, navigationGroups } from "@/config/navigation";
 import { hasCapability } from "@/features/auth/contracts";
 import { useCurrentUser } from "@/features/auth/queries";
 import { cn } from "@/lib/utils/cn";
+import { useScope } from "@/providers/ScopeProvider";
 export function SidebarNavigation({
   collapsed = false,
   onNavigate,
@@ -15,9 +16,12 @@ export function SidebarNavigation({
 }) {
   const pathname = usePathname();
   const currentUser = useCurrentUser();
+  const scope = useScope();
   const visibleGroups = currentUser.data
-    ? filterNavigationGroups(navigationGroups, (capability) =>
-        hasCapability(currentUser.data, capability),
+    ? filterNavigationGroups(
+        navigationGroups,
+        (capability) => hasCapability(currentUser.data, capability),
+        scope,
       )
     : [];
   return (

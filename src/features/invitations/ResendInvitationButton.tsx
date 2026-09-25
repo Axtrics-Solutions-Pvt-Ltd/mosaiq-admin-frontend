@@ -10,8 +10,7 @@ import { useResendInvitation } from "./queries";
 function resendErrorMessage(error: unknown) {
   if (!(error instanceof ApiError))
     return "The invitation could not be resent. Please try again.";
-  if (error.status === 409)
-    return "This invitation can no longer be resent.";
+  if (error.status === 409) return "This invitation can no longer be resent.";
   if (error.status === 404) return "This invitation could not be found.";
   if (error.status === 503)
     return "Email is not set up on the server, so the invitation was not resent.";

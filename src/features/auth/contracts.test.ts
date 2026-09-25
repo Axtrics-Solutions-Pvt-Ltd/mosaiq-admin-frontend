@@ -84,9 +84,9 @@ describe("post-login destination", () => {
   });
 
   it("keeps existing role routing for members", () => {
-    expect(postLoginDestination(parseCurrentUser(response(null, "VIEWER")))).toBe(
-      "/dashboard",
-    );
+    expect(
+      postLoginDestination(parseCurrentUser(response(null, "VIEWER"))),
+    ).toBe("/dashboard");
     expect(
       postLoginDestination(parseCurrentUser(response(null, "CLIENT_USER"))),
     ).toBe("/forbidden?reason=client-portal");
@@ -119,14 +119,40 @@ describe("post-login destination", () => {
 });
 
 describe("capability-based access", () => {
-  it("grants Manager the read-only operational capabilities", () => {
+  it("grants Manager client viewing and workspace work but no organization management", () => {
     const manager = parseCurrentUser(response(null, "MANAGER"));
-    expect(hasCapability(manager, "dashboard.view")).toBe(true);
-    expect(hasCapability(manager, "importHistory.view")).toBe(true);
-    expect(hasCapability(manager, "connectors.view")).toBe(true);
-    expect(hasCapability(manager, "agencies.manage")).toBe(false);
-    expect(hasCapability(manager, "users.manage")).toBe(false);
-    expect(hasCapability(manager, "roles.view")).toBe(false);
+    for (const capability of [
+      "dashboard.view",
+      "clients.view",
+      "workspaces.manage",
+      "reports.manage",
+    ] as const)
+      expect(hasCapability(manager, capability)).toBe(true);
+    for (const capability of [
+      "agencies.manage",
+      "clients.manage",
+      "workspaces.delete",
+      "users.manage",
+      "roles.view",
+      "channels.manage",
+      "reports.delete",
+    ] as const)
+      expect(hasCapability(manager, capability)).toBe(false);
+  });
+
+  it("lets only Super Admin and Agency Admin delete reports", () => {
+    const superAdmin = parseCurrentUser(response("SUPER_ADMIN", null));
+    const agencyAdmin = parseCurrentUser(response(null, "AGENCY_ADMIN"));
+    expect(hasCapability(superAdmin, "reports.delete")).toBe(true);
+    expect(hasCapability(agencyAdmin, "reports.delete")).toBe(true);
+  });
+
+  it("reserves the channel catalogue for Super Admin only", () => {
+    const superAdmin = parseCurrentUser(response("SUPER_ADMIN", null));
+    const agencyAdmin = parseCurrentUser(response(null, "AGENCY_ADMIN"));
+    expect(hasCapability(superAdmin, "channels.manage")).toBe(true);
+    expect(hasCapability(agencyAdmin, "channels.manage")).toBe(false);
+    expect(hasCapability(agencyAdmin, "workspaces.delete")).toBe(true);
   });
 
   it("grants Agency Admin the full organization capability set", () => {

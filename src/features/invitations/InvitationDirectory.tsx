@@ -213,7 +213,12 @@ export function InvitationDirectory({
     per_page: 100,
   });
   const workspaces = workspacesQuery.data?.data ?? [];
-  const invitationsQuery = useInvitations(agencyId ?? 0, page, status, workspaceId);
+  const invitationsQuery = useInvitations(
+    agencyId ?? 0,
+    page,
+    status,
+    workspaceId,
+  );
   const invitations = invitationsQuery.data?.data ?? [];
 
   function changeAgency(value: string) {
@@ -397,10 +402,10 @@ export function InvitationDirectory({
                 : status === "open"
                   ? "No invitations are waiting for a response or ready to resend."
                   : `No invitations currently have the "${
-                    statusFilterOptions.find(
-                      (option) => option.value === status,
-                    )?.label ?? status
-                  }" status.`
+                      statusFilterOptions.find(
+                        (option) => option.value === status,
+                      )?.label ?? status
+                    }" status.`
             }
             kind="empty"
             title="No invitations found"

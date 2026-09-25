@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
+import { getNavigationItem } from "@/config/navigation";
 import { routes } from "@/config/routes";
 import { AgencyLogo } from "@/features/agencies/AgencyLogo";
 import type { AgencyRecord } from "@/features/agencies/contracts";
@@ -35,6 +36,7 @@ import {
 import type { AgencyDetail } from "@/features/agencies/view-model";
 import { ApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/formatters";
+import { useScope } from "@/providers/ScopeProvider";
 
 function DetailList({
   entries,
@@ -327,6 +329,7 @@ export function AgencyDetails({
   const updateMutation = useUpdateAgency();
   const [isConfirming, setIsConfirming] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const parentNavigation = getNavigationItem(routes.agencies.index, useScope());
   const tabs: readonly TabOption[] = [
     {
       content: <Overview agency={agency} />,
@@ -387,8 +390,11 @@ export function AgencyDetails({
         }
         breadcrumbs={
           <>
-            <Link className="hover:text-primary" href={routes.agencies.index}>
-              Agencies
+            <Link
+              className="hover:text-primary"
+              href={parentNavigation?.href ?? routes.agencies.index}
+            >
+              {parentNavigation?.label ?? "Agencies"}
             </Link>
             <span aria-hidden> / </span>
             <span>{agency.name}</span>

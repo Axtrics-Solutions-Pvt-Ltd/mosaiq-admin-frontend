@@ -247,7 +247,9 @@ export function AcceptInvitationForm() {
         <InvitationSummary invitation={invitation} />
         <AuthAlert>
           This invitation is for {invitation.email}
-          {signedInUser ? `, but you are signed in as ${signedInUser.email}` : ""}
+          {signedInUser
+            ? `, but you are signed in as ${signedInUser.email}`
+            : ""}
           . Sign out, then continue with the invited account.
         </AuthAlert>
         {signOutErrorMessage && (
@@ -262,7 +264,9 @@ export function AcceptInvitationForm() {
           {logoutMutation.isPending && (
             <LoaderCircle aria-hidden className="size-4 animate-spin" />
           )}
-          {logoutMutation.isPending ? "Signing out..." : "Sign out and continue"}
+          {logoutMutation.isPending
+            ? "Signing out..."
+            : "Sign out and continue"}
         </Button>
         {declineButton}
       </div>

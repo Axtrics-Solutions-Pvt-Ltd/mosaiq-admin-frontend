@@ -18,7 +18,7 @@ function csrfToken(cookie: string) {
 export async function forwardAgencyRequest(
   request: Request,
   path: string,
-  method: "GET" | "POST" | "PUT",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   body?: unknown,
 ) {
   try {

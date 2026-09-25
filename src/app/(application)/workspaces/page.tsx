@@ -18,6 +18,7 @@ export default async function WorkspacesPage({
       filters={{
         search: single(params.search) ?? "",
         status: status === "active" || status === "inactive" ? status : "all",
+        channel: positive(single(params.channel)),
         page: positive(single(params.page)) ?? 1,
       }}
     />

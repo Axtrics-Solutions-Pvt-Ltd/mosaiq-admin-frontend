@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
+import { assignableAgencyRoles } from "@/config/permissions";
 import { userDetailUrl } from "@/config/routes";
 import { InvitationScopeSelectors } from "@/features/invitations/InvitationScopeSelectors";
 import type {
@@ -27,25 +28,26 @@ import type {
 import { useClient, useWorkspacesByIds } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 
-import { agencyUserRoles, updateAgencyUserSchema } from "./contracts";
+import { updateAgencyUserSchema } from "./contracts";
 import { useAgencyUser, useUpdateAgencyUser } from "./queries";
+import { roleLabels } from "./role-labels";
 
-const roles = [
-  { code: "AGENCY_ADMIN", label: "Agency Admin" },
-  { code: "MANAGER", label: "Manager" },
-  { code: "ANALYST", label: "Analyst" },
-  { code: "VIEWER", label: "Viewer" },
-  { code: "CLIENT_USER", label: "Client User" },
-] as const;
-
+// An empty role means the user holds a legacy role that must be replaced.
 const formSchema = z.object({
   name: z.string().trim().min(1, "Enter a name.").max(255),
-  roleCode: z.enum(agencyUserRoles),
+  roleCode: z
+    .union([z.enum(assignableAgencyRoles), z.literal("")])
+    .refine((value) => value !== "", "Choose Agency Admin or Manager."),
   clientId: z.number().int().positive().nullable(),
   workspaceIds: z.array(z.number().int().positive()),
   status: z.enum(["active", "inactive"]),
 });
-type FormValues = z.infer<typeof formSchema>;
+type FormInput = z.input<typeof formSchema>;
+type FormValues = z.output<typeof formSchema>;
+
+function assignableRole(roleCode: string): FormInput["roleCode"] {
+  return assignableAgencyRoles.find((code) => code === roleCode) ?? "";
+}
 
 export function UserEditForm({
   agencyId,
@@ -80,11 +82,11 @@ export function UserEditForm({
     control,
     reset,
     formState: { errors, isDirty },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      roleCode: "VIEWER",
+      roleCode: "",
       clientId: null,
       workspaceIds: [],
       status: "active",
@@ -97,7 +99,7 @@ export function UserEditForm({
     if (!userQuery.data) return;
     reset({
       name: userQuery.data.name,
-      roleCode: userQuery.data.role_code,
+      roleCode: assignableRole(userQuery.data.role_code),
       clientId: userQuery.data.client_id,
       workspaceIds: userQuery.data.workspace_ids,
       status: userQuery.data.status === "inactive" ? "inactive" : "active",
@@ -126,9 +128,7 @@ export function UserEditForm({
     const parsed = updateAgencyUserSchema.safeParse({
       name: values.name.trim(),
       role_code: values.roleCode,
-      ...(values.roleCode === "CLIENT_USER" && values.clientId
-        ? { client_id: values.clientId }
-        : { client_id: null }),
+      client_id: null,
       workspace_ids: values.workspaceIds,
       status: values.status,
     });
@@ -205,6 +205,8 @@ export function UserEditForm({
     );
   }
 
+  const hasLegacyRole = assignableRole(userQuery.data.role_code) === "";
+
   return (
     <PageStack>
       <PageHeader
@@ -244,6 +246,7 @@ export function UserEditForm({
               required
             >
               <Select
+                aria-invalid={Boolean(errors.roleCode)}
                 id="edit-role"
                 {...roleRegistration}
                 onChange={(event) => {
@@ -251,12 +254,24 @@ export function UserEditForm({
                   clearScope();
                 }}
               >
-                {roles.map((role) => (
-                  <option key={role.code} value={role.code}>
-                    {role.label}
+                {hasLegacyRole && (
+                  <option disabled value="">
+                    Choose a role
+                  </option>
+                )}
+                {assignableAgencyRoles.map((code) => (
+                  <option key={code} value={code}>
+                    {roleLabels[code]}
                   </option>
                 ))}
               </Select>
+              {hasLegacyRole && (
+                <p className="text-muted-foreground mt-1.5 text-xs">
+                  This user has the retired{" "}
+                  {roleLabels[userQuery.data.role_code]} role. Choose Agency
+                  Admin or Manager to save changes.
+                </p>
+              )}
             </FormField>
             <FormField
               error={errors.status?.message}
@@ -273,8 +288,7 @@ export function UserEditForm({
               agencyId={agencyId}
               client={selectedClient}
               clientError={errors.clientId?.message}
-              isClientUser={roleCode === "CLIENT_USER"}
-              isScopeRequired={roleCode === "CLIENT_USER"}
+              isScopeRequired={roleCode === "MANAGER"}
               onClientChange={(client) => {
                 setScopeTouched(true);
                 setTouchedClient(client);

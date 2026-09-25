@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const invitationRoles = [
+import { assignableAgencyRoles } from "@/config/permissions";
+
+// New invitations can only grant the assignable roles.
+export const invitationRoles = assignableAgencyRoles;
+
+// Invitations sent before the role trim may still carry legacy codes, so
+// responses accept every agency role.
+const invitationRoleCodes = [
   "AGENCY_ADMIN",
   "MANAGER",
   "ANALYST",
@@ -12,34 +19,16 @@ export const inviteSchema = z
   .object({
     email: z.email("Enter a valid email address."),
     role_code: z.enum(invitationRoles),
-    client_id: z.number().int().positive().optional(),
     workspace_ids: z.array(z.number().int().positive()),
   })
   .superRefine((value, context) => {
-    if (value.role_code === "CLIENT_USER" && !value.client_id) {
-      context.addIssue({
-        code: "custom",
-        path: ["client_id"],
-        message: "Choose a client for this user.",
-      });
-    }
     // Agency Admins have agency-wide access, so workspace restrictions are
-    // optional for them only; every other role must be scoped.
+    // optional for them only; Managers must be scoped.
     if (value.role_code !== "AGENCY_ADMIN" && !value.workspace_ids.length) {
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message:
-          value.role_code === "CLIENT_USER"
-            ? "Choose at least one workspace for this client."
-            : "Choose at least one workspace for this user.",
-      });
-    }
-    if (value.role_code !== "CLIENT_USER" && value.client_id !== undefined) {
-      context.addIssue({
-        code: "custom",
-        path: ["client_id"],
-        message: "A client can only be assigned to a Client User.",
+        message: "Choose at least one workspace for this user.",
       });
     }
     if (new Set(value.workspace_ids).size !== value.workspace_ids.length) {
@@ -83,7 +72,7 @@ export const invitationSchema = z.object({
   email: z.email(),
   agency_id: z.number().int().positive(),
   client_id: z.number().int().positive().nullable(),
-  role_code: z.enum(invitationRoles),
+  role_code: z.enum(invitationRoleCodes),
   workspace_id: z.number().int().positive().nullable(),
   workspace_name: z.string().nullable(),
   expires_at: z.string().min(1),
@@ -129,7 +118,7 @@ export const myInvitationSchema = z.object({
   id: z.number().int().positive(),
   agency_id: z.number().int().positive(),
   agency_name: z.string(),
-  role_code: z.enum(invitationRoles),
+  role_code: z.enum(invitationRoleCodes),
   client_id: z.number().int().positive().nullable(),
   client_name: z.string().nullable(),
   workspace_id: z.number().int().positive().nullable(),
@@ -182,7 +171,7 @@ export const acceptInvitationRequestSchema = z.object({
 export const invitationInspectionSchema = z.object({
   email: z.email(),
   agency_name: z.string(),
-  role_code: z.enum(invitationRoles),
+  role_code: z.enum(invitationRoleCodes),
   expires_at: z.string().min(1),
   requires_existing_login: z.boolean(),
   // Being added by the backend; optional until every environment returns them.

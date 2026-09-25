@@ -9,6 +9,7 @@ export function ConfirmationDialog({
   body,
   confirmLabel = "Confirm action",
   description,
+  isConfirmDisabled = false,
   isOpen,
   isPending = false,
   onCancel,
@@ -18,6 +19,8 @@ export function ConfirmationDialog({
   body?: ReactNode;
   confirmLabel?: string;
   description: string;
+  // For confirmations that need extra input first, such as typing a name.
+  isConfirmDisabled?: boolean;
   isOpen: boolean;
   isPending?: boolean;
   onCancel: () => void;
@@ -33,7 +36,7 @@ export function ConfirmationDialog({
             Cancel
           </Button>
           <Button
-            disabled={isPending}
+            disabled={isPending || isConfirmDisabled}
             onClick={onConfirm}
             variant="destructive"
           >

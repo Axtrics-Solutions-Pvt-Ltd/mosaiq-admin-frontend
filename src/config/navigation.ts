@@ -1,25 +1,32 @@
-﻿import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   Building,
   Building2,
-  Cable,
   DatabaseZap,
-  FileClock,
+  FileChartColumn,
   Gauge,
   LayoutDashboard,
+  Plug,
   ShieldCheck,
-  SlidersHorizontal,
-  Upload,
   UsersRound,
 } from "lucide-react";
 
 import type { Capability } from "@/config/permissions";
 import { routes } from "@/config/routes";
+
+export type NavigationScope = {
+  isSuperAdmin: boolean;
+  agencyId: number | undefined;
+};
 export type NavigationItem = {
   href: string;
   icon: LucideIcon;
   label: string;
   capability: Capability;
+  // Overrides the label and link for a session; `href` stays the match prefix.
+  resolve?: (
+    scope: NavigationScope,
+  ) => Partial<Pick<NavigationItem, "href" | "label">> | undefined;
 };
 export type NavigationGroup = {
   label: string;
@@ -45,18 +52,36 @@ export const navigationGroups: readonly NavigationGroup[] = [
         icon: Building2,
         label: "Agencies",
         capability: "agencies.manage",
+        resolve: ({ isSuperAdmin, agencyId }) =>
+          !isSuperAdmin && agencyId
+            ? {
+                label: "My Agency",
+                href: routes.agencies.detail(String(agencyId)),
+              }
+            : undefined,
       },
       {
         href: routes.clients.index,
         icon: Building,
         label: "Clients",
-        capability: "clients.manage",
+        capability: "clients.view",
       },
       {
         href: routes.workspaces.index,
         icon: Gauge,
         label: "Workspaces",
         capability: "workspaces.manage",
+      },
+    ],
+  },
+  {
+    label: "Reporting",
+    items: [
+      {
+        href: routes.reports.index,
+        icon: FileChartColumn,
+        label: "Reports",
+        capability: "reports.manage",
       },
     ],
   },
@@ -78,36 +103,13 @@ export const navigationGroups: readonly NavigationGroup[] = [
     ],
   },
   {
-    label: "Data management",
-    items: [
-      {
-        href: routes.dataImport,
-        icon: Upload,
-        label: "Data import",
-        capability: "imports.create",
-      },
-      {
-        href: routes.importHistory,
-        icon: FileClock,
-        label: "Import history",
-        capability: "importHistory.view",
-      },
-      {
-        href: routes.connectors,
-        icon: Cable,
-        label: "Connector status",
-        capability: "connectors.view",
-      },
-    ],
-  },
-  {
     label: "Configuration",
     items: [
       {
-        href: routes.curation,
-        icon: SlidersHorizontal,
-        label: "KPI & module curation",
-        capability: "curation.manage",
+        href: routes.channels,
+        icon: Plug,
+        label: "Channels",
+        capability: "channels.manage",
       },
       {
         href: routes.governance,
@@ -119,19 +121,29 @@ export const navigationGroups: readonly NavigationGroup[] = [
   },
 ];
 export const navigationItems = navigationGroups.flatMap((g) => g.items);
-export function getNavigationItem(pathname: string) {
-  return [...navigationItems]
+export function resolveNavigationItem(
+  item: NavigationItem,
+  scope: NavigationScope,
+): NavigationItem {
+  return { ...item, ...item.resolve?.(scope) };
+}
+export function getNavigationItem(pathname: string, scope?: NavigationScope) {
+  const item = [...navigationItems]
     .sort((a, b) => b.href.length - a.href.length)
     .find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
+  return item && scope ? resolveNavigationItem(item, scope) : item;
 }
 export function filterNavigationGroups(
   groups: readonly NavigationGroup[],
   isVisible: (capability: Capability) => boolean,
+  scope?: NavigationScope,
 ): readonly NavigationGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => isVisible(item.capability)),
+      items: group.items
+        .filter((item) => isVisible(item.capability))
+        .map((item) => (scope ? resolveNavigationItem(item, scope) : item)),
     }))
     .filter((group) => group.items.length > 0);
 }

@@ -59,9 +59,7 @@ export function PendingInvitationsDialog({ user }: { user: CurrentUser }) {
       onClose={dismiss}
       title="You have new invitations"
     >
-      {invitations.length > 0 && (
-        <MyInvitationList invitations={invitations} />
-      )}
+      {invitations.length > 0 && <MyInvitationList invitations={invitations} />}
     </Dialog>
   );
 }

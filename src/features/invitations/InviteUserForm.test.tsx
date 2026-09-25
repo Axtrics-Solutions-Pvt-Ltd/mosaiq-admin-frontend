@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
@@ -26,24 +26,36 @@ beforeAll(() => {
 });
 afterEach(cleanup);
 
-it("locks Agency Admin to their agency and requires Client User scope before sending", async () => {
-  const user = userEvent.setup();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  queryClient.setQueryData(authKeys.me(), {
-    id: 1,
-    name: "Agency Admin",
-    email: "admin@example.test",
-    platformRoleCode: null,
-    membership: {
-      agencyId: 12,
-      roleCode: "AGENCY_ADMIN",
-      clientId: null,
-      workspaceIds: [],
-    },
-  });
-  let received: unknown;
+const agencyAdmin = {
+  id: 1,
+  name: "Agency Admin",
+  email: "admin@example.test",
+  platformRoleCode: null,
+  membership: {
+    agencyId: 12,
+    roleCode: "AGENCY_ADMIN",
+    clientId: null,
+    workspaceIds: [],
+  },
+};
+
+function workspace(id: number, name: string) {
+  return {
+    id,
+    agency_id: 12,
+    client_id: 4,
+    name,
+    timezone: "UTC",
+    currency: "USD",
+    status: "active",
+    invite_status: null,
+    invite_status_reason: null,
+    created_at: null,
+    updated_at: null,
+  };
+}
+
+function mockAgencyScope() {
   server.use(
     http.get(workspacePaths.clients(12), () =>
       HttpResponse.json({
@@ -62,123 +74,55 @@ it("locks Agency Admin to their agency and requires Client User scope before sen
     ),
     http.get(workspacePaths.collection(12, 4), () =>
       HttpResponse.json({
-        data: [
-          {
-            id: 9,
-            agency_id: 12,
-            client_id: 4,
-            name: "Reporting",
-            timezone: "UTC",
-            currency: "USD",
-            status: "active",
-            invite_status: null,
-            invite_status_reason: null,
-            created_at: null,
-            updated_at: null,
-          },
-          {
-            id: 10,
-            agency_id: 12,
-            client_id: 4,
-            name: "Marketing",
-            timezone: "UTC",
-            currency: "USD",
-            status: "active",
-            invite_status: null,
-            invite_status_reason: null,
-            created_at: null,
-            updated_at: null,
-          },
-        ],
+        data: [workspace(9, "Reporting"), workspace(10, "Marketing")],
         meta: { current_page: 1, last_page: 1, total: 2 },
       }),
     ),
-    http.post(invitationPaths.collection(12), async ({ request }) => {
-      received = await request.json();
-      return new HttpResponse(null, { status: 201 });
-    }),
   );
-  render(
+}
+
+function renderForm(currentUser: unknown) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  queryClient.setQueryData(authKeys.me(), currentUser);
+  return render(
     <QueryClientProvider client={queryClient}>
       <InviteUserForm />
       <Toaster />
     </QueryClientProvider>,
   );
-  expect(screen.queryByLabelText("Agency ID")).not.toBeInTheDocument();
-  await user.type(
-    screen.getByRole("textbox", { name: /Email/ }),
-    "client@example.test",
-  );
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: /Role/ }),
-    "CLIENT_USER",
-  );
-  await user.click(screen.getByRole("button", { name: "Send invitation" }));
-  expect(
-    await screen.findByText("Choose a client for this user."),
-  ).toBeVisible();
-  expect(received).toBeUndefined();
-  await user.click(screen.getByRole("button", { name: "Client" }));
+}
+
+async function chooseWorkspaces(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Workspace client" }));
   await user.click(await screen.findByRole("option", { name: /Acme Client/ }));
   await user.click(screen.getByRole("button", { name: "Workspace access" }));
   await user.click(await screen.findByRole("option", { name: /Reporting/ }));
   await user.click(screen.getByRole("option", { name: /Marketing/ }));
-  await user.click(screen.getByRole("button", { name: "Send invitation" }));
-  expect(await screen.findByRole("status")).toHaveTextContent(
-    "Invitation emailed to client@example.test.",
-  );
-  expect(received).toEqual({
-    email: "client@example.test",
-    role_code: "CLIENT_USER",
-    client_id: 4,
-    workspace_ids: [9, 10],
-  });
-  expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
-});
+}
 
-it("sends Agency Admin invitations without scope but requires it for other roles", async () => {
+it("lets an Agency Admin invite only Managers, scoped to workspaces", async () => {
   const user = userEvent.setup();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  queryClient.setQueryData(authKeys.me(), {
-    id: 1,
-    name: "Agency Admin",
-    email: "admin@example.test",
-    platformRoleCode: null,
-    membership: {
-      agencyId: 12,
-      roleCode: "AGENCY_ADMIN",
-      clientId: null,
-      workspaceIds: [],
-    },
-  });
   let received: unknown;
+  mockAgencyScope();
   server.use(
-    http.get(workspacePaths.clients(12), () =>
-      HttpResponse.json({
-        data: [],
-        meta: { current_page: 1, last_page: 1, total: 0 },
-      }),
-    ),
     http.post(invitationPaths.collection(12), async ({ request }) => {
       received = await request.json();
       return new HttpResponse(null, { status: 201 });
     }),
   );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <InviteUserForm />
-      <Toaster />
-    </QueryClientProvider>,
+  renderForm(agencyAdmin);
+
+  expect(
+    screen.queryByRole("combobox", { name: /Role/ }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("Role:").parentElement).toHaveTextContent(
+    "Role: Manager",
   );
   await user.type(
     screen.getByRole("textbox", { name: /Email/ }),
-    "viewer@example.test",
-  );
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: /Role/ }),
-    "VIEWER",
+    "manager@example.test",
   );
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(
@@ -189,89 +133,42 @@ it("sends Agency Admin invitations without scope but requires it for other roles
   ).toBeVisible();
   expect(received).toBeUndefined();
 
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: /Role/ }),
-    "AGENCY_ADMIN",
-  );
+  await chooseWorkspaces(user);
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(await screen.findByRole("status")).toHaveTextContent(
-    "Invitation emailed to viewer@example.test.",
+    "Invitation emailed to manager@example.test.",
   );
   expect(received).toEqual({
-    email: "viewer@example.test",
-    role_code: "AGENCY_ADMIN",
-    workspace_ids: [],
+    email: "manager@example.test",
+    role_code: "MANAGER",
+    workspace_ids: [9, 10],
   });
+  expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
+});
+
+it("offers a Super Admin only the Agency Admin and Manager roles", () => {
+  renderForm({
+    id: 1,
+    name: "Super Admin",
+    email: "super@example.test",
+    platformRoleCode: "SUPER_ADMIN",
+    membership: null,
+  });
+  const roleSelect = screen.getByRole("combobox", { name: /Role/ });
+  expect(
+    within(roleSelect)
+      .getAllByRole("option")
+      .map((option) => option.textContent),
+  ).toEqual(["Agency Admin", "Manager"]);
+  expect(roleSelect).toHaveValue("MANAGER");
 });
 
 it("shows already-pending workspaces on conflict and resubmits only the creatable ones", async () => {
   const user = userEvent.setup();
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  queryClient.setQueryData(authKeys.me(), {
-    id: 1,
-    name: "Agency Admin",
-    email: "admin@example.test",
-    platformRoleCode: null,
-    membership: {
-      agencyId: 12,
-      roleCode: "AGENCY_ADMIN",
-      clientId: null,
-      workspaceIds: [],
-    },
-  });
   const receivedBodies: unknown[] = [];
   let requestCount = 0;
+  mockAgencyScope();
   server.use(
-    http.get(workspacePaths.clients(12), () =>
-      HttpResponse.json({
-        data: [
-          {
-            id: 4,
-            agency_id: 12,
-            name: "Acme Client",
-            status: "active",
-            created_at: null,
-            updated_at: null,
-          },
-        ],
-        meta: { current_page: 1, last_page: 1, total: 1 },
-      }),
-    ),
-    http.get(workspacePaths.collection(12, 4), () =>
-      HttpResponse.json({
-        data: [
-          {
-            id: 9,
-            agency_id: 12,
-            client_id: 4,
-            name: "Reporting",
-            timezone: "UTC",
-            currency: "USD",
-            status: "active",
-            invite_status: null,
-            invite_status_reason: null,
-            created_at: null,
-            updated_at: null,
-          },
-          {
-            id: 10,
-            agency_id: 12,
-            client_id: 4,
-            name: "Marketing",
-            timezone: "UTC",
-            currency: "USD",
-            status: "active",
-            invite_status: null,
-            invite_status_reason: null,
-            created_at: null,
-            updated_at: null,
-          },
-        ],
-        meta: { current_page: 1, last_page: 1, total: 2 },
-      }),
-    ),
     http.post(invitationPaths.collection(12), async ({ request }) => {
       receivedBodies.push(await request.json());
       requestCount += 1;
@@ -298,24 +195,12 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
       return new HttpResponse(null, { status: 201 });
     }),
   );
-  render(
-    <QueryClientProvider client={queryClient}>
-      <InviteUserForm />
-    </QueryClientProvider>,
-  );
+  renderForm(agencyAdmin);
   await user.type(
     screen.getByRole("textbox", { name: /Email/ }),
     "conflict@example.test",
   );
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: /Role/ }),
-    "CLIENT_USER",
-  );
-  await user.click(screen.getByRole("button", { name: "Client" }));
-  await user.click(await screen.findByRole("option", { name: /Acme Client/ }));
-  await user.click(screen.getByRole("button", { name: "Workspace access" }));
-  await user.click(await screen.findByRole("option", { name: /Reporting/ }));
-  await user.click(screen.getByRole("option", { name: /Marketing/ }));
+  await chooseWorkspaces(user);
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
   expect(
@@ -336,8 +221,7 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
   expect(receivedBodies).toHaveLength(2);
   expect(receivedBodies[1]).toEqual({
     email: "conflict@example.test",
-    role_code: "CLIENT_USER",
-    client_id: 4,
+    role_code: "MANAGER",
     workspace_ids: [10],
   });
 });

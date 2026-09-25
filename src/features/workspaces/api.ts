@@ -4,6 +4,9 @@ import { clientPaths, workspacePaths } from "@/lib/api/paths";
 import {
   clientListSchema,
   clientResponseSchema,
+  type WorkspaceCredentialsPayload,
+  workspaceCredentialsResponseSchema,
+  workspaceFetchResponseSchema,
   workspaceListSchema,
   type WorkspaceProfile,
   workspaceResponseSchema,
@@ -70,6 +73,7 @@ export type WorkspaceListFilters = {
   email?: string;
   role_code?: string;
   ids?: readonly number[];
+  connector_id?: number;
 };
 export async function listWorkspaces(
   agencyId: number,
@@ -138,4 +142,60 @@ export async function updateWorkspace(
     { method: "PUT", body: payload },
   );
   return workspaceResponseSchema.parse(result).data;
+}
+export async function deleteWorkspace(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+) {
+  await apiRequest<unknown>(
+    workspacePaths.detail(agencyId, clientId, workspaceId),
+    { method: "DELETE" },
+  );
+}
+export async function getWorkspaceCredentials(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.credentials(agencyId, clientId, workspaceId),
+    { signal },
+  );
+  return workspaceCredentialsResponseSchema.parse(result).data;
+}
+export async function saveWorkspaceCredentials(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+  payload: WorkspaceCredentialsPayload,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.credentials(agencyId, clientId, workspaceId),
+    { method: "PUT", body: payload },
+  );
+  return workspaceCredentialsResponseSchema.parse(result).data;
+}
+export async function disconnectWorkspace(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.credentials(agencyId, clientId, workspaceId),
+    { method: "DELETE" },
+  );
+  return workspaceCredentialsResponseSchema.parse(result).data;
+}
+export async function fetchWorkspaceData(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.fetch(agencyId, clientId, workspaceId),
+    { method: "POST" },
+  );
+  return workspaceFetchResponseSchema.parse(result).data;
 }

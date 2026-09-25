@@ -25,7 +25,6 @@ export function InvitationScopeSelectors({
   client,
   clientError,
   email,
-  isClientUser,
   isScopeRequired,
   onClientChange,
   onWorkspacesChange,
@@ -37,7 +36,6 @@ export function InvitationScopeSelectors({
   client?: ClientRecord;
   clientError?: string;
   email?: string;
-  isClientUser: boolean;
   isScopeRequired: boolean;
   onClientChange: (client: ClientRecord) => void;
   onWorkspacesChange: (workspaces: WorkspaceRecord[]) => void;
@@ -72,15 +70,13 @@ export function InvitationScopeSelectors({
     <>
       <FormField
         description={
-          isClientUser
-            ? "Required. Only active clients in the selected agency are available."
-            : isScopeRequired
-              ? "Required. Choose an active client to browse its workspaces. The client is not submitted for this role."
-              : "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role."
+          isScopeRequired
+            ? "Required. Choose an active client to browse its workspaces. The client is not submitted for this role."
+            : "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role."
         }
         error={clientError}
         id="invite-client"
-        label={isClientUser ? "Client" : "Workspace client"}
+        label="Workspace client"
         required={isScopeRequired}
       >
         <PaginatedCombobox
@@ -121,11 +117,9 @@ export function InvitationScopeSelectors({
 
       <FormField
         description={
-          isClientUser
-            ? "Choose at least one active workspace belonging to this client."
-            : isScopeRequired
-              ? "Choose at least one active workspace this user can access."
-              : "Optional. Agency Admins have agency-wide access; selected workspaces restrict it."
+          isScopeRequired
+            ? "Choose at least one active workspace this user can access."
+            : "Optional. Agency Admins have agency-wide access; selected workspaces restrict it."
         }
         error={workspaceError}
         id="invite-workspaces"

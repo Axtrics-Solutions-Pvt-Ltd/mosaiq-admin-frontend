@@ -96,7 +96,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
       previousPath.current = pathname;
     }
   }, [pathname]);
-  const current = getNavigationItem(pathname);
+  const current = getNavigationItem(pathname, scope);
   const currentLabel =
     pathname === routes.profile
       ? "Profile"
