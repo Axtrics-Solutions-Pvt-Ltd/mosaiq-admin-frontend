@@ -35,11 +35,13 @@ const orgAdminCapabilities: readonly Capability[] = [
 ];
 
 // A Manager only reaches the clients and workspaces the API returns for them.
+// They may delete any report they can edit; workspace delete stays with admins.
 const managerCapabilities: readonly Capability[] = [
   "dashboard.view",
   "clients.view",
   "workspaces.manage",
   "reports.manage",
+  "reports.delete",
 ];
 
 const agencyStaffCapabilities: readonly Capability[] = ["dashboard.view"];

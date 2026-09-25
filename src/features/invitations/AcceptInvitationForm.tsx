@@ -25,9 +25,10 @@ import { formatDate } from "@/lib/formatters";
 import {
   acceptInvitationFormSchema,
   type AcceptInvitationFormValues,
+  getInvitationAccessScope,
   type InvitationInspection,
 } from "./contracts";
-import { invitationRoleLabels } from "./labels";
+import { invitationRoleLabels, wholeClientLabel } from "./labels";
 import {
   useAcceptInvitation,
   useInspectInvitation,
@@ -70,6 +71,11 @@ function InvitationSummary({
     items.push({ label: "Client", value: invitation.client_name });
   if (invitation.workspace_name)
     items.push({ label: "Workspace", value: invitation.workspace_name });
+  else if (getInvitationAccessScope(invitation) === "client")
+    items.push({
+      label: "Workspaces",
+      value: wholeClientLabel(null, invitation.workspace_count),
+    });
   items.push({
     label: "Expires",
     value: (
@@ -222,7 +228,9 @@ export function AcceptInvitationForm() {
           You now have access to{" "}
           {invitation.workspace_name
             ? `${invitation.workspace_name} at ${invitation.agency_name}`
-            : invitation.agency_name}
+            : invitation.client_name
+              ? `${invitation.client_name} at ${invitation.agency_name}`
+              : invitation.agency_name}
           .
         </AuthAlert>
         <Button asChild className="w-full">

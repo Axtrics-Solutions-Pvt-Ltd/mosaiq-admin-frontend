@@ -119,13 +119,14 @@ describe("post-login destination", () => {
 });
 
 describe("capability-based access", () => {
-  it("grants Manager client viewing and workspace work but no organization management", () => {
+  it("grants Manager client viewing, workspace and full report work but no organization management", () => {
     const manager = parseCurrentUser(response(null, "MANAGER"));
     for (const capability of [
       "dashboard.view",
       "clients.view",
       "workspaces.manage",
       "reports.manage",
+      "reports.delete",
     ] as const)
       expect(hasCapability(manager, capability)).toBe(true);
     for (const capability of [
@@ -135,12 +136,11 @@ describe("capability-based access", () => {
       "users.manage",
       "roles.view",
       "channels.manage",
-      "reports.delete",
     ] as const)
       expect(hasCapability(manager, capability)).toBe(false);
   });
 
-  it("lets only Super Admin and Agency Admin delete reports", () => {
+  it("lets Super Admin and Agency Admin delete reports", () => {
     const superAdmin = parseCurrentUser(response("SUPER_ADMIN", null));
     const agencyAdmin = parseCurrentUser(response(null, "AGENCY_ADMIN"));
     expect(hasCapability(superAdmin, "reports.delete")).toBe(true);

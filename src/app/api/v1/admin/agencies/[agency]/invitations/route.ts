@@ -24,6 +24,13 @@ export async function GET(
       return Response.json({ message: "Invalid workspace." }, { status: 400 });
     query.set("workspace_id", String(workspaceId));
   }
+  const clientIdParam = incoming.searchParams.get("client_id");
+  if (clientIdParam !== null) {
+    const clientId = Number(clientIdParam);
+    if (!Number.isSafeInteger(clientId) || clientId <= 0)
+      return Response.json({ message: "Invalid client." }, { status: 400 });
+    query.set("client_id", String(clientId));
+  }
   const path = invitationPaths.collection(agencyId);
   return forwardAdminRequest(
     request,

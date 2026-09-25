@@ -380,12 +380,12 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
       {((scope.isSuperAdmin && agenciesQuery.isPending) || query.isPending) && (
         <p aria-busy="true">Loading clients...</p>
       )}
-      {(agenciesQuery.isError || query.isError) && (
+      {((scope.isSuperAdmin && agenciesQuery.isError) || query.isError) && (
         <StatePanel
           action={
             <Button
               onClick={() => {
-                agenciesQuery.refetch();
+                if (scope.isSuperAdmin) agenciesQuery.refetch();
                 query.refetch();
               }}
             >

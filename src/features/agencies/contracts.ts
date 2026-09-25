@@ -58,32 +58,41 @@ export const agencyResponseSchema = z.object({
       reporting_week_start: z.enum(["monday", "sunday"]),
       date_format: z.string(),
     }),
-    workspace_count: countSchema,
-    user_count: countSchema,
-    workspaces: z.array(
-      z.object({
-        id: z.number().int().positive(),
-        name: z.string(),
-        status: statusSchema,
-        data_source_label: nullableText,
-      }),
-    ),
-    administrators: z.array(
-      z.object({
-        id: z.number().int().positive(),
-        name: z.string(),
-        role_code: z.string(),
-        status: z.string(),
-      }),
-    ),
-    recent_activity: z.array(
-      z.object({
-        id: z.number().int().positive(),
-        title: z.string(),
-        description: z.string(),
-        occurred_at: nullableText,
-      }),
-    ),
+    // A Manager gets the profile only (name, logo, defaults); counts,
+    // workspaces, administrators and activity come for Super Admin and the
+    // Agency Admin, who are the only roles shown the agency screens.
+    workspace_count: countSchema.default(0),
+    user_count: countSchema.default(0),
+    workspaces: z
+      .array(
+        z.object({
+          id: z.number().int().positive(),
+          name: z.string(),
+          status: statusSchema,
+          data_source_label: nullableText,
+        }),
+      )
+      .default([]),
+    administrators: z
+      .array(
+        z.object({
+          id: z.number().int().positive(),
+          name: z.string(),
+          role_code: z.string(),
+          status: z.string(),
+        }),
+      )
+      .default([]),
+    recent_activity: z
+      .array(
+        z.object({
+          id: z.number().int().positive(),
+          title: z.string(),
+          description: z.string(),
+          occurred_at: nullableText,
+        }),
+      )
+      .default([]),
   }),
 });
 

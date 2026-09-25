@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getInvitationAccessScope,
   invitationSchema,
   invitationStatusQuery,
   inviteSchema,
@@ -35,7 +36,7 @@ describe("invitation contract", () => {
     }
   });
 
-  it("makes workspaces optional only for Agency Admin", () => {
+  it("makes workspaces optional and requires a client for a Manager", () => {
     expect(
       inviteSchema.safeParse({
         email: "admin@example.test",
@@ -43,25 +44,70 @@ describe("invitation contract", () => {
         workspace_ids: [],
       }).success,
     ).toBe(true);
+    expect(
+      inviteSchema.safeParse({
+        email: "manager@example.test",
+        role_code: "MANAGER",
+        client_id: 4,
+        workspace_ids: [],
+      }).success,
+    ).toBe(true);
     const result = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
-      workspace_ids: [],
+      workspace_ids: [9],
     });
     expect(result.success).toBe(false);
     if (!result.success)
-      expect(result.error.issues[0]?.path).toEqual(["workspace_ids"]);
+      expect(result.error.issues[0]?.path).toEqual(["client_id"]);
   });
 
-  it("does not submit a client", () => {
-    const result = inviteSchema.safeParse({
+  it("submits a client only for a Manager", () => {
+    const manager = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
       client_id: 4,
       workspace_ids: [9],
     });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data).not.toHaveProperty("client_id");
+    expect(manager.success && manager.data.client_id).toBe(4);
+    expect(
+      inviteSchema.safeParse({
+        email: "admin@example.test",
+        role_code: "AGENCY_ADMIN",
+        client_id: 4,
+        workspace_ids: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("describes what an invitation grants", () => {
+    expect(
+      getInvitationAccessScope({
+        role_code: "MANAGER",
+        client_id: 4,
+        workspace_id: null,
+      }),
+    ).toBe("client");
+    expect(
+      getInvitationAccessScope({
+        role_code: "MANAGER",
+        client_id: 4,
+        workspace_id: 9,
+      }),
+    ).toBe("workspace");
+    expect(
+      getInvitationAccessScope({
+        role_code: "AGENCY_ADMIN",
+        client_id: null,
+        workspace_id: null,
+      }),
+    ).toBe("agency");
+    expect(
+      getInvitationAccessScope({
+        access_scope: "client",
+        role_code: "MANAGER",
+      }),
+    ).toBe("client");
   });
 
   it("still reads invitations sent with a legacy role", () => {
@@ -85,6 +131,7 @@ describe("invitation contract", () => {
     const result = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
+      client_id: 4,
       workspace_ids: [9, 9],
     });
     expect(result.success).toBe(false);

@@ -557,7 +557,7 @@ export function WorkspaceCreateScreen({
     (agencyId > 0 && clients.isPending)
   )
     return <p aria-busy="true">Loading workspace setup...</p>;
-  if (agencies.isError || clients.isError)
+  if ((isSuperAdmin && agencies.isError) || clients.isError)
     return (
       <StatePanel
         kind="error"
@@ -566,7 +566,7 @@ export function WorkspaceCreateScreen({
         action={
           <Button
             onClick={() => {
-              agencies.refetch();
+              if (isSuperAdmin) agencies.refetch();
               clients.refetch();
             }}
           >

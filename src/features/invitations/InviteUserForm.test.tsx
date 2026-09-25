@@ -94,15 +94,19 @@ function renderForm(currentUser: unknown) {
   );
 }
 
-async function chooseWorkspaces(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Workspace client" }));
+async function chooseClient(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Client" }));
   await user.click(await screen.findByRole("option", { name: /Acme Client/ }));
+}
+
+async function chooseWorkspaces(user: ReturnType<typeof userEvent.setup>) {
+  await chooseClient(user);
   await user.click(screen.getByRole("button", { name: "Workspace access" }));
   await user.click(await screen.findByRole("option", { name: /Reporting/ }));
   await user.click(screen.getByRole("option", { name: /Marketing/ }));
 }
 
-it("lets an Agency Admin invite only Managers, scoped to workspaces", async () => {
+it("lets an Agency Admin invite only Managers, scoped to a client and workspaces", async () => {
   const user = userEvent.setup();
   let received: unknown;
   mockAgencyScope();
@@ -126,10 +130,7 @@ it("lets an Agency Admin invite only Managers, scoped to workspaces", async () =
   );
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(
-    await screen.findByText("Choose a client to select workspaces."),
-  ).toBeVisible();
-  expect(
-    screen.getByText("Choose at least one workspace for this user."),
+    await screen.findByText("Choose a client for this Manager."),
   ).toBeVisible();
   expect(received).toBeUndefined();
 
@@ -141,9 +142,45 @@ it("lets an Agency Admin invite only Managers, scoped to workspaces", async () =
   expect(received).toEqual({
     email: "manager@example.test",
     role_code: "MANAGER",
+    client_id: 4,
     workspace_ids: [9, 10],
   });
   expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
+});
+
+it("invites a Manager to a whole client when no workspace is chosen", async () => {
+  const user = userEvent.setup();
+  let received: unknown;
+  mockAgencyScope();
+  server.use(
+    http.post(invitationPaths.collection(12), async ({ request }) => {
+      received = await request.json();
+      return new HttpResponse(null, { status: 201 });
+    }),
+  );
+  renderForm(agencyAdmin);
+
+  await user.type(
+    screen.getByRole("textbox", { name: /Email/ }),
+    "whole@example.test",
+  );
+  await chooseClient(user);
+  expect(
+    screen.getByText(
+      "Optional. Leave empty to give access to all current workspaces of this client.",
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Send invitation" }));
+
+  expect(
+    await screen.findByText("Invitation emailed to whole@example.test."),
+  ).toBeVisible();
+  expect(received).toEqual({
+    email: "whole@example.test",
+    role_code: "MANAGER",
+    client_id: 4,
+    workspace_ids: [],
+  });
 });
 
 it("offers a Super Admin only the Agency Admin and Manager roles", () => {
@@ -222,6 +259,7 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
   expect(receivedBodies[1]).toEqual({
     email: "conflict@example.test",
     role_code: "MANAGER",
+    client_id: 4,
     workspace_ids: [10],
   });
 });

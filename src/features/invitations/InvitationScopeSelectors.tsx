@@ -16,6 +16,39 @@ import {
   useInfiniteWorkspaces,
 } from "@/features/workspaces/queries";
 
+/**
+ * `manager-invite`: the client is submitted and workspaces are optional.
+ * `manager-edit`: the client only browses workspaces for an existing Manager.
+ * `restriction`: an Agency Admin, where workspaces optionally restrict access.
+ */
+export type ScopeSelectorMode =
+  "manager-invite" | "manager-edit" | "restriction";
+
+const scopeCopy: Record<
+  ScopeSelectorMode,
+  { clientLabel: string; client: string; workspaces: string }
+> = {
+  "manager-invite": {
+    clientLabel: "Client",
+    client:
+      "Required. The Manager can see this client and create workspaces under it.",
+    workspaces:
+      "Optional. Leave empty to give access to all current workspaces of this client.",
+  },
+  "manager-edit": {
+    clientLabel: "Workspace client",
+    client: "Choose an active client to browse its workspaces.",
+    workspaces: "Choose the workspaces this Manager can access.",
+  },
+  restriction: {
+    clientLabel: "Workspace client",
+    client:
+      "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role.",
+    workspaces:
+      "Optional. Agency Admins have agency-wide access; selected workspaces restrict it.",
+  },
+};
+
 function uniqueById<Option extends { id: number }>(options: Option[]) {
   return [...new Map(options.map((option) => [option.id, option])).values()];
 }
@@ -25,7 +58,8 @@ export function InvitationScopeSelectors({
   client,
   clientError,
   email,
-  isScopeRequired,
+  isWorkspaceRequired = false,
+  mode,
   onClientChange,
   onWorkspacesChange,
   roleCode,
@@ -36,7 +70,8 @@ export function InvitationScopeSelectors({
   client?: ClientRecord;
   clientError?: string;
   email?: string;
-  isScopeRequired: boolean;
+  isWorkspaceRequired?: boolean;
+  mode: ScopeSelectorMode;
   onClientChange: (client: ClientRecord) => void;
   onWorkspacesChange: (workspaces: WorkspaceRecord[]) => void;
   roleCode?: string;
@@ -69,15 +104,11 @@ export function InvitationScopeSelectors({
   return (
     <>
       <FormField
-        description={
-          isScopeRequired
-            ? "Required. Choose an active client to browse its workspaces. The client is not submitted for this role."
-            : "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role."
-        }
+        description={scopeCopy[mode].client}
         error={clientError}
         id="invite-client"
-        label="Workspace client"
-        required={isScopeRequired}
+        label={scopeCopy[mode].clientLabel}
+        required={mode === "manager-invite"}
       >
         <PaginatedCombobox
           ariaDescribedBy={
@@ -116,15 +147,11 @@ export function InvitationScopeSelectors({
       </FormField>
 
       <FormField
-        description={
-          isScopeRequired
-            ? "Choose at least one active workspace this user can access."
-            : "Optional. Agency Admins have agency-wide access; selected workspaces restrict it."
-        }
+        description={scopeCopy[mode].workspaces}
         error={workspaceError}
         id="invite-workspaces"
         label="Workspace access"
-        required={isScopeRequired}
+        required={isWorkspaceRequired}
       >
         <PaginatedCombobox
           ariaDescribedBy={

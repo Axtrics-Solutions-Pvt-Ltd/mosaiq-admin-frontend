@@ -20,14 +20,15 @@ describe("agency user contract", () => {
     ).toBe(true);
   });
 
-  it("requires workspaces for a Manager", () => {
-    const result = updateAgencyUserSchema.safeParse({
-      role_code: "MANAGER",
-      workspace_ids: [],
-    });
-    expect(result.success).toBe(false);
-    if (!result.success)
-      expect(result.error.issues[0]?.path).toEqual(["workspace_ids"]);
+  // A Manager with client-level access may have no workspaces; the edit form
+  // requires workspaces only when the Manager has no client access.
+  it("allows a Manager without workspaces", () => {
+    expect(
+      updateAgencyUserSchema.safeParse({
+        role_code: "MANAGER",
+        workspace_ids: [],
+      }).success,
+    ).toBe(true);
   });
 
   it("rejects a client assignment", () => {

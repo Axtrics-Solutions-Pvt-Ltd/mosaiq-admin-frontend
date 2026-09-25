@@ -42,9 +42,12 @@ export function useReportOwner(
       user.isPending ||
       (isSuperAdmin && agencies.isPending) ||
       (agencyId > 0 && clients.isPending),
-    isError: agencies.isError || clients.isError,
+    // A disabled query still reports an error cached by another screen, and
+    // refetch() ignores `enabled`, so the agency list counts only for a
+    // Super Admin.
+    isError: (isSuperAdmin && agencies.isError) || clients.isError,
     refetch: () => {
-      void agencies.refetch();
+      if (isSuperAdmin) void agencies.refetch();
       void clients.refetch();
     },
   };

@@ -61,11 +61,11 @@ export function InvitationConflictDialog({
             {alreadyPending.map((workspace) => (
               <li
                 className="bg-muted flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                key={workspace.workspace_id}
+                key={workspace.invitation_id}
               >
                 <div>
                   <p className="text-strong font-medium">
-                    {workspace.workspace_name}
+                    {workspace.workspace_name ?? "All workspaces of the client"}
                   </p>
                   <p className="text-muted-foreground text-xs">
                     Sent {formatDate(workspace.sent_at)} · Expires{" "}
@@ -74,9 +74,11 @@ export function InvitationConflictDialog({
                 </div>
                 <Button asChild size="sm" variant="outline">
                   <Link
-                    href={`${userInvitationsUrl(agencyId)}&workspace=${
+                    href={
                       workspace.workspace_id
-                    }`}
+                        ? `${userInvitationsUrl(agencyId)}&workspace=${workspace.workspace_id}`
+                        : userInvitationsUrl(agencyId)
+                    }
                     target="_blank"
                   >
                     View
@@ -94,8 +96,13 @@ export function InvitationConflictDialog({
             </h3>
             <ul className="mt-2 space-y-1">
               {creatable.map((workspace) => (
-                <li className="text-sm" key={workspace.workspace_id}>
-                  {workspace.workspace_name}
+                <li
+                  className="text-sm"
+                  key={
+                    workspace.workspace_id ?? `client-${workspace.client_id}`
+                  }
+                >
+                  {workspace.workspace_name ?? "All workspaces of the client"}
                 </li>
               ))}
             </ul>

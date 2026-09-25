@@ -24,6 +24,10 @@ export const agencyUserSchema = z.object({
   client_id: z.number().int().positive().nullable(),
   workspace_ids: z.array(z.number().int().positive()),
   pending_workspace_ids: z.array(z.number().int().positive()).default([]),
+  // Clients a Manager holds whole-client access to, and pending whole-client
+  // invitations. Older API responses omit them.
+  client_ids: z.array(z.number().int().positive()).default([]),
+  pending_client_ids: z.array(z.number().int().positive()).default([]),
   invited_at: z.string().nullable(),
   accepted_at: z.string().nullable(),
 });
@@ -50,14 +54,9 @@ export const updateAgencyUserSchema = z
     status: z.enum(["active", "inactive"]),
   })
   .partial()
+  // A Manager with no workspaces is valid when they hold client-level access,
+  // which only the edit form knows; it enforces that rule.
   .superRefine((value, context) => {
-    if (value.role_code === "MANAGER" && value.workspace_ids?.length === 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["workspace_ids"],
-        message: "Choose at least one workspace for this user.",
-      });
-    }
     if (
       value.workspace_ids &&
       new Set(value.workspace_ids).size !== value.workspace_ids.length

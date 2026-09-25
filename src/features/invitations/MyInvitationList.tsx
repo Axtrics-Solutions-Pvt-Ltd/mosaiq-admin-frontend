@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { ApiError } from "@/lib/api/errors";
 import { formatDate } from "@/lib/formatters";
 
-import type { MyInvitation } from "./contracts";
-import { invitationRoleLabels } from "./labels";
+import { getInvitationAccessScope, type MyInvitation } from "./contracts";
+import { invitationRoleLabels, wholeClientLabel } from "./labels";
 import { useAcceptMyInvitation, useRejectMyInvitation } from "./queries";
 
 type AgencyGroup = {
@@ -34,7 +34,11 @@ function groupByAgency(invitations: readonly MyInvitation[]) {
 }
 
 function invitationScopeLabel(invitation: MyInvitation) {
-  return invitation.workspace_name ?? "Agency-wide access";
+  const scope = getInvitationAccessScope(invitation);
+  if (scope === "client")
+    return wholeClientLabel(invitation.client_name, invitation.workspace_count);
+  if (scope === "workspace") return invitation.workspace_name ?? "Workspace";
+  return "Agency-wide access";
 }
 
 function actionErrorMessage(error: unknown, action: "accept" | "decline") {
@@ -126,6 +130,7 @@ export function MyInvitationList({
                     <p className="text-muted-foreground mt-0.5 text-sm">
                       {invitationRoleLabels[invitation.role_code]}
                       {invitation.client_name &&
+                        getInvitationAccessScope(invitation) !== "client" &&
                         ` · ${invitation.client_name}`}{" "}
                       · Expires{" "}
                       <time dateTime={invitation.expires_at}>

@@ -19,16 +19,24 @@ export const inviteSchema = z
   .object({
     email: z.email("Enter a valid email address."),
     role_code: z.enum(invitationRoles),
+    // Managers are scoped to a client. With no workspaces chosen, Laravel
+    // grants every active workspace of the client when the invite is accepted.
+    client_id: z.number().int().positive().nullable().optional(),
     workspace_ids: z.array(z.number().int().positive()),
   })
   .superRefine((value, context) => {
-    // Agency Admins have agency-wide access, so workspace restrictions are
-    // optional for them only; Managers must be scoped.
-    if (value.role_code !== "AGENCY_ADMIN" && !value.workspace_ids.length) {
+    if (value.role_code === "MANAGER" && !value.client_id) {
       context.addIssue({
         code: "custom",
-        path: ["workspace_ids"],
-        message: "Choose at least one workspace for this user.",
+        path: ["client_id"],
+        message: "Choose a client for this Manager.",
+      });
+    }
+    if (value.role_code !== "MANAGER" && value.client_id) {
+      context.addIssue({
+        code: "custom",
+        path: ["client_id"],
+        message: "Only a Manager invitation can be scoped to a client.",
       });
     }
     if (new Set(value.workspace_ids).size !== value.workspace_ids.length) {
@@ -67,12 +75,23 @@ export function invitationStatusQuery(filter: InvitationStatusFilter) {
   return filter;
 }
 
+// What accepting grants: one workspace, every workspace of a client (a
+// whole-client Manager invitation), or no workspace restriction.
+export const invitationAccessScopes = [
+  "workspace",
+  "client",
+  "agency",
+] as const;
+export type InvitationAccessScope = (typeof invitationAccessScopes)[number];
+
 export const invitationSchema = z.object({
   id: z.number().int().positive(),
   email: z.email(),
   agency_id: z.number().int().positive(),
   client_id: z.number().int().positive().nullable(),
+  client_name: z.string().nullable().optional(),
   role_code: z.enum(invitationRoleCodes),
+  access_scope: z.enum(invitationAccessScopes).optional(),
   workspace_id: z.number().int().positive().nullable(),
   workspace_name: z.string().nullable(),
   expires_at: z.string().min(1),
@@ -85,6 +104,24 @@ export const invitationSchema = z.object({
   // Laravel decides whether a row can be resent; do not derive it from status.
   can_resend: z.boolean().optional(),
 });
+
+/**
+ * What an invitation grants, for display. Falls back to the row's fields when
+ * the API does not send `access_scope`.
+ */
+export function getInvitationAccessScope(invitation: {
+  access_scope?: InvitationAccessScope;
+  role_code: string;
+  client_id?: number | null;
+  workspace_id?: number | null;
+  workspace_name?: string | null;
+}): InvitationAccessScope {
+  if (invitation.access_scope) return invitation.access_scope;
+  if (invitation.workspace_id || invitation.workspace_name) return "workspace";
+  if (invitation.role_code === "MANAGER" && invitation.client_id)
+    return "client";
+  return "agency";
+}
 
 export function getInvitationStatus(
   invitation: Pick<
@@ -121,8 +158,11 @@ export const myInvitationSchema = z.object({
   role_code: z.enum(invitationRoleCodes),
   client_id: z.number().int().positive().nullable(),
   client_name: z.string().nullable(),
+  access_scope: z.enum(invitationAccessScopes).optional(),
   workspace_id: z.number().int().positive().nullable(),
   workspace_name: z.string().nullable(),
+  // Active workspaces a whole-client invitation grants if accepted now.
+  workspace_count: z.number().int().nonnegative().nullable().optional(),
   expires_at: z.string().min(1),
 });
 export type MyInvitation = z.infer<typeof myInvitationSchema>;
@@ -131,17 +171,20 @@ export const myInvitationListResponseSchema = z.object({
   data: z.array(myInvitationSchema),
 });
 
+// A whole-client Manager invitation has no workspace, only a client.
 export const alreadyPendingWorkspaceSchema = z.object({
-  workspace_id: z.number().int().positive(),
-  workspace_name: z.string(),
+  workspace_id: z.number().int().positive().nullable(),
+  workspace_name: z.string().nullable(),
+  client_id: z.number().int().positive().nullable().optional(),
   invitation_id: z.number().int().positive(),
   sent_at: z.string(),
   expires_at: z.string(),
 });
 
 export const creatableWorkspaceSchema = z.object({
-  workspace_id: z.number().int().positive(),
-  workspace_name: z.string(),
+  workspace_id: z.number().int().positive().nullable(),
+  workspace_name: z.string().nullable(),
+  client_id: z.number().int().positive().nullable().optional(),
 });
 
 export const invitationConflictSchema = z.object({
@@ -177,6 +220,8 @@ export const invitationInspectionSchema = z.object({
   // Being added by the backend; optional until every environment returns them.
   workspace_name: z.string().nullable().optional(),
   client_name: z.string().nullable().optional(),
+  access_scope: z.enum(invitationAccessScopes).optional(),
+  workspace_count: z.number().int().nonnegative().nullable().optional(),
 });
 export type InvitationInspection = z.infer<typeof invitationInspectionSchema>;
 

@@ -245,8 +245,9 @@ export function ClientCreateScreen({
 }) {
   const router = useRouter();
   const currentUser = useCurrentUser();
-  const agencies = useAgencies({ page: 1 });
   const isSuperAdmin = currentUser.data?.platformRoleCode === "SUPER_ADMIN";
+  // Only a Super Admin can list agencies; everyone else works in their own.
+  const agencies = useAgencies({ page: 1 }, { enabled: isSuperAdmin });
   const agencyId =
     requestedAgencyId ||
     currentUser.data?.membership?.agencyId ||
@@ -257,13 +258,13 @@ export function ClientCreateScreen({
     (currentUser.data?.membership?.roleCode === "AGENCY_ADMIN" &&
       currentUser.data.membership.agencyId === agencyId);
 
-  if (currentUser.isPending || agencies.isPending)
+  if (currentUser.isPending || (isSuperAdmin && agencies.isPending))
     return (
       <div aria-busy="true" className="p-8">
         Loading client setup...
       </div>
     );
-  if (agencies.isError)
+  if (isSuperAdmin && agencies.isError)
     return (
       <StatePanel
         kind="error"

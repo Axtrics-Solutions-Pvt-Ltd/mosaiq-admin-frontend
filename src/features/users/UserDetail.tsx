@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { routes, userEditUrl } from "@/config/routes";
-import { useWorkspacesByIds } from "@/features/workspaces/queries";
+import { useClient, useWorkspacesByIds } from "@/features/workspaces/queries";
 import { formatDate } from "@/lib/formatters";
 
 import { useAgencyUser } from "./queries";
@@ -36,6 +36,25 @@ function DetailList({
         </div>
       ))}
     </dl>
+  );
+}
+
+function ClientAccessBadge({
+  agencyId,
+  clientId,
+  isPending,
+}: {
+  agencyId: number;
+  clientId: number;
+  isPending: boolean;
+}) {
+  const clientQuery = useClient(agencyId, clientId);
+  const name = clientQuery.data?.name ?? "Client";
+  return (
+    <Badge tone={isPending ? "warning" : "success"}>
+      #{clientId} {name}
+      {isPending && <> &middot; Invite not accepted (all workspaces)</>}
+    </Badge>
   );
 }
 
@@ -127,12 +146,16 @@ export function UserDetail({
           <DetailList
             entries={[
               { label: "Role", value: roleLabels[user.role_code] },
-              {
-                label: "Client",
-                value: user.client_id
-                  ? `Client #${user.client_id}`
-                  : "Agency access",
-              },
+              ...(user.role_code === "MANAGER"
+                ? []
+                : [
+                    {
+                      label: "Client",
+                      value: user.client_id
+                        ? `Client #${user.client_id}`
+                        : "Agency access",
+                    },
+                  ]),
               {
                 label: "Invited",
                 value: user.invited_at ? formatDate(user.invited_at) : "--",
@@ -143,6 +166,36 @@ export function UserDetail({
               },
             ]}
           />
+          {(user.client_ids.length > 0 ||
+            user.pending_client_ids.length > 0) && (
+            <div>
+              <p className="text-muted-foreground text-xs font-medium">
+                Client access
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Clients">
+                {user.client_ids.map((id) => (
+                  <li key={id}>
+                    <ClientAccessBadge
+                      agencyId={agencyId}
+                      clientId={id}
+                      isPending={false}
+                    />
+                  </li>
+                ))}
+                {user.pending_client_ids
+                  .filter((id) => !user.client_ids.includes(id))
+                  .map((id) => (
+                    <li key={`pending-${id}`}>
+                      <ClientAccessBadge
+                        agencyId={agencyId}
+                        clientId={id}
+                        isPending
+                      />
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
           <div>
             <p className="text-muted-foreground text-xs font-medium">
               Workspace access
@@ -150,7 +203,9 @@ export function UserDetail({
             {confirmedWorkspaceIds.length === 0 &&
             pendingWorkspaceIds.length === 0 ? (
               <p className="text-strong mt-1 font-medium">
-                {user.client_id ? "None" : "Agency-wide access"}
+                {user.client_id || user.role_code === "MANAGER"
+                  ? "None"
+                  : "Agency-wide access"}
               </p>
             ) : (
               <ul className="mt-2 flex flex-wrap gap-2" aria-label="Workspaces">

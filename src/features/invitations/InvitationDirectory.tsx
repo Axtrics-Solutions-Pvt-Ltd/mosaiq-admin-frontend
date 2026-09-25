@@ -23,6 +23,7 @@ import { formatDate } from "@/lib/formatters";
 import { useScope } from "@/providers/ScopeProvider";
 
 import {
+  getInvitationAccessScope,
   getInvitationStatus,
   type Invitation,
   type InvitationStatusFilter,
@@ -70,20 +71,33 @@ function InvitationActions({ invitation }: { invitation: Invitation }) {
 }
 
 function Scope({ invitation }: { invitation: Invitation }) {
-  if (invitation.client_id) {
+  const scope = getInvitationAccessScope(invitation);
+  const clientLabel =
+    invitation.client_name ??
+    (invitation.client_id ? `Client #${invitation.client_id}` : undefined);
+  if (scope === "client") {
     return (
       <span>
-        <span className="text-strong block font-medium">
-          Client #{invitation.client_id}
-        </span>
+        <span className="text-strong block font-medium">All workspaces</span>
         <span className="text-muted-foreground block text-xs">
-          {invitation.workspace_name ?? "No workspace assigned"}
+          {clientLabel}
         </span>
       </span>
     );
   }
-  if (invitation.workspace_name) {
-    return <span>{invitation.workspace_name}</span>;
+  if (scope === "workspace") {
+    return (
+      <span>
+        <span className="text-strong block font-medium">
+          {invitation.workspace_name ?? `Workspace #${invitation.workspace_id}`}
+        </span>
+        {clientLabel && (
+          <span className="text-muted-foreground block text-xs">
+            {clientLabel}
+          </span>
+        )}
+      </span>
+    );
   }
   return <span className="text-muted-foreground">Agency access</span>;
 }

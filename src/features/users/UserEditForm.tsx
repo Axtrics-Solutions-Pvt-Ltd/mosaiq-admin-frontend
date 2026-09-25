@@ -93,6 +93,9 @@ export function UserEditForm({
     },
   });
   const roleCode = useWatch({ control, name: "roleCode" });
+  // A Manager invited to a whole client keeps that client without workspaces.
+  const isWorkspaceRequired =
+    roleCode === "MANAGER" && !userQuery.data?.client_ids.length;
   const roleRegistration = register("roleCode");
 
   useEffect(() => {
@@ -139,6 +142,12 @@ export function UserEditForm({
         if (issue.path[0] === "workspace_ids")
           setError("workspaceIds", { message: issue.message });
       }
+      return;
+    }
+    if (isWorkspaceRequired && values.workspaceIds.length === 0) {
+      setError("workspaceIds", {
+        message: "Choose at least one workspace for this user.",
+      });
       return;
     }
     try {
@@ -288,7 +297,8 @@ export function UserEditForm({
               agencyId={agencyId}
               client={selectedClient}
               clientError={errors.clientId?.message}
-              isScopeRequired={roleCode === "MANAGER"}
+              isWorkspaceRequired={isWorkspaceRequired}
+              mode={roleCode === "MANAGER" ? "manager-edit" : "restriction"}
               onClientChange={(client) => {
                 setScopeTouched(true);
                 setTouchedClient(client);

@@ -112,28 +112,23 @@ export function InviteUserForm() {
       return;
     }
     const submittedRoleCode = isSuperAdmin ? values.roleCode : "MANAGER";
-    // The client is picked only to browse workspaces; it is not submitted, so
-    // the payload schema cannot flag it as missing.
-    const isClientMissing =
-      submittedRoleCode !== "AGENCY_ADMIN" && !values.clientId;
-    if (isClientMissing) {
-      setError("clientId", {
-        message: "Choose a client to select workspaces.",
-      });
-    }
+    // A Manager is scoped to the chosen client. For an Agency Admin the client
+    // is only used to browse workspace restrictions and is not submitted.
     const parsed = inviteSchema.safeParse({
       email: values.email.trim(),
       role_code: submittedRoleCode,
+      client_id: submittedRoleCode === "MANAGER" ? values.clientId : null,
       workspace_ids: values.workspaceIds,
     });
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
+        if (issue.path[0] === "client_id")
+          setError("clientId", { message: issue.message });
         if (issue.path[0] === "workspace_ids")
           setError("workspaceIds", { message: issue.message });
       }
       return;
     }
-    if (isClientMissing) return;
     await submitInvitation(targetAgencyId, parsed.data);
   });
 
@@ -165,6 +160,8 @@ export function InviteUserForm() {
         if (fields.email) setError("email", { message: fields.email });
         if (fields.role_code)
           setError("roleCode", { message: fields.role_code });
+        if (fields.client_id)
+          setError("clientId", { message: fields.client_id });
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
         const serverMessage =
@@ -267,8 +264,8 @@ export function InviteUserForm() {
                   </span>
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Agency Admins invite Managers, who can access only the
-                  workspaces chosen below.
+                  Agency Admins invite Managers, who can access only the client
+                  and workspaces chosen below.
                 </p>
                 {errors.roleCode?.message && (
                   <p className="text-destructive mt-1 text-sm" role="alert">
@@ -319,7 +316,7 @@ export function InviteUserForm() {
               client={selectedClient}
               clientError={errors.clientId?.message}
               email={debouncedEmail || undefined}
-              isScopeRequired={roleCode !== "AGENCY_ADMIN"}
+              mode={roleCode === "MANAGER" ? "manager-invite" : "restriction"}
               roleCode={roleCode}
               onClientChange={(client) => {
                 setSelectedClient(client);
