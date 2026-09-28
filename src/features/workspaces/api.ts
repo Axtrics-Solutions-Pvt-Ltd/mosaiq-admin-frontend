@@ -32,6 +32,11 @@ export type ClientListFilters = {
   status?: "active" | "inactive";
   page?: number;
   per_page?: number;
+  // Embeds each client's active workspaces; `search` then also matches them.
+  include?: "workspaces";
+  // Marks clients and workspaces this user already has or is invited to.
+  email?: string;
+  role_code?: string;
 };
 export async function listClients(
   agencyId: number,

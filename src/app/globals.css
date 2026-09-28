@@ -1,7 +1,11 @@
 ﻿@import "tailwindcss";
 @import "../styles/tokens.css";
-* {
-  border-color: var(--border);
+/* Layered so Tailwind `border-*` color utilities can override the default;
+   an unlayered rule would beat every utility. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 html {
   min-width: 20rem;

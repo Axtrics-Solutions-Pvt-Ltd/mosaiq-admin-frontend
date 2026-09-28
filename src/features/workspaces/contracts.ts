@@ -52,6 +52,9 @@ const clientSchema = z.object({
   status: statusSchema,
   workspace_count: z.number().int().nonnegative().optional(),
   workspaces: z.array(workspaceSchema).optional(),
+  // Only when listed with `email` + `role_code`: "added" when that user already
+  // holds All workspaces of the client, "invited" when it is pending.
+  invite_status: z.enum(["added", "invited"]).nullable().optional(),
   created_at: z.string().nullable(),
   updated_at: z.string().nullable(),
 });

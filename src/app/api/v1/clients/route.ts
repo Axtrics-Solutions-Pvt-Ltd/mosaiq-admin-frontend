@@ -1,7 +1,16 @@
 import { forwardAgencyRequest } from "@/lib/api/agency-server";
 import { clientPaths } from "@/lib/api/paths";
 
-const allowedFilters = ["agency_id", "search", "status", "page", "per_page"];
+const allowedFilters = [
+  "agency_id",
+  "search",
+  "status",
+  "page",
+  "per_page",
+  "include",
+  "email",
+  "role_code",
+];
 
 export async function GET(request: Request) {
   const incoming = new URL(request.url);

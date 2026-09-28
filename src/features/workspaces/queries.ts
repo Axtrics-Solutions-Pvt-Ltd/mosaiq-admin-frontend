@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -94,6 +95,52 @@ export function useInfiniteClients(agencyId: number, search: string) {
       page.meta.current_page < page.meta.last_page
         ? page.meta.current_page + 1
         : undefined,
+  });
+}
+/**
+ * Clients of one agency with their active workspaces embedded, for the
+ * client → workspace access tree. With `email` + `roleCode`, clients and
+ * workspaces carry what that user already has or is invited to.
+ */
+export function useInfiniteClientTree(
+  agencyId: number,
+  search: string,
+  email?: string,
+  roleCode?: string,
+) {
+  // The backend requires email and role_code together.
+  const effectiveEmail = email && roleCode ? email : undefined;
+  return useInfiniteQuery({
+    queryKey: [
+      "workspaces",
+      "client-tree",
+      agencyId,
+      search,
+      effectiveEmail ?? "",
+      effectiveEmail ? (roleCode ?? "") : "",
+    ] as const,
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) =>
+      listClients(
+        agencyId,
+        {
+          search: search || undefined,
+          status: "active",
+          include: "workspaces",
+          page: pageParam,
+          per_page: 20,
+          email: effectiveEmail,
+          role_code: effectiveEmail ? roleCode : undefined,
+        },
+        signal,
+      ),
+    getNextPageParam: (page) =>
+      page.meta.current_page < page.meta.last_page
+        ? page.meta.current_page + 1
+        : undefined,
+    // Keep the tree on screen while a new search or invitee email reloads it.
+    placeholderData: keepPreviousData,
+    enabled: valid(agencyId),
   });
 }
 export function useClient(agencyId: number, clientId: number) {

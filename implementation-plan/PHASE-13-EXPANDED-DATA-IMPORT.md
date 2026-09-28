@@ -2,7 +2,7 @@
 
 Status: not started. This is follow-up scope, not part of the original 01→12 visual-prototype sequence in [README.md](README.md) — Phases 08 and 09 were already carried through to a working, API-wired `/data-import` and `/import-history` (confirmed: both screens call the real Laravel endpoints today, not fixtures). This phase extends that already-functional feature to the new import types built on the backend.
 
-Backend source of truth: [docs/client-portal/IMPLEMENTATION_PHASES.md](../../mosaiq-laravel-api/docs/client-portal/IMPLEMENTATION_PHASES.md) (Phase 5 there is this doc's counterpart). Read that first — it lists every new CSV type, its columns, and what's already live.
+Backend source of truth: [docs/user-portal-apis/LEGACY-CSV-IMPLEMENTATION-PHASES.md](../../mosaiq-laravel-api/docs/user-portal-apis/LEGACY-CSV-IMPLEMENTATION-PHASES.md) (superseded) (Phase 5 there is this doc's counterpart). Read that first — it lists every new CSV type, its columns, and what's already live.
 
 ## Outcome
 

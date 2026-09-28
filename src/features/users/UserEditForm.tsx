@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -20,6 +20,16 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { toast } from "@/components/ui/Toast";
 import { assignableAgencyRoles } from "@/config/permissions";
 import { userDetailUrl } from "@/config/routes";
+import {
+  type ClientAccessSelection,
+  fromUserAccess,
+  isSameSelection,
+  toClientsPayload,
+} from "@/features/invitations/client-access";
+import {
+  ClientWorkspaceTree,
+  type PendingClientAccess,
+} from "@/features/invitations/ClientWorkspaceTree";
 import { InvitationScopeSelectors } from "@/features/invitations/InvitationScopeSelectors";
 import type {
   ClientRecord,
@@ -64,11 +74,49 @@ export function UserEditForm({
   const [touchedWorkspaces, setTouchedWorkspaces] = useState<WorkspaceRecord[]>(
     [],
   );
-  const clientQuery = useClient(agencyId, userQuery.data?.client_id ?? 0);
+  // The single client and workspace list are only used by the Agency Admin
+  // restriction picker; a Manager's access comes from `access`.
+  const usesRestrictionPicker =
+    userQuery.data !== undefined && userQuery.data.role_code !== "MANAGER";
+  const clientQuery = useClient(
+    agencyId,
+    usesRestrictionPicker ? (userQuery.data?.client_id ?? 0) : 0,
+  );
   const workspacesQuery = useWorkspacesByIds(
     agencyId,
-    userQuery.data?.workspace_ids ?? [],
+    usesRestrictionPicker ? (userQuery.data?.workspace_ids ?? []) : [],
   );
+  // A Manager's access, as a client -> workspace selection.
+  const initialAccess = useMemo(
+    () => fromUserAccess(userQuery.data?.access ?? []),
+    [userQuery.data],
+  );
+  const pendingAccess = useMemo<PendingClientAccess>(() => {
+    const access = userQuery.data?.access ?? [];
+    return {
+      allWorkspacesClientIds: new Set(
+        access
+          .filter((entry) => entry.pending_all_workspaces)
+          .map((entry) => entry.client_id),
+      ),
+      workspaceIds: new Set(
+        access.flatMap((entry) => entry.pending_workspace_ids),
+      ),
+    };
+  }, [userQuery.data]);
+  const clientNames = useMemo(
+    () =>
+      Object.fromEntries(
+        (userQuery.data?.access ?? []).map((entry) => [
+          entry.client_id,
+          entry.client_name ?? `Client #${entry.client_id}`,
+        ]),
+      ),
+    [userQuery.data],
+  );
+  const [editedAccess, setEditedAccess] = useState<ClientAccessSelection>();
+  const [clientsError, setClientsError] = useState<string>();
+  const clientAccess = editedAccess ?? initialAccess;
   const selectedClient = scopeTouched ? touchedClient : clientQuery.data;
   const selectedWorkspaces = scopeTouched
     ? touchedWorkspaces
@@ -93,10 +141,10 @@ export function UserEditForm({
     },
   });
   const roleCode = useWatch({ control, name: "roleCode" });
-  // A Manager invited to a whole client keeps that client without workspaces.
-  const isWorkspaceRequired =
-    roleCode === "MANAGER" && !userQuery.data?.client_ids.length;
   const roleRegistration = register("roleCode");
+  const wasManager = userQuery.data?.role_code === "MANAGER";
+  const isAccessChanged =
+    editedAccess !== undefined && !isSameSelection(editedAccess, initialAccess);
 
   useEffect(() => {
     if (!userQuery.data) return;
@@ -109,17 +157,21 @@ export function UserEditForm({
     });
   }, [userQuery.data, reset]);
 
+  const hasUnsavedChanges = isDirty || isAccessChanged;
   useEffect(() => {
-    if (!isDirty) return;
+    if (!hasUnsavedChanges) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
+  }, [hasUnsavedChanges]);
 
-  function clearScope() {
+  function clearScope(nextRoleCode: string) {
+    setClientsError(undefined);
+    // Switching back to Manager restores what the Manager holds.
+    setEditedAccess(nextRoleCode === "MANAGER" && wasManager ? undefined : {});
     setScopeTouched(true);
     setTouchedClient(undefined);
     setTouchedWorkspaces([]);
@@ -128,26 +180,32 @@ export function UserEditForm({
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    const isManager = values.roleCode === "MANAGER";
+    // A Manager's `clients` replaces their access, so it is only sent when the
+    // selection changed or the user becomes a Manager.
+    const sendsClients = isManager && (isAccessChanged || !wasManager);
+    setClientsError(undefined);
+    if (isManager && toClientsPayload(clientAccess).length === 0) {
+      setClientsError("Choose at least one client for this Manager.");
+      return;
+    }
     const parsed = updateAgencyUserSchema.safeParse({
       name: values.name.trim(),
       role_code: values.roleCode,
       client_id: null,
-      workspace_ids: values.workspaceIds,
       status: values.status,
+      ...(isManager
+        ? sendsClients
+          ? { clients: toClientsPayload(clientAccess) }
+          : {}
+        : { workspace_ids: values.workspaceIds }),
     });
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
-        if (issue.path[0] === "client_id")
-          setError("clientId", { message: issue.message });
+        if (issue.path[0] === "clients") setClientsError(issue.message);
         if (issue.path[0] === "workspace_ids")
           setError("workspaceIds", { message: issue.message });
       }
-      return;
-    }
-    if (isWorkspaceRequired && values.workspaceIds.length === 0) {
-      setError("workspaceIds", {
-        message: "Choose at least one workspace for this user.",
-      });
       return;
     }
     try {
@@ -168,6 +226,10 @@ export function UserEditForm({
           setError("clientId", { message: fields.client_id });
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
+        const clientsField = Object.keys(fields).find((field) =>
+          field.startsWith("clients"),
+        );
+        if (clientsField) setClientsError(fields[clientsField]);
         if (fields.status) setError("status", { message: fields.status });
         toast({ title: error.message, tone: "error" });
       } else {
@@ -260,7 +322,7 @@ export function UserEditForm({
                 {...roleRegistration}
                 onChange={(event) => {
                   roleRegistration.onChange(event);
-                  clearScope();
+                  clearScope(event.target.value);
                 }}
               >
                 {hasLegacyRole && (
@@ -293,31 +355,60 @@ export function UserEditForm({
                 <option value="inactive">Inactive</option>
               </Select>
             </FormField>
-            <InvitationScopeSelectors
-              agencyId={agencyId}
-              client={selectedClient}
-              clientError={errors.clientId?.message}
-              isWorkspaceRequired={isWorkspaceRequired}
-              mode={roleCode === "MANAGER" ? "manager-edit" : "restriction"}
-              onClientChange={(client) => {
-                setScopeTouched(true);
-                setTouchedClient(client);
-                setTouchedWorkspaces([]);
-                setValue("clientId", client.id, { shouldDirty: true });
-                setValue("workspaceIds", [], { shouldDirty: true });
-              }}
-              onWorkspacesChange={(workspaces) => {
-                setScopeTouched(true);
-                setTouchedWorkspaces(workspaces);
-                setValue(
-                  "workspaceIds",
-                  workspaces.map((workspace) => workspace.id),
-                  { shouldDirty: true },
-                );
-              }}
-              workspaceError={errors.workspaceIds?.message}
-              workspaces={selectedWorkspaces}
-            />
+            {roleCode === "MANAGER" ? (
+              <FormField
+                description="Tick a client for all its workspaces, including ones added later, or open it to choose workspaces."
+                error={clientsError}
+                id="edit-clients"
+                label="Clients"
+                required
+              >
+                <ClientWorkspaceTree
+                  agencyId={agencyId}
+                  clientNames={clientNames}
+                  error={clientsError}
+                  id="edit-clients"
+                  onChange={(selection) => {
+                    setEditedAccess(selection);
+                    setClientsError(undefined);
+                  }}
+                  pending={pendingAccess}
+                  value={clientAccess}
+                />
+                {(isAccessChanged || !wasManager) && (
+                  <p className="bg-muted mt-2 rounded-lg border p-3 text-xs">
+                    Removed access is revoked as soon as you save. Newly added
+                    clients or workspaces are sent to the user as one invitation
+                    email and apply once accepted.
+                  </p>
+                )}
+              </FormField>
+            ) : (
+              <InvitationScopeSelectors
+                agencyId={agencyId}
+                client={selectedClient}
+                clientError={errors.clientId?.message}
+                mode="restriction"
+                onClientChange={(client) => {
+                  setScopeTouched(true);
+                  setTouchedClient(client);
+                  setTouchedWorkspaces([]);
+                  setValue("clientId", client.id, { shouldDirty: true });
+                  setValue("workspaceIds", [], { shouldDirty: true });
+                }}
+                onWorkspacesChange={(workspaces) => {
+                  setScopeTouched(true);
+                  setTouchedWorkspaces(workspaces);
+                  setValue(
+                    "workspaceIds",
+                    workspaces.map((workspace) => workspace.id),
+                    { shouldDirty: true },
+                  );
+                }}
+                workspaceError={errors.workspaceIds?.message}
+                workspaces={selectedWorkspaces}
+              />
+            )}
             <div className="flex flex-wrap gap-3 border-t pt-5">
               <Button disabled={updateMutation.isPending} type="submit">
                 {updateMutation.isPending ? (
@@ -330,7 +421,7 @@ export function UserEditForm({
               <Button asChild type="button" variant="outline">
                 <Link href={userDetailUrl(userId, agencyId)}>Cancel</Link>
               </Button>
-              {isDirty && (
+              {hasUnsavedChanges && (
                 <p className="text-muted-foreground self-center text-xs">
                   Unsaved changes
                 </p>

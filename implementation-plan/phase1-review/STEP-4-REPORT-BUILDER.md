@@ -1,6 +1,6 @@
 # Step 4 — Reports and report builder
 
-API dependency: API Step 4 (reports, layout, preview). The widget types and codes follow `mosaiq-laravel-api/docs/phase1-review/WIDGET-CATALOGUE.md`. The payload shapes follow `mosaiq-laravel-api/docs/client-portal/PUBLIC-REPORT-API-CONTRACT.md` §5.
+API dependency: API Step 4 (reports, layout, preview). The widget types and codes follow `mosaiq-laravel-api/docs/phase1-review/WIDGET-CATALOGUE.md`. The payload shapes follow `mosaiq-laravel-api/docs/user-portal-apis/PUBLIC-REPORT-API-CONTRACT.md` §5.
 
 ## 4.1 Routes and navigation
 

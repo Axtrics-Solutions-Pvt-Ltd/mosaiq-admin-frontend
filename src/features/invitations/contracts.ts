@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { assignableAgencyRoles } from "@/config/permissions";
 
+import {
+  checkDistinctClients,
+  clientAccessPayloadSchema,
+} from "./client-access";
+
 // New invitations can only grant the assignable roles.
 export const invitationRoles = assignableAgencyRoles;
 
@@ -19,27 +24,37 @@ export const inviteSchema = z
   .object({
     email: z.email("Enter a valid email address."),
     role_code: z.enum(invitationRoles),
-    // Managers are scoped to a client. With no workspaces chosen, Laravel
-    // grants every active workspace of the client when the invite is accepted.
-    client_id: z.number().int().positive().nullable().optional(),
-    workspace_ids: z.array(z.number().int().positive()),
+    // A Manager gets one or more clients, each with "All workspaces" or chosen
+    // workspaces, and the whole list is sent as one invitation email.
+    clients: z.array(clientAccessPayloadSchema).optional(),
+    // Agency Admins only: optional workspaces that restrict agency-wide access.
+    workspace_ids: z.array(z.number().int().positive()).optional(),
   })
   .superRefine((value, context) => {
-    if (value.role_code === "MANAGER" && !value.client_id) {
+    if (value.role_code === "MANAGER" && !value.clients?.length) {
       context.addIssue({
         code: "custom",
-        path: ["client_id"],
-        message: "Choose a client for this Manager.",
+        path: ["clients"],
+        message: "Choose at least one client for this Manager.",
       });
     }
-    if (value.role_code !== "MANAGER" && value.client_id) {
+    if (value.role_code !== "MANAGER" && value.clients) {
       context.addIssue({
         code: "custom",
-        path: ["client_id"],
-        message: "Only a Manager invitation can be scoped to a client.",
+        path: ["clients"],
+        message: "Only a Manager invitation can be scoped to clients.",
       });
     }
-    if (new Set(value.workspace_ids).size !== value.workspace_ids.length) {
+    if (value.clients && value.workspace_ids) {
+      context.addIssue({
+        code: "custom",
+        path: ["workspace_ids"],
+        message: "Send workspaces inside clients.",
+      });
+    }
+    checkDistinctClients(value.clients, context);
+    const workspaceIds = value.workspace_ids ?? [];
+    if (new Set(workspaceIds).size !== workspaceIds.length) {
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
@@ -84,8 +99,28 @@ export const invitationAccessScopes = [
 ] as const;
 export type InvitationAccessScope = (typeof invitationAccessScopes)[number];
 
+/**
+ * Every client an invitation batch grants, as returned by inspect and the
+ * invitee's own list. `workspaces` lists the chosen workspaces, or the current
+ * ones for "All workspaces"; `existing_workspaces` those already held.
+ */
+const invitationWorkspaceSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+});
+export const invitationClientSchema = z.object({
+  client_id: z.number().int().positive(),
+  client_name: z.string(),
+  all_workspaces: z.boolean(),
+  workspaces: z.array(invitationWorkspaceSchema),
+  existing_workspaces: z.array(invitationWorkspaceSchema),
+});
+export type InvitationClient = z.infer<typeof invitationClientSchema>;
+
 export const invitationSchema = z.object({
   id: z.number().int().positive(),
+  // Rows created by one invite share a batch: one email, one accept.
+  batch_id: z.string().nullable().optional(),
   email: z.email(),
   agency_id: z.number().int().positive(),
   client_id: z.number().int().positive().nullable(),
@@ -163,6 +198,8 @@ export const myInvitationSchema = z.object({
   workspace_name: z.string().nullable(),
   // Active workspaces a whole-client invitation grants if accepted now.
   workspace_count: z.number().int().nonnegative().nullable().optional(),
+  // Every client and workspace of the invitation batch.
+  clients: z.array(invitationClientSchema).optional(),
   expires_at: z.string().min(1),
 });
 export type MyInvitation = z.infer<typeof myInvitationSchema>;
@@ -222,6 +259,7 @@ export const invitationInspectionSchema = z.object({
   client_name: z.string().nullable().optional(),
   access_scope: z.enum(invitationAccessScopes).optional(),
   workspace_count: z.number().int().nonnegative().nullable().optional(),
+  clients: z.array(invitationClientSchema).optional(),
 });
 export type InvitationInspection = z.infer<typeof invitationInspectionSchema>;
 

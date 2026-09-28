@@ -29,6 +29,12 @@ import type {
 import { ApiError } from "@/lib/api/errors";
 
 import {
+  type ClientAccessSelection,
+  selectionFromCreatable,
+  toClientsPayload,
+} from "./client-access";
+import { ClientWorkspaceTree } from "./ClientWorkspaceTree";
+import {
   InvitationAlreadyPendingError,
   type InvitationConflict,
   invitationRoles,
@@ -58,6 +64,8 @@ export function InviteUserForm() {
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<
     WorkspaceRecord[]
   >([]);
+  const [clientAccess, setClientAccess] = useState<ClientAccessSelection>({});
+  const [clientsError, setClientsError] = useState<string>();
   const [pendingConflict, setPendingConflict] = useState<{
     agencyId: number;
     conflict: InvitationConflict;
@@ -101,6 +109,8 @@ export function InviteUserForm() {
   function clearScope() {
     setSelectedClient(undefined);
     setSelectedWorkspaces([]);
+    setClientAccess({});
+    setClientsError(undefined);
     setValue("clientId", null);
     setValue("workspaceIds", []);
   }
@@ -112,18 +122,25 @@ export function InviteUserForm() {
       return;
     }
     const submittedRoleCode = isSuperAdmin ? values.roleCode : "MANAGER";
-    // A Manager is scoped to the chosen client. For an Agency Admin the client
-    // is only used to browse workspace restrictions and is not submitted.
-    const parsed = inviteSchema.safeParse({
-      email: values.email.trim(),
-      role_code: submittedRoleCode,
-      client_id: submittedRoleCode === "MANAGER" ? values.clientId : null,
-      workspace_ids: values.workspaceIds,
-    });
+    // A Manager gets the clients chosen in the tree. For an Agency Admin the
+    // client only browses workspace restrictions and is not submitted.
+    const parsed = inviteSchema.safeParse(
+      submittedRoleCode === "MANAGER"
+        ? {
+            email: values.email.trim(),
+            role_code: submittedRoleCode,
+            clients: toClientsPayload(clientAccess),
+          }
+        : {
+            email: values.email.trim(),
+            role_code: submittedRoleCode,
+            workspace_ids: values.workspaceIds,
+          },
+    );
+    setClientsError(undefined);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
-        if (issue.path[0] === "client_id")
-          setError("clientId", { message: issue.message });
+        if (issue.path[0] === "clients") setClientsError(issue.message);
         if (issue.path[0] === "workspace_ids")
           setError("workspaceIds", { message: issue.message });
       }
@@ -162,6 +179,10 @@ export function InviteUserForm() {
           setError("roleCode", { message: fields.role_code });
         if (fields.client_id)
           setError("clientId", { message: fields.client_id });
+        const clientsField = Object.keys(fields).find((field) =>
+          field.startsWith("clients"),
+        );
+        if (clientsField) setClientsError(fields[clientsField]);
         if (fields.workspace_ids)
           setError("workspaceIds", { message: fields.workspace_ids });
         const serverMessage =
@@ -186,16 +207,23 @@ export function InviteUserForm() {
 
   async function handleSendToRemaining() {
     if (!pendingConflict) return;
-    const creatableIds = new Set(
-      pendingConflict.conflict.creatable.map(
-        (workspace) => workspace.workspace_id,
-      ),
-    );
-    const { agencyId: conflictAgencyId, payload } = pendingConflict;
+    const { agencyId: conflictAgencyId, conflict, payload } = pendingConflict;
     setPendingConflict(undefined);
+    if (payload.clients) {
+      await submitInvitation(conflictAgencyId, {
+        ...payload,
+        clients: toClientsPayload(selectionFromCreatable(conflict.creatable)),
+      });
+      return;
+    }
+    const creatableIds = new Set(
+      conflict.creatable.map((workspace) => workspace.workspace_id),
+    );
     await submitInvitation(conflictAgencyId, {
       ...payload,
-      workspace_ids: payload.workspace_ids.filter((id) => creatableIds.has(id)),
+      workspace_ids: (payload.workspace_ids ?? []).filter((id) =>
+        creatableIds.has(id),
+      ),
     });
   }
 
@@ -264,7 +292,7 @@ export function InviteUserForm() {
                   </span>
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Agency Admins invite Managers, who can access only the client
+                  Agency Admins invite Managers, who can access only the clients
                   and workspaces chosen below.
                 </p>
                 {errors.roleCode?.message && (
@@ -311,30 +339,53 @@ export function InviteUserForm() {
                 reactivated.
               </p>
             )}
-            <InvitationScopeSelectors
-              agencyId={agencyId ?? 0}
-              client={selectedClient}
-              clientError={errors.clientId?.message}
-              email={debouncedEmail || undefined}
-              mode={roleCode === "MANAGER" ? "manager-invite" : "restriction"}
-              roleCode={roleCode}
-              onClientChange={(client) => {
-                setSelectedClient(client);
-                setSelectedWorkspaces([]);
-                setValue("clientId", client.id, { shouldValidate: true });
-                setValue("workspaceIds", []);
-              }}
-              onWorkspacesChange={(workspaces) => {
-                setSelectedWorkspaces(workspaces);
-                setValue(
-                  "workspaceIds",
-                  workspaces.map((workspace) => workspace.id),
-                  { shouldValidate: true },
-                );
-              }}
-              workspaceError={errors.workspaceIds?.message}
-              workspaces={selectedWorkspaces}
-            />
+            {roleCode === "MANAGER" ? (
+              <FormField
+                description="Tick a client for all its workspaces, including ones added later, or open it to choose workspaces. The Manager gets one email listing everything."
+                error={clientsError}
+                id="invite-clients"
+                label="Clients"
+                required
+              >
+                <ClientWorkspaceTree
+                  agencyId={agencyId ?? 0}
+                  email={debouncedEmail || undefined}
+                  error={clientsError}
+                  id="invite-clients"
+                  onChange={(selection) => {
+                    setClientAccess(selection);
+                    setClientsError(undefined);
+                  }}
+                  roleCode={roleCode}
+                  value={clientAccess}
+                />
+              </FormField>
+            ) : (
+              <InvitationScopeSelectors
+                agencyId={agencyId ?? 0}
+                client={selectedClient}
+                clientError={errors.clientId?.message}
+                email={debouncedEmail || undefined}
+                mode="restriction"
+                roleCode={roleCode}
+                onClientChange={(client) => {
+                  setSelectedClient(client);
+                  setSelectedWorkspaces([]);
+                  setValue("clientId", client.id, { shouldValidate: true });
+                  setValue("workspaceIds", []);
+                }}
+                onWorkspacesChange={(workspaces) => {
+                  setSelectedWorkspaces(workspaces);
+                  setValue(
+                    "workspaceIds",
+                    workspaces.map((workspace) => workspace.id),
+                    { shouldValidate: true },
+                  );
+                }}
+                workspaceError={errors.workspaceIds?.message}
+                workspaces={selectedWorkspaces}
+              />
+            )}
             <div className="flex flex-wrap gap-3 border-t pt-5">
               <Button
                 disabled={createMutation.isPending || currentUser.isPending}

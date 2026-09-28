@@ -57,27 +57,30 @@ function workspace(id: number, name: string) {
 
 function mockAgencyScope() {
   server.use(
-    http.get(workspacePaths.clients(12), () =>
-      HttpResponse.json({
+    http.get(workspacePaths.clients(12), ({ request }) => {
+      const include = new URL(request.url).searchParams.get("include");
+      return HttpResponse.json({
         data: [
           {
             id: 4,
             agency_id: 12,
             name: "Acme Client",
             status: "active",
+            ...(include === "workspaces"
+              ? {
+                  workspaces: [
+                    workspace(9, "Reporting"),
+                    workspace(10, "Marketing"),
+                  ],
+                }
+              : {}),
             created_at: null,
             updated_at: null,
           },
         ],
         meta: { current_page: 1, last_page: 1, total: 1 },
-      }),
-    ),
-    http.get(workspacePaths.collection(12, 4), () =>
-      HttpResponse.json({
-        data: [workspace(9, "Reporting"), workspace(10, "Marketing")],
-        meta: { current_page: 1, last_page: 1, total: 2 },
-      }),
-    ),
+      });
+    }),
   );
 }
 
@@ -94,19 +97,16 @@ function renderForm(currentUser: unknown) {
   );
 }
 
-async function chooseClient(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Client" }));
-  await user.click(await screen.findByRole("option", { name: /Acme Client/ }));
+async function chooseReportingOnly(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("checkbox", { name: "Acme Client" }),
+  );
+  // Unticking All workspaces keeps every listed workspace, so one can be removed.
+  await user.click(screen.getByRole("checkbox", { name: /^All workspaces/ }));
+  await user.click(screen.getByRole("checkbox", { name: "Marketing" }));
 }
 
-async function chooseWorkspaces(user: ReturnType<typeof userEvent.setup>) {
-  await chooseClient(user);
-  await user.click(screen.getByRole("button", { name: "Workspace access" }));
-  await user.click(await screen.findByRole("option", { name: /Reporting/ }));
-  await user.click(screen.getByRole("option", { name: /Marketing/ }));
-}
-
-it("lets an Agency Admin invite only Managers, scoped to a client and workspaces", async () => {
+it("lets an Agency Admin invite a Manager to chosen workspaces of a client", async () => {
   const user = userEvent.setup();
   let received: unknown;
   mockAgencyScope();
@@ -130,11 +130,14 @@ it("lets an Agency Admin invite only Managers, scoped to a client and workspaces
   );
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(
-    await screen.findByText("Choose a client for this Manager."),
+    await screen.findByText("Choose at least one client for this Manager."),
   ).toBeVisible();
   expect(received).toBeUndefined();
 
-  await chooseWorkspaces(user);
+  await chooseReportingOnly(user);
+  expect(
+    document.querySelector("#invite-clients [aria-live=polite]"),
+  ).toHaveTextContent("1 client · 1 workspace");
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(await screen.findByRole("status")).toHaveTextContent(
     "Invitation emailed to manager@example.test.",
@@ -142,13 +145,12 @@ it("lets an Agency Admin invite only Managers, scoped to a client and workspaces
   expect(received).toEqual({
     email: "manager@example.test",
     role_code: "MANAGER",
-    client_id: 4,
-    workspace_ids: [9, 10],
+    clients: [{ client_id: 4, all_workspaces: false, workspace_ids: [9] }],
   });
   expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
 });
 
-it("invites a Manager to a whole client when no workspace is chosen", async () => {
+it("invites a Manager to all workspaces of a client by ticking the client", async () => {
   const user = userEvent.setup();
   let received: unknown;
   mockAgencyScope();
@@ -164,12 +166,11 @@ it("invites a Manager to a whole client when no workspace is chosen", async () =
     screen.getByRole("textbox", { name: /Email/ }),
     "whole@example.test",
   );
-  await chooseClient(user);
-  expect(
-    screen.getByText(
-      "Optional. Leave empty to give access to all current workspaces of this client.",
-    ),
-  ).toBeVisible();
+  await user.click(
+    await screen.findByRole("checkbox", { name: "Acme Client" }),
+  );
+  expect(screen.getByRole("checkbox", { name: "Reporting" })).toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Reporting" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
   expect(
@@ -178,8 +179,7 @@ it("invites a Manager to a whole client when no workspace is chosen", async () =
   expect(received).toEqual({
     email: "whole@example.test",
     role_code: "MANAGER",
-    client_id: 4,
-    workspace_ids: [],
+    clients: [{ client_id: 4, all_workspaces: true }],
   });
 });
 
@@ -219,12 +219,15 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
               {
                 workspace_id: 9,
                 workspace_name: "Reporting",
+                client_id: 4,
                 invitation_id: 55,
                 sent_at: "2026-09-01T00:00:00Z",
                 expires_at: "2026-09-08T00:00:00Z",
               },
             ],
-            creatable: [{ workspace_id: 10, workspace_name: "Marketing" }],
+            creatable: [
+              { workspace_id: 10, workspace_name: "Marketing", client_id: 4 },
+            ],
           },
           { status: 409 },
         );
@@ -237,7 +240,10 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
     screen.getByRole("textbox", { name: /Email/ }),
     "conflict@example.test",
   );
-  await chooseWorkspaces(user);
+  await user.click(
+    await screen.findByRole("checkbox", { name: "Acme Client" }),
+  );
+  await user.click(screen.getByRole("checkbox", { name: /^All workspaces/ }));
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
   expect(
@@ -245,8 +251,9 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
       "Some workspaces already have a pending invitation",
     ),
   ).toBeVisible();
-  expect(screen.getByText("Reporting")).toBeVisible();
-  expect(screen.getByText("Marketing")).toBeVisible();
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByText("Reporting")).toBeVisible();
+  expect(within(dialog).getByText("Marketing")).toBeVisible();
 
   await user.click(
     screen.getByRole("button", { name: "Send to the remaining 1 workspace" }),
@@ -256,10 +263,14 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
     expect(push).toHaveBeenCalledWith("/users/invitations?agency=12"),
   );
   expect(receivedBodies).toHaveLength(2);
+  expect(receivedBodies[0]).toEqual({
+    email: "conflict@example.test",
+    role_code: "MANAGER",
+    clients: [{ client_id: 4, all_workspaces: false, workspace_ids: [9, 10] }],
+  });
   expect(receivedBodies[1]).toEqual({
     email: "conflict@example.test",
     role_code: "MANAGER",
-    client_id: 4,
-    workspace_ids: [10],
+    clients: [{ client_id: 4, all_workspaces: false, workspace_ids: [10] }],
   });
 });

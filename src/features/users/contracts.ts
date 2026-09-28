@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { assignableAgencyRoles } from "@/config/permissions";
+import {
+  checkDistinctClients,
+  clientAccessPayloadSchema,
+  userClientAccessSchema,
+} from "@/features/invitations/client-access";
 
 // Existing memberships may still carry legacy codes, so responses accept them.
 export const agencyUserRoles = [
@@ -28,6 +33,8 @@ export const agencyUserSchema = z.object({
   // invitations. Older API responses omit them.
   client_ids: z.array(z.number().int().positive()).default([]),
   pending_client_ids: z.array(z.number().int().positive()).default([]),
+  // Access grouped by client, active and pending. Older API responses omit it.
+  access: z.array(userClientAccessSchema).default([]),
   invited_at: z.string().nullable(),
   accepted_at: z.string().nullable(),
 });
@@ -50,13 +57,23 @@ export const updateAgencyUserSchema = z
     name: z.string().trim().min(1, "Enter a name.").max(255),
     role_code: z.enum(assignableAgencyRoles),
     client_id: z.null(),
+    // Agency Admins only: workspaces that restrict agency-wide access.
     workspace_ids: z.array(z.number().int().positive()),
+    // Managers only: the complete access, replacing what they hold. Removed
+    // access is revoked at once; added access is emailed as one invitation.
+    clients: z.array(clientAccessPayloadSchema),
     status: z.enum(["active", "inactive"]),
   })
   .partial()
-  // A Manager with no workspaces is valid when they hold client-level access,
-  // which only the edit form knows; it enforces that rule.
   .superRefine((value, context) => {
+    if (value.clients && value.workspace_ids) {
+      context.addIssue({
+        code: "custom",
+        path: ["workspace_ids"],
+        message: "Send workspaces inside clients.",
+      });
+    }
+    checkDistinctClients(value.clients, context);
     if (
       value.workspace_ids &&
       new Set(value.workspace_ids).size !== value.workspace_ids.length

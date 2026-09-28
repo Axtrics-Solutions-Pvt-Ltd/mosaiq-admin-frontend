@@ -36,7 +36,7 @@ describe("invitation contract", () => {
     }
   });
 
-  it("makes workspaces optional and requires a client for a Manager", () => {
+  it("makes workspaces optional for an Agency Admin and requires clients for a Manager", () => {
     expect(
       inviteSchema.safeParse({
         email: "admin@example.test",
@@ -48,34 +48,53 @@ describe("invitation contract", () => {
       inviteSchema.safeParse({
         email: "manager@example.test",
         role_code: "MANAGER",
-        client_id: 4,
-        workspace_ids: [],
+        clients: [
+          { client_id: 4, all_workspaces: true },
+          { client_id: 5, all_workspaces: false, workspace_ids: [9] },
+        ],
       }).success,
     ).toBe(true);
     const result = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
-      workspace_ids: [9],
+      clients: [],
     });
     expect(result.success).toBe(false);
     if (!result.success)
-      expect(result.error.issues[0]?.path).toEqual(["client_id"]);
+      expect(result.error.issues[0]?.path).toEqual(["clients"]);
   });
 
-  it("submits a client only for a Manager", () => {
-    const manager = inviteSchema.safeParse({
+  it("requires All workspaces or a workspace for each client, each client once", () => {
+    const noWorkspace = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
-      client_id: 4,
-      workspace_ids: [9],
+      clients: [{ client_id: 4, all_workspaces: false }],
     });
-    expect(manager.success && manager.data.client_id).toBe(4);
+    expect(noWorkspace.success).toBe(false);
+    if (!noWorkspace.success)
+      expect(noWorkspace.error.issues[0]?.path).toEqual([
+        "clients",
+        0,
+        "workspace_ids",
+      ]);
+    expect(
+      inviteSchema.safeParse({
+        email: "manager@example.test",
+        role_code: "MANAGER",
+        clients: [
+          { client_id: 4, all_workspaces: true },
+          { client_id: 4, all_workspaces: true },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("submits clients only for a Manager", () => {
     expect(
       inviteSchema.safeParse({
         email: "admin@example.test",
         role_code: "AGENCY_ADMIN",
-        client_id: 4,
-        workspace_ids: [],
+        clients: [{ client_id: 4, all_workspaces: true }],
       }).success,
     ).toBe(false);
   });
