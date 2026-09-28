@@ -9,6 +9,7 @@ import {
   deleteWorkspace,
   disconnectWorkspace,
   fetchWorkspaceData,
+  generateWorkspaceSampleData,
   getWorkspace,
   getWorkspaceCredentials,
   listWorkspaces,
@@ -197,6 +198,29 @@ describe("workspace connection API", () => {
     );
     await expect(fetchWorkspaceData(2, 4, 7)).resolves.toMatchObject({
       rows_upserted: 400,
+      is_sample: true,
+      sample_rows_cleared: 0,
+      corrections_reverted: 0,
+    });
+  });
+  it("generates sample data", async () => {
+    server.use(
+      http.post(workspacePaths.sampleData(2, 4, 7), () =>
+        HttpResponse.json({
+          data: {
+            status: "succeeded",
+            rows_upserted: 8000,
+            date_from: "2025-08-21",
+            date_to: "2026-09-24",
+            is_sample: true,
+            sample_rows_cleared: 0,
+            corrections_reverted: 0,
+          },
+        }),
+      ),
+    );
+    await expect(generateWorkspaceSampleData(2, 4, 7)).resolves.toMatchObject({
+      rows_upserted: 8000,
       is_sample: true,
     });
   });

@@ -204,3 +204,14 @@ export async function fetchWorkspaceData(
   );
   return workspaceFetchResponseSchema.parse(result).data;
 }
+export async function generateWorkspaceSampleData(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.sampleData(agencyId, clientId, workspaceId),
+    { method: "POST" },
+  );
+  return workspaceFetchResponseSchema.parse(result).data;
+}

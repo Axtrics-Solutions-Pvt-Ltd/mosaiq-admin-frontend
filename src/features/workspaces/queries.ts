@@ -11,6 +11,7 @@ import {
   deleteWorkspace,
   disconnectWorkspace,
   fetchWorkspaceData,
+  generateWorkspaceSampleData,
   getClient,
   getWorkspace,
   getWorkspaceCredentials,
@@ -394,5 +395,14 @@ export function useDisconnectWorkspace(scope: WorkspaceScope) {
 export function useFetchWorkspaceData(scope: WorkspaceScope) {
   return useConnectionMutation(() =>
     fetchWorkspaceData(scope.agencyId, scope.clientId, scope.workspaceId),
+  );
+}
+export function useGenerateWorkspaceSampleData(scope: WorkspaceScope) {
+  return useConnectionMutation(() =>
+    generateWorkspaceSampleData(
+      scope.agencyId,
+      scope.clientId,
+      scope.workspaceId,
+    ),
   );
 }

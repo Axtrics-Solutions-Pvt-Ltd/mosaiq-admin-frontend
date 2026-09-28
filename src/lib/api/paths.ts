@@ -73,6 +73,8 @@ export const workspacePaths = {
     `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/credentials`,
   fetch: (agencyId: number, clientId: number, workspaceId: number) =>
     `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/fetch`,
+  sampleData: (agencyId: number, clientId: number, workspaceId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/sample-data`,
 } as const;
 
 export const channelPaths = {

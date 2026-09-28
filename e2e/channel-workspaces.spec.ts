@@ -26,12 +26,21 @@ test("a client gets a Meta workspace that connects and fetches sample data", asy
   await page.getByRole("tab", { name: "Connection" }).click();
   const connection = page.getByRole("tabpanel", { name: "Connection" });
   await expect(
-    connection.getByText(/live connection to Meta Ads comes in a later phase/),
+    connection.getByText(/generate sample data to preview reports/),
   ).toBeVisible();
   await expect(connection.getByText("Not connected")).toBeVisible();
   await expect(
-    connection.getByRole("button", { name: "Fetch data" }),
+    connection.getByRole("button", { name: "Fetch live data" }),
   ).toBeDisabled();
+  await connection
+    .getByRole("button", { name: "Generate sample data" })
+    .click();
+  await expect(
+    connection.getByText(
+      /^8,000 sample rows generated for 21 Aug 2025–24 Sept? 2026\.$/,
+    ),
+  ).toBeVisible();
+  await expect(connection.getByText(/show\s+generated numbers/)).toBeVisible();
   await connection.getByLabel("Access token").fill("secret-token-9876");
   await connection.getByLabel("Ad account ID").fill("act_1234");
   await connection.getByRole("button", { name: "Save credentials" }).click();
@@ -41,7 +50,11 @@ test("a client gets a Meta workspace that connects and fetches sample data", asy
   await expect(connection.getByText("•••• 9876")).toBeVisible();
   await expect(connection.locator("input[type=password]")).toHaveCount(0);
 
-  await connection.getByRole("button", { name: "Fetch data" }).click();
+  await connection.getByRole("button", { name: "Fetch live data" }).click();
+  await page
+    .getByRole("dialog", { name: "Replace sample data with live data?" })
+    .getByRole("button", { name: "Fetch live data" })
+    .click();
   await expect(
     connection.getByText(/^400 rows updated for 21 Aug 2025–24 Sept? 2026\.$/),
   ).toBeVisible();

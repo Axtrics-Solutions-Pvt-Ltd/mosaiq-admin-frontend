@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CloudDownload,
+  FlaskConical,
   Info,
   KeyRound,
   Pencil,
@@ -38,6 +39,7 @@ import type { WorkspaceFetchResult, WorkspaceRecord } from "./contracts";
 import {
   useDisconnectWorkspace,
   useFetchWorkspaceData,
+  useGenerateWorkspaceSampleData,
   useSaveWorkspaceCredentials,
   useWorkspaceCredentials,
 } from "./queries";
@@ -238,6 +240,18 @@ function CredentialsForm({
   );
 }
 
+type DataAction = { kind: "sample" | "fetch"; result: WorkspaceFetchResult };
+
+function dataActionSummary({ kind, result }: DataAction) {
+  const range = `${formatDate(result.date_from)}–${formatDate(result.date_to)}`;
+  if (kind === "sample")
+    return `${formatNumber(result.rows_upserted)} sample rows generated for ${range}.`;
+  const summary = `${formatNumber(result.rows_upserted)} rows updated for ${range}.`;
+  return result.sample_rows_cleared > 0
+    ? `${summary} Sample data was cleared and ${formatNumber(result.corrections_reverted)} corrections were reverted.`
+    : summary;
+}
+
 export function ConnectionCard({
   workspace,
   canManage,
@@ -257,8 +271,10 @@ export function ConnectionCard({
   const channels = useChannels({ enabled: Boolean(channel) });
   const disconnect = useDisconnectWorkspace(scope);
   const fetchData = useFetchWorkspaceData(scope);
+  const generateSample = useGenerateWorkspaceSampleData(scope);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [lastFetch, setLastFetch] = useState<WorkspaceFetchResult>();
+  const [isConfirmingLiveFetch, setIsConfirmingLiveFetch] = useState(false);
+  const [lastAction, setLastAction] = useState<DataAction>();
   const [actionError, setActionError] = useState("");
 
   if (!channel)
@@ -293,15 +309,23 @@ export function ConnectionCard({
     : [];
   const status = credentials.data?.status ?? "not_connected";
   const isConnected = status === "connected";
-  // Phase 1 fetches generate sample rows; only a fetch that says otherwise
-  // hides the notice.
-  const isSample = lastFetch?.is_sample ?? true;
+  // The latest result wins until the workspace refetch catches up, so the
+  // live-fetch confirmation shows right after sample data is generated.
+  const dataSource = lastAction
+    ? lastAction.result.is_sample
+      ? "sample"
+      : "live"
+    : workspace.data_source;
+  const isSample = dataSource === "sample";
+  const isLive = dataSource === "live";
+  const isBusy = fetchData.isPending || generateSample.isPending;
 
   async function runFetch() {
+    setIsConfirmingLiveFetch(false);
     setActionError("");
-    setLastFetch(undefined);
+    setLastAction(undefined);
     try {
-      setLastFetch(await fetchData.mutateAsync());
+      setLastAction({ kind: "fetch", result: await fetchData.mutateAsync() });
     } catch (error) {
       setActionError(
         error instanceof ApiError && error.status === 422
@@ -311,12 +335,29 @@ export function ConnectionCard({
     }
   }
 
+  async function runGenerateSample() {
+    setActionError("");
+    setLastAction(undefined);
+    try {
+      setLastAction({
+        kind: "sample",
+        result: await generateSample.mutateAsync(),
+      });
+    } catch (error) {
+      setActionError(
+        error instanceof ApiError && error.status === 422
+          ? (error.fieldErrors.data_source ?? error.message)
+          : "The sample data could not be generated. Please try again.",
+      );
+    }
+  }
+
   async function confirmDisconnect() {
     setActionError("");
     try {
       await disconnect.mutateAsync();
       setIsDisconnecting(false);
-      setLastFetch(undefined);
+      setLastAction(undefined);
       toast({
         title: "Workspace disconnected",
         description: "The stored credentials were removed.",
@@ -342,16 +383,24 @@ export function ConnectionCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        {isSample && (
+        {!isLive && (
           <div
             className="bg-info-soft text-info flex items-start gap-2 rounded-lg border border-sky-200 p-3 text-sm"
             role="note"
           >
             <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
-            <p>
-              <strong>Sample data:</strong> live connection to {channel.name}{" "}
-              comes in a later phase.
-            </p>
+            {isSample ? (
+              <p>
+                <strong>Sample data:</strong> reports for this workspace show
+                generated numbers. The first live fetch from {channel.name}{" "}
+                replaces them.
+              </p>
+            ) : (
+              <p>
+                <strong>No data yet:</strong> generate sample data to preview
+                reports, or connect {channel.name} and fetch live data.
+              </p>
+            )}
           </div>
         )}
         {credentials.isPending && (
@@ -376,10 +425,18 @@ export function ConnectionCard({
         )}
         {credentials.isSuccess && (
           <>
-            <dl className="grid gap-4 text-sm sm:grid-cols-3">
+            <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-muted-foreground text-xs">Channel</dt>
                 <dd className="text-strong mt-1 font-medium">{channel.name}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">Data</dt>
+                <dd className="text-strong mt-1 font-medium">
+                  {isLive ? "Live" : isSample ? "Sample" : "None"}
+                  {workspace.data_fetched_at &&
+                    ` · ${formatDateTime(workspace.data_fetched_at)}`}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground text-xs">Last fetched</dt>
@@ -427,20 +484,34 @@ export function ConnectionCard({
               className="text-success text-sm"
               role="status"
             >
-              {lastFetch &&
-                `${formatNumber(lastFetch.rows_upserted)} rows updated for ${formatDate(lastFetch.date_from)}–${formatDate(lastFetch.date_to)}.`}
+              {lastAction && dataActionSummary(lastAction)}
             </p>
             {canManage && (
               <div className="flex flex-wrap gap-2 border-t pt-4">
                 <Button
                   aria-busy={fetchData.isPending}
-                  disabled={!isConnected || fetchData.isPending}
-                  onClick={runFetch}
+                  disabled={!isConnected || isBusy}
+                  onClick={() =>
+                    isSample ? setIsConfirmingLiveFetch(true) : runFetch()
+                  }
                   variant="secondary"
                 >
                   <CloudDownload aria-hidden className="size-4" />
-                  {fetchData.isPending ? "Fetching data..." : "Fetch data"}
+                  {fetchData.isPending ? "Fetching data..." : "Fetch live data"}
                 </Button>
+                {!isLive && (
+                  <Button
+                    aria-busy={generateSample.isPending}
+                    disabled={isBusy}
+                    onClick={runGenerateSample}
+                    variant="outline"
+                  >
+                    <FlaskConical aria-hidden className="size-4" />
+                    {generateSample.isPending
+                      ? "Generating sample data..."
+                      : "Generate sample data"}
+                  </Button>
+                )}
                 {status !== "not_connected" && (
                   <Button
                     onClick={() => setIsDisconnecting(true)}
@@ -451,7 +522,7 @@ export function ConnectionCard({
                 )}
                 {!isConnected && (
                   <p className="text-muted-foreground self-center text-xs">
-                    Save the credentials to connect before fetching data.
+                    Save the credentials to connect before fetching live data.
                   </p>
                 )}
               </div>
@@ -459,6 +530,22 @@ export function ConnectionCard({
           </>
         )}
       </CardContent>
+      <ConfirmationDialog
+        body={
+          <p>
+            When {channel.name} returns live data, the sample data for{" "}
+            {workspace.name} is deleted and corrections made on it are reverted.
+            Reports then show live data only.
+          </p>
+        }
+        confirmLabel="Fetch live data"
+        description="Sample data cannot be generated again once the workspace has live data."
+        isOpen={isConfirmingLiveFetch}
+        isPending={fetchData.isPending}
+        onCancel={() => setIsConfirmingLiveFetch(false)}
+        onConfirm={runFetch}
+        title="Replace sample data with live data?"
+      />
       <ConfirmationDialog
         body={
           <p>

@@ -1186,7 +1186,7 @@ createServer(async (request, response) => {
       ),
     );
   const workspaceConnection = url.pathname.match(
-    /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)\/workspaces\/(\d+)\/(credentials|fetch)$/,
+    /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)\/workspaces\/(\d+)\/(credentials|fetch|sample-data)$/,
   );
   if (workspaceConnection) {
     const workspace = workspaceRows.find(
@@ -1203,6 +1203,26 @@ createServer(async (request, response) => {
     )
       return json(response, 419, { message: "CSRF mismatch" });
     const state = credentialState(workspace);
+    if (workspaceConnection[4] === "sample-data" && request.method === "POST") {
+      if (workspace.data_source === "live")
+        return json(response, 422, {
+          message: "This workspace has live data.",
+          errors: { data_source: ["This workspace has live data."] },
+        });
+      workspace.data_source = "sample";
+      workspace.data_fetched_at = "2026-09-24T09:00:00Z";
+      return json(response, 200, {
+        data: {
+          status: "succeeded",
+          rows_upserted: 8000,
+          date_from: "2025-08-21",
+          date_to: "2026-09-24",
+          is_sample: true,
+          sample_rows_cleared: 0,
+          corrections_reverted: 0,
+        },
+      });
+    }
     if (workspaceConnection[4] === "fetch" && request.method === "POST") {
       if (state.status !== "connected")
         return json(response, 422, { message: "Connect the workspace first." });
@@ -1211,6 +1231,9 @@ createServer(async (request, response) => {
         last_fetched_at: "2026-09-24T09:00:00Z",
         last_fetch_status: "completed",
       });
+      // Live fetchers do not exist yet, so a fetch still stores sample data.
+      workspace.data_source = "sample";
+      workspace.data_fetched_at = "2026-09-24T09:00:00Z";
       return json(response, 200, {
         data: {
           status: "completed",
@@ -1218,6 +1241,8 @@ createServer(async (request, response) => {
           date_from: "2025-08-21",
           date_to: "2026-09-24",
           is_sample: true,
+          sample_rows_cleared: 0,
+          corrections_reverted: 0,
         },
       });
     }

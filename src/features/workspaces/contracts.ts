@@ -8,6 +8,7 @@ export const connectionStatusSchema = z.enum([
   "connected",
   "error",
 ]);
+export const workspaceDataSourceSchema = z.enum(["sample", "live"]);
 const workspaceChannelSchema = z.object({
   id: z.number().int().positive(),
   code: z.string(),
@@ -40,6 +41,9 @@ const workspaceSchema = z.object({
   timezone: z.string(),
   currency: z.string(),
   status: statusSchema,
+  // Null until sample data is generated or live data is fetched.
+  data_source: workspaceDataSourceSchema.nullable().default(null),
+  data_fetched_at: z.string().nullable().default(null),
   invite_status: z.enum(["added", "invited"]).nullable(),
   invite_status_reason: z.enum(["expired", "revoked", "rejected"]).nullable(),
   created_at: z.string().nullable(),
@@ -118,6 +122,9 @@ export const workspaceFetchResponseSchema = z.object({
     date_from: z.string(),
     date_to: z.string(),
     is_sample: z.boolean(),
+    // Set only by the first live fetch of a workspace holding sample data.
+    sample_rows_cleared: z.number().int().nonnegative().default(0),
+    corrections_reverted: z.number().int().nonnegative().default(0),
   }),
 });
 

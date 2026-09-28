@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -37,6 +37,8 @@ const workspace: WorkspaceRecord = {
   timezone: "Europe/London",
   currency: "GBP",
   status: "active",
+  data_source: null,
+  data_fetched_at: null,
   invite_status: null,
   invite_status_reason: null,
   created_at: null,
@@ -137,17 +139,114 @@ describe("ConnectionCard", () => {
     expect(saved).toEqual([]);
   });
 
-  it("keeps Fetch data disabled until the workspace is connected", async () => {
+  it("keeps Fetch live data disabled until the workspace is connected", async () => {
     useConnectionApi("not_connected");
     renderWithScope(<ConnectionCard canManage workspace={workspace} />, {
       platformRoleCode: "SUPER_ADMIN",
     });
     expect(
-      await screen.findByRole("button", { name: "Fetch data" }),
+      await screen.findByRole("button", { name: "Fetch live data" }),
     ).toBeDisabled();
     expect(
-      screen.getByText(/live connection to Meta Ads comes in a later phase/),
+      screen.getByRole("button", { name: "Generate sample data" }),
+    ).toBeEnabled();
+    expect(screen.getByText(/generate sample data to preview/)).toBeVisible();
+  });
+
+  it("generates sample data without a connection", async () => {
+    useConnectionApi("not_connected");
+    let requests = 0;
+    server.use(
+      http.post(workspacePaths.sampleData(2, 4, 7), () => {
+        requests += 1;
+        return HttpResponse.json({
+          data: {
+            status: "succeeded",
+            rows_upserted: 8000,
+            date_from: "2025-08-21",
+            date_to: "2026-09-24",
+            is_sample: true,
+            sample_rows_cleared: 0,
+            corrections_reverted: 0,
+          },
+        });
+      }),
+    );
+    renderWithScope(<ConnectionCard canManage workspace={workspace} />, {
+      platformRoleCode: "SUPER_ADMIN",
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Generate sample data" }),
+    );
+    expect(
+      await screen.findByText(
+        /^8,000 sample rows generated for 21 Aug 2025–24 Sept? 2026.$/,
+      ),
     ).toBeVisible();
+    expect(requests).toBe(1);
+    // The card switches to sample before the workspace refetch lands.
+    expect(screen.getByText(/show\s+generated numbers/)).toBeVisible();
+  });
+
+  it("asks before replacing sample data with live data", async () => {
+    useConnectionApi();
+    let requests = 0;
+    server.use(
+      http.post(workspacePaths.fetch(2, 4, 7), () => {
+        requests += 1;
+        return HttpResponse.json({
+          data: {
+            status: "succeeded",
+            rows_upserted: 30,
+            date_from: "2025-08-21",
+            date_to: "2026-09-24",
+            is_sample: false,
+            sample_rows_cleared: 8000,
+            corrections_reverted: 2,
+          },
+        });
+      }),
+    );
+    renderWithScope(
+      <ConnectionCard
+        canManage
+        workspace={{ ...workspace, data_source: "sample" }}
+      />,
+      { platformRoleCode: "SUPER_ADMIN" },
+    );
+    expect(await screen.findByText(/show\s+generated numbers/)).toBeVisible();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Fetch live data" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Replace sample data with live data?",
+    });
+    expect(requests).toBe(0);
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Fetch live data" }),
+    );
+    expect(
+      await screen.findByText(/Sample data was cleared and 2 corrections/),
+    ).toBeVisible();
+    expect(requests).toBe(1);
+  });
+
+  it("hides sample data once the workspace is live", async () => {
+    useConnectionApi();
+    renderWithScope(
+      <ConnectionCard
+        canManage
+        workspace={{ ...workspace, data_source: "live" }}
+      />,
+      { platformRoleCode: "SUPER_ADMIN" },
+    );
+    expect(
+      await screen.findByRole("button", { name: "Fetch live data" }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole("button", { name: "Generate sample data" }),
+    ).toBeNull();
+    expect(screen.queryByRole("note")).toBeNull();
   });
 
   it("reports the rows a fetch updated", async () => {
@@ -169,7 +268,7 @@ describe("ConnectionCard", () => {
       platformRoleCode: "SUPER_ADMIN",
     });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Fetch data" }),
+      await screen.findByRole("button", { name: "Fetch live data" }),
     );
     expect(
       await screen.findByText(
