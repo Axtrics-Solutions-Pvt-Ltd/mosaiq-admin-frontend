@@ -2,11 +2,9 @@ import { z } from "zod";
 
 export const shareLinkStatuses = ["active", "expired", "revoked"] as const;
 
-// Mirrors the API's `ReportShareLinkRequest`: the readable part of the slug
-// is lowercase words joined by single dashes. The API appends a random
-// 6-character suffix so the URL can't be guessed.
-export const readableSlugPattern = /^[a-z0-9]+(-[a-z0-9]+)*$/;
-export const maxReadableSlugLength = 93;
+// Mirrors the API's `ReportShareLinkRequest`. The slug is a random 32-character
+// hex token set by the API, so it can't be chosen or changed; only the label
+// is editable.
 export const maxLabelLength = 100;
 export const minPasswordLength = 8;
 export const maxPasswordLength = 100;
@@ -43,12 +41,6 @@ const expiresSchema = z.iso.datetime({ offset: true }).nullable();
 // Request bodies, also used by the proxy routes to reject malformed input.
 export const shareLinkCreateRequestSchema = z.strictObject({
   label: labelSchema.optional(),
-  slug: z
-    .string()
-    .max(maxReadableSlugLength)
-    .regex(readableSlugPattern)
-    .nullable()
-    .optional(),
   password: passwordSchema.nullable().optional(),
   expires_at: expiresSchema.optional(),
 });
@@ -92,25 +84,9 @@ function isFuture(value: string, now: number) {
 const futureExpiryMessage = "Choose a date and time in the future.";
 const passwordLengthMessage = `Use ${minPasswordLength} to ${maxPasswordLength} characters.`;
 
-export function validateReadableSlug(value: string) {
-  if (value === "") return undefined;
-  if (value.length > maxReadableSlugLength)
-    return `Use at most ${maxReadableSlugLength} characters.`;
-  if (!readableSlugPattern.test(value))
-    return "Use lowercase letters and numbers, with single dashes between words.";
-  return undefined;
-}
-
 export function linkCreateFormSchema(now = () => Date.now()) {
   return z.object({
     label: z.string().trim().max(maxLabelLength),
-    slug: z
-      .string()
-      .trim()
-      .superRefine((value, context) => {
-        const message = validateReadableSlug(value);
-        if (message) context.addIssue({ code: "custom", message });
-      }),
     password: z
       .string()
       .refine(
@@ -135,7 +111,6 @@ export function toCreateRequest(
 ): ShareLinkCreateRequest {
   return {
     ...(values.label && { label: values.label }),
-    ...(values.slug && { slug: values.slug }),
     ...(values.password && { password: values.password }),
     ...(values.expires_at && {
       expires_at: localInputToIso(values.expires_at),

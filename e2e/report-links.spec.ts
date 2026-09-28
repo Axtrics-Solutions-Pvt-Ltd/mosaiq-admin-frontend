@@ -17,7 +17,6 @@ test("a password-protected share link is created, copied and revoked", async ({
   await page.getByRole("button", { name: "Create link" }).first().click();
   const form = page.getByRole("form", { name: "Create link" });
   await form.getByLabel("Label").fill(label);
-  await form.getByLabel("Readable URL part").fill("northstar-board");
   await form.getByLabel("Password", { exact: true }).fill("open-sesame-42");
   await form.getByRole("button", { name: "Show password" }).click();
   await expect(form.getByLabel("Password", { exact: true })).toHaveAttribute(
@@ -28,7 +27,7 @@ test("a password-protected share link is created, copied and revoked", async ({
 
   const created = page.getByRole("dialog", { name: "Link created" });
   await expect(created.getByTestId("created-link-url")).toHaveText(
-    /^http:\/\/portal\.example\.test\/userPortal\/northstar-board-\d{6}$/,
+    /^http:\/\/portal\.example\.test\/[a-f0-9]{32}$/,
   );
   await expect(
     created.getByText(/The password is not shown again\./),

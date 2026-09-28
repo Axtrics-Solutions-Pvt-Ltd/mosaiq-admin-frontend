@@ -10,70 +10,34 @@ import {
   toCreateRequest,
   toLocalDateTimeInput,
   toUpdateRequest,
-  validateReadableSlug,
 } from "./contracts";
 
 const now = new Date(2026, 8, 25, 12, 0).getTime();
 const clock = () => now;
 
-describe("readable slug validation", () => {
-  it("accepts lowercase words joined by single dashes, or nothing", () => {
-    for (const slug of ["", "acme", "acme-monthly-2026", "q3"])
-      expect(validateReadableSlug(slug)).toBeUndefined();
-  });
-
-  it("rejects what the API pattern rejects", () => {
-    for (const slug of [
-      "Acme",
-      "acme monthly",
-      "acme--monthly",
-      "-acme",
-      "acme-",
-      "acme_monthly",
-      "acmé",
-    ])
-      expect(validateReadableSlug(slug)).toMatch(/lowercase letters/);
-  });
-
-  it("limits the readable part to 93 characters", () => {
-    expect(validateReadableSlug("a".repeat(93))).toBeUndefined();
-    expect(validateReadableSlug("a".repeat(94))).toMatch(/at most 93/);
-  });
-
-  it("is enforced by the create form and the proxy request schema", () => {
-    const form = linkCreateFormSchema(clock).safeParse({
-      label: "",
-      slug: "Bad Slug",
-      password: "",
-      expires_at: "",
-    });
-    expect(form.success).toBe(false);
+describe("link slug", () => {
+  it("can't be chosen: the proxy request schema rejects a slug", () => {
     expect(
-      shareLinkCreateRequestSchema.safeParse({ slug: "bad--slug" }).success,
+      shareLinkCreateRequestSchema.safeParse({ slug: "acme-monthly" }).success,
     ).toBe(false);
-    expect(
-      shareLinkCreateRequestSchema.safeParse({ slug: "good-slug" }).success,
-    ).toBe(true);
   });
 });
 
 describe("create form", () => {
   const schema = linkCreateFormSchema(clock);
-  const empty = { label: "", slug: "", password: "", expires_at: "" };
+  const empty = { label: "", password: "", expires_at: "" };
 
   it("sends only the fields that were filled in", () => {
     expect(toCreateRequest(schema.parse(empty))).toEqual({});
     const request = toCreateRequest(
       schema.parse({
         label: " Leadership ",
-        slug: "acme",
         password: "open-sesame",
         expires_at: "2026-10-01T09:30",
       }),
     );
     expect(request).toEqual({
       label: "Leadership",
-      slug: "acme",
       password: "open-sesame",
       expires_at: new Date(2026, 9, 1, 9, 30).toISOString(),
     });
@@ -172,8 +136,8 @@ describe("share link responses", () => {
     id: 1,
     report_id: 9,
     label: null,
-    slug: "acme-x1y2z3",
-    url: "https://portal.example.test/userPortal/acme-x1y2z3",
+    slug: "f33f97be57604b6b9f11cd9103be58c1",
+    url: "https://portal.example.test/f33f97be57604b6b9f11cd9103be58c1",
     status: "active",
     has_password: false,
     expires_at: null,

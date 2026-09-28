@@ -28,7 +28,6 @@ import {
   linkCreateFormSchema,
   type LinkEditForm,
   linkEditFormSchema,
-  maxReadableSlugLength,
   minPasswordLength,
   type PasswordAction,
   type ShareLink,
@@ -147,7 +146,7 @@ export function CreatedLinkDrawer({
   );
 }
 
-const createFields = ["label", "slug", "password", "expires_at"] as const;
+const createFields = ["label", "password", "expires_at"] as const;
 
 function CreateLinkForm({
   onClose,
@@ -162,7 +161,7 @@ function CreateLinkForm({
   const [formError, setFormError] = useState("");
   const form = useForm<LinkCreateForm>({
     resolver: zodResolver(linkCreateFormSchema()),
-    defaultValues: { label: "", slug: "", password: "", expires_at: "" },
+    defaultValues: { label: "", password: "", expires_at: "" },
   });
   const {
     formState: { errors, isDirty },
@@ -205,7 +204,7 @@ function CreateLinkForm({
           <FormError message={formError} />
           <DrawerSection className="grid gap-4 pt-0">
             <FormField
-              description="Only shown here, to tell links apart. For example: Leadership."
+              description="Only shown here, to tell links apart. For example: Leadership. The URL itself is a random code that can't be changed."
               error={errors.label?.message}
               id="link-label"
               label="Label"
@@ -214,22 +213,6 @@ function CreateLinkForm({
                 aria-invalid={Boolean(errors.label)}
                 id="link-label"
                 {...register("label")}
-              />
-            </FormField>
-            <FormField
-              description={`Lowercase words joined by dashes, up to ${maxReadableSlugLength} characters. Leave empty to use the report name. A random suffix is always added and the slug can't be changed later.`}
-              error={errors.slug?.message}
-              id="link-slug"
-              label="Readable URL part"
-            >
-              <Input
-                aria-invalid={Boolean(errors.slug)}
-                autoCapitalize="none"
-                className="font-mono"
-                id="link-slug"
-                placeholder="acme-monthly"
-                spellCheck={false}
-                {...register("slug")}
               />
             </FormField>
             <FormField

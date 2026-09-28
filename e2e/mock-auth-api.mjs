@@ -1446,23 +1446,15 @@ createServer(async (request, response) => {
         });
       if (!linkMatch[1] && request.method === "POST") {
         const body = await readJson(request);
-        if (body.slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(body.slug))
-          return json(response, 422, {
-            message: "The given data was invalid.",
-            errors: {
-              slug: [
-                "The slug may only contain lowercase letters, numbers and single dashes.",
-              ],
-            },
-          });
         const id = nextShareLinkId++;
-        const slug = `${body.slug || "report"}-${String(id).padStart(6, "0")}`;
+        // The API sets a random 32-character hex token; the mock pads the id.
+        const slug = String(id).padStart(32, "0");
         const link = {
           id,
           report_id: report.id,
           label: body.label ?? null,
           slug,
-          url: `http://portal.example.test/userPortal/${slug}`,
+          url: `http://portal.example.test/${slug}`,
           status: "active",
           has_password: typeof body.password === "string",
           expires_at: body.expires_at ?? null,
