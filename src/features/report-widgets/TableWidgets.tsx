@@ -33,7 +33,7 @@ function ScrollTable({
 const headCell = "text-muted-foreground py-2 pr-4 text-xs font-medium";
 const bodyCell = "py-2.5 pr-4 align-top";
 
-const statusTones: Record<
+export const statusTones: Record<
   string,
   "success" | "warning" | "danger" | "neutral"
 > = {

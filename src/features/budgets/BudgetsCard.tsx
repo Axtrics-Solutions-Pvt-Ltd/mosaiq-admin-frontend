@@ -24,7 +24,7 @@ import {
 } from "./budget-grid";
 import { useBudgets, useUpdateBudgets } from "./queries";
 
-// The anchor the report builder's "Add budgets" link opens.
+// The anchor the report builder's "Edit the whole year" link opens.
 export const budgetsCardId = "budgets";
 
 const monthLabel = new Intl.DateTimeFormat("en-GB", {

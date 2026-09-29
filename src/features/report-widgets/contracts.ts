@@ -107,6 +107,22 @@ const payloadSchemas = {
     ),
     filterable: z.boolean(),
   }),
+  gauge: z.object({
+    value: numberOrNull,
+    max: z.number(),
+    format: formatSchema,
+    label: z.string().nullable().optional(),
+    status: z
+      .object({
+        // An unknown status code from a newer backend shows as neutral.
+        code: z.string(),
+        label: z.string(),
+      })
+      .nullable()
+      .optional(),
+    change: changeSchema.nullable().optional(),
+    details: z.array(labelledValue).optional(),
+  }),
   bullet_list: z.object({
     tone: z.enum(["positive", "negative", "neutral"]),
     items: z.array(z.string()),

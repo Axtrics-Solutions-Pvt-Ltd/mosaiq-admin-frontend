@@ -1,7 +1,6 @@
 "use client";
 
 import { Eye, EyeOff, Pencil, Plus } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { StatePanel } from "@/components/shared/StatePanel";
@@ -171,9 +170,9 @@ export type CanvasPreview = {
 };
 
 export function ReportCanvas({
-  budgetsUrl,
   currency,
   isPortalView,
+  onAddBudgets,
   onChannelSelect,
   onEditSection,
   onEditWidget,
@@ -186,10 +185,10 @@ export function ReportCanvas({
   selectedTabCode,
   valueAdornment,
 }: {
-  // Where budget pacing without budgets sends the admin to add them.
-  budgetsUrl: string;
   currency: string;
   isPortalView: boolean;
+  // Opens budget pacing's monthly budgets in the inspector.
+  onAddBudgets: (itemId: number) => void;
   onChannelSelect: (channelCode: string) => void;
   // Opens a section's colour and title in the inspector.
   onEditSection: (itemId: number) => void;
@@ -443,11 +442,13 @@ export function ReportCanvas({
                         !isPortalView &&
                         widget.empty &&
                         widget.reason === "no_budget" ? (
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={budgetsUrl}>
-                              <Plus aria-hidden className="size-4" /> Add
-                              budgets
-                            </Link>
+                          <Button
+                            onClick={() => onAddBudgets(item.id)}
+                            size="sm"
+                            type="button"
+                            variant="outline"
+                          >
+                            <Plus aria-hidden className="size-4" /> Add budgets
                           </Button>
                         ) : undefined
                       }

@@ -119,6 +119,8 @@ function Builder({
   const isWide = useMediaQuery("(min-width: 80rem)");
   const [isPortalView, setIsPortalView] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<number>();
+  // Bumped by "Add budgets" so the inspector scrolls to the budgets.
+  const [budgetFocusRequest, setBudgetFocusRequest] = useState(0);
   const [isInspectorDirty, setIsInspectorDirty] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<{
     itemId: number | undefined;
@@ -294,9 +296,20 @@ function Builder({
       />
     ) : null;
 
+  const budgetMonth = (
+    preview.data?.period.to ??
+    range?.to ??
+    new Date().toISOString()
+  ).slice(0, 7);
   const inspector = selectedItem ? (
     <WidgetInspector
       accents={layout.data?.accents}
+      budgets={{
+        allBudgetsHref: `${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`,
+        focusRequest: budgetFocusRequest,
+        initialMonth: budgetMonth,
+        workspaces: report.workspaces,
+      }}
       item={selectedItem}
       onDirtyChange={setIsInspectorDirty}
       scope={scope}
@@ -388,12 +401,18 @@ function Builder({
       >
         <div className="min-w-0">
           <ReportCanvas
-            budgetsUrl={`${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`}
             currency={meta.data?.currency ?? report.currency}
             isPortalView={isPortalView}
+            onAddBudgets={(itemId) => {
+              setBudgetFocusRequest((request) => request + 1);
+              requestSelect(itemId);
+            }}
             onChannelSelect={(channel) => replaceView({ channel })}
             onEditSection={(itemId) => requestSelect(itemId)}
-            onEditWidget={(itemId) => requestSelect(itemId)}
+            onEditWidget={(itemId) => {
+              setBudgetFocusRequest(0);
+              requestSelect(itemId);
+            }}
             onReorder={saveOrder}
             onSelectTab={(code) => replaceView({ tab: code })}
             onToggleWidget={toggleWidget}

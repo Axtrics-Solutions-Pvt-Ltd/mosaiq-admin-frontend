@@ -137,6 +137,17 @@ describe("WidgetRenderer", () => {
     expect(screen.getByText("2.18x")).toBeVisible();
   });
 
+  it("shows a gauge's value, status in text and details", () => {
+    render(
+      <WidgetRenderer currency="USD" widget={widget(widgetFixtures.gauge)} />,
+    );
+    expect(screen.getByText("82%")).toBeVisible();
+    expect(screen.getByText("Under pacing")).toBeVisible();
+    expect(screen.getByText("vs prev 30 days")).toBeVisible();
+    expect(screen.getByText("$350K")).toBeVisible();
+    expect(screen.getByText("Remaining")).toBeVisible();
+  });
+
   it("prints every heatmap value so shading isn't the only cue", () => {
     render(
       <WidgetRenderer currency="USD" widget={widget(widgetFixtures.heatmap)} />,
@@ -151,6 +162,7 @@ describe("WidgetRenderer", () => {
     ["channel_list", ["items.0.spend", "items.1.roas"]],
     ["metric_table", ["rows.1.value"]],
     ["data_table", ["rows.0.spend", "rows.1.roas"]],
+    ["gauge", ["value", "details.1.value"]],
   ] as const)("places %s value adornments by payload path", (type, paths) => {
     render(
       <WidgetRenderer

@@ -10,6 +10,7 @@ import {
 } from "./contracts";
 import { CreativeGridWidget } from "./CreativeGridWidget";
 import { DonutWidget } from "./DonutWidget";
+import { GaugeWidget } from "./GaugeWidget";
 import { KpiGroupWidget, KpiWidget } from "./KpiWidget";
 import { LineChartWidget } from "./LineChartWidget";
 import {
@@ -123,6 +124,14 @@ function WidgetBody({
         <DonutWidget
           currency={currency}
           onChannelSelect={onChannelSelect}
+          payload={parsed.payload}
+          valueAdornment={valueAdornment}
+        />
+      );
+    case "gauge":
+      return (
+        <GaugeWidget
+          currency={currency}
           payload={parsed.payload}
           valueAdornment={valueAdornment}
         />

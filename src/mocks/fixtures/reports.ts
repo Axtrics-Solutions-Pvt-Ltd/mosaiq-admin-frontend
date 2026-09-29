@@ -96,6 +96,32 @@ export const widgetFixtures = {
     ],
     filterable: true,
   },
+  gauge: {
+    code: "budget_utilization",
+    type: "gauge",
+    kind: "live",
+    title: "Budget Utilization",
+    subtitle: null,
+    as_of: null,
+    empty: false,
+    value: 82,
+    max: 100,
+    format: "percent",
+    label: "Under pacing",
+    status: { code: "on_watch", label: "Under pacing" },
+    change: {
+      value: 5,
+      format: "percent",
+      direction: "up",
+      sentiment: "neutral",
+      label: "vs prev 30 days",
+    },
+    details: [
+      { label: "Total budget", value: 350000, format: "currency" },
+      { label: "Spent", value: 287000, format: "currency" },
+      { label: "Remaining", value: 63000, format: "currency" },
+    ],
+  },
   bullet_list: {
     code: "what_worked",
     type: "bullet_list",
@@ -384,16 +410,20 @@ export const widgetFixtures = {
 // Budget pacing without any budget in the range (API Step 6).
 export const noBudgetWidgetFixture = {
   code: "budget_utilization",
-  type: "donut",
+  type: "gauge",
   kind: "live",
   title: "Budget Utilization",
   subtitle: null,
   as_of: null,
   empty: true,
   reason: "no_budget",
-  center: null,
-  items: [],
-  filterable: false,
+  value: null,
+  max: 100,
+  format: "percent",
+  label: null,
+  status: null,
+  change: null,
+  details: [],
 } as const;
 
 export type AccentFixture = {

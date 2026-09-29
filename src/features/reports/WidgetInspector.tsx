@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useFieldArray,
   useForm,
@@ -19,6 +19,10 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { toast } from "@/components/ui/Toast";
+import {
+  BudgetMonthEditor,
+  type BudgetWorkspace,
+} from "@/features/budgets/BudgetMonthEditor";
 import { ApiError } from "@/lib/api/errors";
 
 import type { ReportScope } from "./api";
@@ -517,15 +521,27 @@ function TitleOnlyForm({
   );
 }
 
+// Budget pacing reads the client's monthly budgets, edited beside the widget.
+export const budgetWidgetCode = "budget_utilization";
+
+export type InspectorBudgets = {
+  allBudgetsHref: string;
+  focusRequest: number;
+  initialMonth: string;
+  workspaces: readonly BudgetWorkspace[];
+};
+
 // Edits one widget, or a section's colour and title (`accents` are the
 // swatches from GET layout).
 export function WidgetInspector({
   accents = [],
+  budgets,
   item,
   onDirtyChange,
   scope,
 }: {
   accents?: readonly Accent[];
+  budgets?: InspectorBudgets;
   item: LayoutItem;
   onDirtyChange: (isDirty: boolean) => void;
   scope: ReportScope;
@@ -538,6 +554,13 @@ export function WidgetInspector({
   const title = itemTitle(item);
   const isSection = item.level === "section";
   const noun = isSection ? "section" : "widget";
+  // The widget form and the budgets have separate unsaved edits.
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [isBudgetDirty, setIsBudgetDirty] = useState(false);
+  useEffect(
+    () => onDirtyChange(isFormDirty || isBudgetDirty),
+    [isFormDirty, isBudgetDirty, onDirtyChange],
+  );
 
   const save: SaveHandler = async (patch) => {
     try {
@@ -561,7 +584,7 @@ export function WidgetInspector({
     try {
       await resetMutation.mutateAsync(item.id);
       toast({ title: `${title} reset to its defaults`, tone: "success" });
-      onDirtyChange(false);
+      setIsFormDirty(false);
       setFormVersion((version) => version + 1);
     } catch {
       toast({
@@ -577,7 +600,7 @@ export function WidgetInspector({
   const formProps = {
     isSaving: updateMutation.isPending,
     item,
-    onDirtyChange,
+    onDirtyChange: setIsFormDirty,
     save,
   };
 
@@ -609,6 +632,18 @@ export function WidgetInspector({
             note="This widget's content can't be edited here yet. You can rename it and show or hide it."
           />
         ))}
+      {budgets && item.code === budgetWidgetCode && (
+        <BudgetMonthEditor
+          agencyId={scope.agencyId}
+          allBudgetsHref={budgets.allBudgetsHref}
+          clientId={scope.clientId}
+          focusRequest={budgets.focusRequest}
+          initialMonth={budgets.initialMonth}
+          key={`budgets-${item.id}`}
+          onDirtyChange={setIsBudgetDirty}
+          workspaces={budgets.workspaces}
+        />
+      )}
       <div className="border-t pt-4">
         <Button
           disabled={resetMutation.isPending}

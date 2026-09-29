@@ -30,9 +30,9 @@ function Harness({
   if (!layout.data) return <p>Loading</p>;
   return (
     <ReportCanvas
-      budgetsUrl="/clients/20"
       currency="USD"
       isPortalView={isPortalView}
+      onAddBudgets={vi.fn()}
       onChannelSelect={vi.fn()}
       onEditSection={onEditSection}
       onEditWidget={vi.fn()}
