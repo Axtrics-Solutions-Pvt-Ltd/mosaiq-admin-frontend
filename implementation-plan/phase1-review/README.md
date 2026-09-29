@@ -57,6 +57,8 @@ The capabilities `imports.create`, `importHistory.view`, `connectors.view` and `
 | 5 | [STEP-5-SHARE-LINKS.md](STEP-5-SHARE-LINKS.md) | Links tab: create, copy, password, expiry, revoke, regenerate |
 | 6 | [STEP-6-REMAINING-WIDGETS.md](STEP-6-REMAINING-WIDGETS.md) | Renderers and editors for the remaining widget types, budgets |
 | 7 | [STEP-7-LEGACY-RETIREMENT.md](STEP-7-LEGACY-RETIREMENT.md) | KPI curation and leftover legacy code removed |
+| 8 | [STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md](STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md) | Manager access to several clients, on invite and edit |
+| 9 | [STEP-9-SECTION-ACCENTS.md](STEP-9-SECTION-ACCENTS.md) | Section colours in the builder: picker, coloured section and tab rows |
 
 ## Definition of done per step
 

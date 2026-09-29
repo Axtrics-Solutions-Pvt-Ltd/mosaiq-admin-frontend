@@ -23,6 +23,7 @@ import { ApiError } from "@/lib/api/errors";
 
 import type { ReportScope } from "./api";
 import {
+  type Accent,
   type LayoutItem,
   reportMetricCodes,
   reportMetricLabel,
@@ -56,10 +57,11 @@ import {
   useReportDirty,
   useSubmit,
 } from "./inspector-parts";
+import { itemTitle } from "./layout";
 import { hasManualEditor } from "./manual-forms";
 import { ManualDataForm } from "./ManualDataForms";
 import { useResetLayoutItem, useUpdateLayoutItem } from "./queries";
-import { itemTitle } from "./StructurePanel";
+import { SectionForm } from "./SectionForm";
 
 const kindLabels = {
   live: "Live data",
@@ -515,11 +517,15 @@ function TitleOnlyForm({
   );
 }
 
+// Edits one widget, or a section's colour and title (`accents` are the
+// swatches from GET layout).
 export function WidgetInspector({
+  accents = [],
   item,
   onDirtyChange,
   scope,
 }: {
+  accents?: readonly Accent[];
   item: LayoutItem;
   onDirtyChange: (isDirty: boolean) => void;
   scope: ReportScope;
@@ -530,6 +536,8 @@ export function WidgetInspector({
   // A reset or a new item starts the form again from the stored values.
   const [formVersion, setFormVersion] = useState(0);
   const title = itemTitle(item);
+  const isSection = item.level === "section";
+  const noun = isSection ? "section" : "widget";
 
   const save: SaveHandler = async (patch) => {
     try {
@@ -544,7 +552,7 @@ export function WidgetInspector({
             undefined,
             {},
             undefined,
-            "The widget could not be saved. Please try again.",
+            `The ${noun} could not be saved. Please try again.`,
           );
     }
   };
@@ -557,8 +565,8 @@ export function WidgetInspector({
       setFormVersion((version) => version + 1);
     } catch {
       toast({
-        title: "Widget not reset",
-        description: "The widget could not be reset. Please try again.",
+        title: isSection ? "Section not reset" : "Widget not reset",
+        description: `The ${noun} could not be reset. Please try again.`,
         tone: "error",
       });
     }
@@ -576,7 +584,9 @@ export function WidgetInspector({
   return (
     <section aria-label={`Inspector: ${title}`} className="space-y-4">
       <header className="space-y-1.5">
-        <p className="text-muted-foreground text-xs font-medium">Widget</p>
+        <p className="text-muted-foreground text-xs font-medium">
+          {isSection ? "Section" : "Widget"}
+        </p>
         <h2 className="text-strong text-base font-semibold">{title}</h2>
         <div className="flex flex-wrap gap-1.5">
           {item.kind && <Badge tone="primary">{kindLabels[item.kind]}</Badge>}
@@ -584,6 +594,9 @@ export function WidgetInspector({
           {!item.is_available && <Badge tone="neutral">Coming soon</Badge>}
         </div>
       </header>
+      {isSection && (
+        <SectionForm accents={accents} key={formKey} {...formProps} />
+      )}
       {item.kind === "live" && <LiveWidgetForm key={formKey} {...formProps} />}
       {item.kind === "text" && <TextWidgetForm key={formKey} {...formProps} />}
       {item.kind === "manual_data" &&
@@ -604,23 +617,25 @@ export function WidgetInspector({
           type="button"
           variant="outline"
         >
-          <RotateCcw aria-hidden className="size-4" /> Reset widget
+          <RotateCcw aria-hidden className="size-4" />{" "}
+          {isSection ? "Reset section" : "Reset widget"}
         </Button>
       </div>
       <ConfirmationDialog
         body={
           <p>
-            {title} goes back to its catalogue defaults: its default visibility,
-            and no custom title, settings or written content.
+            {isSection
+              ? `${title} goes back to its catalogue defaults: its default visibility, colour and title.`
+              : `${title} goes back to its catalogue defaults: its default visibility, and no custom title, settings or written content.`}
           </p>
         }
-        confirmLabel="Reset widget"
+        confirmLabel={isSection ? "Reset section" : "Reset widget"}
         description="This can't be undone."
         isOpen={isConfirmingReset}
         isPending={resetMutation.isPending}
         onCancel={() => setIsConfirmingReset(false)}
         onConfirm={reset}
-        title="Reset this widget?"
+        title={isSection ? "Reset this section?" : "Reset this widget?"}
       />
     </section>
   );

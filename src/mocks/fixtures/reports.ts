@@ -396,6 +396,79 @@ export const noBudgetWidgetFixture = {
   filterable: false,
 } as const;
 
+export type AccentFixture = {
+  key: string;
+  label: string;
+  base: string;
+  strong: string;
+  soft: string;
+};
+
+// The API's swatch list (config/report_accents.php).
+export const accentFixtures: AccentFixture[] = [
+  {
+    key: "blue",
+    label: "Blue",
+    base: "#2563EB",
+    strong: "#1D4ED8",
+    soft: "#EFF6FF",
+  },
+  {
+    key: "indigo",
+    label: "Indigo",
+    base: "#4F46E5",
+    strong: "#4338CA",
+    soft: "#EEF2FF",
+  },
+  {
+    key: "teal",
+    label: "Teal",
+    base: "#0F766E",
+    strong: "#115E59",
+    soft: "#F0FDFA",
+  },
+  {
+    key: "violet",
+    label: "Violet",
+    base: "#7C3AED",
+    strong: "#6D28D9",
+    soft: "#F5F3FF",
+  },
+  {
+    key: "rose",
+    label: "Rose",
+    base: "#E11D48",
+    strong: "#BE123C",
+    soft: "#FFF1F2",
+  },
+  {
+    key: "amber",
+    label: "Amber",
+    base: "#B45309",
+    strong: "#92400E",
+    soft: "#FFFBEB",
+  },
+  {
+    key: "emerald",
+    label: "Emerald",
+    base: "#047857",
+    strong: "#065F46",
+    soft: "#ECFDF5",
+  },
+  {
+    key: "slate",
+    label: "Slate",
+    base: "#334155",
+    strong: "#1E293B",
+    soft: "#F1F5F9",
+  },
+];
+
+export function accentFixture(key: string, isDefault = true) {
+  const accent = accentFixtures.find((swatch) => swatch.key === key)!;
+  return { ...accent, is_default: isDefault };
+}
+
 export type LayoutItemFixture = {
   id: number;
   parent_id: number | null;
@@ -409,6 +482,7 @@ export type LayoutItemFixture = {
   is_available: boolean;
   position: number;
   settings: Record<string, unknown> | unknown[];
+  accent: (AccentFixture & { is_default: boolean }) | null;
   content: unknown;
   as_of: string | null;
   updated_by: number | null;
@@ -429,6 +503,7 @@ export function layoutItem(fixture: LayoutItemInput): LayoutItemFixture {
     is_enabled: true,
     is_available: true,
     settings: [],
+    accent: null,
     content: null,
     as_of: null,
     updated_by: null,
@@ -444,6 +519,7 @@ export function layoutFixture() {
   return {
     report_id: 7,
     layout_version: 3,
+    accents: accentFixtures,
     sections: [
       layoutItem({
         id: 1,
@@ -451,6 +527,7 @@ export function layoutFixture() {
         level: "section",
         code: "reporting",
         title: "Reporting Dashboard",
+        accent: accentFixture("blue"),
         position: 0,
         children: [
           layoutItem({
@@ -499,6 +576,7 @@ export function layoutFixture() {
         level: "section",
         code: "mmm",
         title: "Media Mix Model",
+        accent: accentFixture("teal"),
         is_enabled: false,
         position: 1,
         children: [

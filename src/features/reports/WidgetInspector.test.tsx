@@ -4,7 +4,12 @@ import { http, HttpResponse } from "msw";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { reportPaths } from "@/lib/api/paths";
-import { layoutItem, type LayoutItemFixture } from "@/mocks/fixtures/reports";
+import {
+  accentFixture,
+  accentFixtures,
+  layoutItem,
+  type LayoutItemFixture,
+} from "@/mocks/fixtures/reports";
 import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
 
@@ -60,9 +65,28 @@ function usePatchApi(fixture: LayoutItemFixture, response?: () => Response) {
   return sent;
 }
 
+function section(overrides: Partial<LayoutItemFixture>) {
+  return widget({
+    id: 1,
+    parent_id: null,
+    level: "section",
+    code: "reporting",
+    title: "Reporting Dashboard",
+    type: null,
+    kind: null,
+    accent: accentFixture("blue"),
+    ...overrides,
+  });
+}
+
 function renderInspector(item: ReturnType<typeof widget>["item"]) {
   return renderWithScope(
-    <WidgetInspector item={item} onDirtyChange={vi.fn()} scope={scope} />,
+    <WidgetInspector
+      accents={accentFixtures}
+      item={item}
+      onDirtyChange={vi.fn()}
+      scope={scope}
+    />,
     { platformRoleCode: "SUPER_ADMIN" },
   );
 }
@@ -214,5 +238,62 @@ describe("WidgetInspector", () => {
       within(dialog).getByRole("button", { name: "Reset widget" }),
     );
     await waitFor(() => expect(resets).toBe(1));
+  });
+
+  it("shows a section's colours with its default chosen and no subtitle", () => {
+    renderInspector(section({}).item);
+    const colours = screen.getByRole("group", { name: "Colour" });
+    expect(within(colours).getAllByRole("radio")).toHaveLength(8);
+    expect(
+      within(colours).getByRole("radio", { name: "Blue (default)" }),
+    ).toBeChecked();
+    expect(screen.getByLabelText("Title")).toBeVisible();
+    expect(screen.queryByLabelText("Subtitle")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset section" })).toBeVisible();
+  });
+
+  it("saves a section colour with the section's other settings", async () => {
+    const { fixture, item } = section({ settings: { title: "Performance" } });
+    const sent = usePatchApi(fixture);
+    renderInspector(item);
+    await userEvent.click(screen.getByRole("radio", { name: "Rose" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      settings: { title: "Performance", accent: "rose" },
+    });
+  });
+
+  it("shows a stored colour as chosen and the API's colour error on it", async () => {
+    const { fixture, item } = section({
+      settings: { accent: "teal" },
+      accent: accentFixture("teal", false),
+    });
+    usePatchApi(fixture, () =>
+      HttpResponse.json(
+        {
+          message: "The given data was invalid.",
+          errors: {
+            "settings.accent": ["Choose one of the available colours."],
+          },
+        },
+        { status: 422 },
+      ),
+    );
+    renderInspector(item);
+    expect(screen.getByRole("radio", { name: "Teal" })).toBeChecked();
+    await userEvent.click(screen.getByRole("radio", { name: "Slate" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("Choose one of the available colours."),
+    ).toBeVisible();
+    expect(screen.getByRole("radio", { name: "Slate" })).toBeChecked();
+  });
+
+  it("offers no colour on a widget", () => {
+    renderInspector(widget({}).item);
+    expect(
+      screen.queryByRole("group", { name: "Colour" }),
+    ).not.toBeInTheDocument();
   });
 });

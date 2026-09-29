@@ -129,6 +129,20 @@ export const reportCreateFormSchema = reportProfileFormSchema
   .extend({ workspace_ids: workspaceIdsSchema });
 
 export const layoutLevels = ["section", "tab", "widget"] as const;
+
+// A section colour from the API's fixed swatch list. The shades are drawn as
+// sent: `base` fills the active section tab (white text), `strong` marks the
+// active sub-tab, `soft` is the sub-tab hover.
+const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+export const accentSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  base: hexColorSchema,
+  strong: hexColorSchema,
+  soft: hexColorSchema,
+});
+// A section's colour: its `settings.accent`, or the catalogue default.
+const resolvedAccentSchema = accentSchema.extend({ is_default: z.boolean() });
 export const widgetKinds = ["live", "text", "manual_data"] as const;
 
 export type LayoutItem = {
@@ -144,6 +158,8 @@ export type LayoutItem = {
   is_available: boolean;
   position: number;
   settings: Record<string, unknown>;
+  // Sections only; null for tabs and widgets, which follow their section.
+  accent: ResolvedAccent | null;
   content: unknown;
   as_of: string | null;
   updated_at: string | null;
@@ -164,6 +180,7 @@ const layoutItemSchema: z.ZodType<LayoutItem, unknown> = z.lazy(() =>
     is_available: z.boolean(),
     position: z.number().int(),
     settings: settingsSchema,
+    accent: resolvedAccentSchema.nullable().default(null),
     content: z.unknown(),
     as_of: z.string().nullable(),
     updated_at: z.string().nullable(),
@@ -175,6 +192,8 @@ export const layoutResponseSchema = z.object({
   data: z.object({
     report_id: idSchema,
     layout_version: z.number().int(),
+    // The swatches a section can use, in display order.
+    accents: z.array(accentSchema).default([]),
     sections: z.array(layoutItemSchema),
   }),
 });
@@ -225,6 +244,7 @@ export const previewMetaSchema = z.object({
       z.object({
         code: z.string(),
         name: z.string(),
+        accent: resolvedAccentSchema.nullable().default(null),
         tabs: z.array(z.object({ code: z.string(), name: z.string() })),
       }),
     ),
@@ -283,6 +303,8 @@ export type ReportCreateForm = z.infer<typeof reportCreateFormSchema>;
 export type ReportLayout = z.infer<typeof layoutResponseSchema>["data"];
 export type ReorderItem = z.infer<typeof reorderRequestSchema>["items"][number];
 export type LayoutItemPatch = z.infer<typeof layoutItemPatchSchema>;
+export type Accent = z.infer<typeof accentSchema>;
+export type ResolvedAccent = z.infer<typeof resolvedAccentSchema>;
 export type PreviewMeta = z.infer<typeof previewMetaSchema>["data"];
 export type PreviewTab = z.infer<typeof previewTabSchema>["data"];
 export type PreviewWidget = PreviewTab["widgets"][number];

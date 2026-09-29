@@ -32,7 +32,8 @@ test("budget pacing asks for budgets, and manual content is entered in the build
   // Without budgets, pacing is empty and offers a way to add them.
   await page
     .getByRole("navigation", { name: "Reporting Dashboard tabs" })
-    .getByRole("button", { name: "Channels" })
+    // The label, not the tab's drag handle or Move menu.
+    .getByRole("button", { name: /^Channels/ })
     .click();
   const pacing = page.getByRole("region", {
     name: "Budget Utilization",
@@ -75,7 +76,7 @@ test("budget pacing asks for budgets, and manual content is entered in the build
   // Enter Marketing Intelligence content with the generic list editor.
   await page
     .getByRole("navigation", { name: "Report sections" })
-    .getByRole("button", { name: "Marketing Intelligence" })
+    .getByRole("button", { name: /^Marketing Intelligence/ })
     .click();
   await page.getByRole("button", { name: "Edit Audience Overview" }).click();
   const inspector = page.getByRole("region", {

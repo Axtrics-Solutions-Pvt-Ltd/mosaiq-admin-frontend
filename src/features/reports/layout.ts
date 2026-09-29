@@ -1,6 +1,25 @@
-import type { LayoutItem, ReorderItem } from "./contracts";
+import type { CSSProperties } from "react";
+
+import type { LayoutItem, ReorderItem, ResolvedAccent } from "./contracts";
 
 // Pure helpers over the section → tab → widget tree from `GET layout`.
+
+export function itemTitle(item: LayoutItem) {
+  return item.title ?? item.default_title ?? item.code;
+}
+
+// A section's colour as CSS variables for its tab rows. Without one the rows
+// keep the default primary styling.
+export function accentStyle(
+  accent: ResolvedAccent | null | undefined,
+): CSSProperties | undefined {
+  if (!accent) return undefined;
+  return {
+    "--section-accent": accent.base,
+    "--section-accent-strong": accent.strong,
+    "--section-accent-soft": accent.soft,
+  } as CSSProperties;
+}
 
 export function findLayoutItem(
   items: readonly LayoutItem[],
@@ -74,6 +93,23 @@ export function moveInOrder(
   if (index < 0 || target < 0 || target >= ordered.length) return undefined;
   const moved = [...ordered];
   [moved[index], moved[target]] = [moved[target]!, moved[index]!];
+  return toOrder(moved);
+}
+
+// The reorder payload after dropping one item onto another's place, as a drag
+// does: the items between them shift by one.
+export function moveToInOrder(
+  siblings: readonly LayoutItem[],
+  id: number,
+  targetId: number,
+): ReorderItem[] | undefined {
+  const ordered = [...siblings].sort((a, b) => a.position - b.position);
+  const index = ordered.findIndex((item) => item.id === id);
+  const target = ordered.findIndex((item) => item.id === targetId);
+  if (index < 0 || target < 0 || index === target) return undefined;
+  const moved = [...ordered];
+  const [item] = moved.splice(index, 1);
+  moved.splice(target, 0, item!);
   return toOrder(moved);
 }
 

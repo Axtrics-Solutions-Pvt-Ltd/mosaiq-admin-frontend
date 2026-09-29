@@ -98,9 +98,17 @@ export const textFormSchema = z
 
 export const titleFormSchema = z.object(titleFields);
 
+// Sections take a title and a colour, no subtitle. An empty `accent` keeps
+// the catalogue default.
+export const sectionFormSchema = z.object({
+  title: titleFields.title,
+  accent: z.string(),
+});
+
 export type LiveFormValues = z.infer<typeof liveFormSchema>;
 export type TextFormValues = z.infer<typeof textFormSchema>;
 export type TitleFormValues = z.infer<typeof titleFormSchema>;
+export type SectionFormValues = z.infer<typeof sectionFormSchema>;
 
 function record(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -120,6 +128,13 @@ export function toTitleValues(item: LayoutItem): TitleFormValues {
   return {
     title: text(item.settings.title),
     subtitle: text(item.settings.subtitle),
+  };
+}
+
+export function toSectionValues(item: LayoutItem): SectionFormValues {
+  return {
+    title: text(item.settings.title),
+    accent: item.accent && !item.accent.is_default ? item.accent.key : "",
   };
 }
 
@@ -207,6 +222,19 @@ export function titlePatch(
   values: TitleFormValues,
 ): LayoutItemPatch {
   return { settings: settingsOrNull(withTitles(item.settings, values)) };
+}
+
+// Carries other stored settings over, as settings replace the stored value.
+export function sectionPatch(
+  item: LayoutItem,
+  values: SectionFormValues,
+): LayoutItemPatch {
+  const next = { ...item.settings };
+  delete next.title;
+  delete next.accent;
+  if (values.title.trim()) next.title = values.title.trim();
+  if (values.accent) next.accent = values.accent;
+  return { settings: settingsOrNull(next) };
 }
 
 export function livePatch(

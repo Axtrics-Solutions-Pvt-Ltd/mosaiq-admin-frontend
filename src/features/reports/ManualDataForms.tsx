@@ -28,6 +28,7 @@ import {
   useReportDirty,
   useSubmit,
 } from "./inspector-parts";
+import { itemTitle } from "./layout";
 import {
   emptyRow,
   formatLabels,
@@ -40,7 +41,6 @@ import {
   numericFormats,
   toManualValues,
 } from "./manual-forms";
-import { itemTitle } from "./StructurePanel";
 
 function useManualForm<Type extends ManualType>(
   type: Type,

@@ -30,16 +30,48 @@ test("a report is created, shaped, written and corrected in the builder", async 
   ).toBeVisible();
 
   // Hide the Detailed Metrics tab from the portal.
-  if (isMobile) await page.getByRole("button", { name: "Structure" }).click();
-  const detailed = page
-    .getByRole("navigation", { name: "Report structure" })
-    .getByRole("checkbox", { name: "Show Detailed Metrics in the portal" });
+  const designTabs = page.getByRole("navigation", {
+    name: "Reporting Dashboard tabs",
+  });
+  const detailed = designTabs.getByRole("checkbox", {
+    name: "Show Detailed Metrics in the portal",
+  });
   // The optimistic update lands once any layout refetch is cancelled, so
   // wait for the state instead of expecting it right after the click.
   await detailed.click();
   await expect(detailed).not.toBeChecked();
-  if (isMobile)
-    await page.getByRole("button", { name: "Close drawer" }).click();
+
+  // Put Detailed Metrics first: dragged by its grip, or from its menu on a
+  // phone.
+  if (isMobile) {
+    await designTabs
+      .getByRole("button", { name: "Move Detailed Metrics" })
+      .click();
+    await page
+      .getByRole("group", { name: "Move Detailed Metrics" })
+      .getByRole("button", { name: "Move left" })
+      .click();
+  } else {
+    const grip = designTabs.getByRole("button", {
+      name: "Drag Detailed Metrics to reorder",
+    });
+    const target = await designTabs
+      .getByRole("button", { name: "Drag Executive Summary to reorder" })
+      .boundingBox();
+    await grip.hover();
+    await page.mouse.down();
+    // dnd-kit starts a drag after a few pixels, then follows the pointer.
+    await page.mouse.move(target!.x + 2, target!.y + target!.height / 2, {
+      steps: 12,
+    });
+    await page.mouse.up();
+  }
+  await expect(designTabs.getByRole("listitem").nth(0)).toContainText(
+    "Detailed Metrics",
+  );
+  await expect(designTabs.getByRole("listitem").nth(1)).toContainText(
+    "Executive Summary",
+  );
 
   // Write the AI summary.
   await page.getByRole("button", { name: "Edit AI Summary" }).click();

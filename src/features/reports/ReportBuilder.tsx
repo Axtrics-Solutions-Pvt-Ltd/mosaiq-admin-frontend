@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, ListTree, PencilRuler, Share2 } from "lucide-react";
+import { Eye, PencilRuler, Share2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -40,7 +40,7 @@ import {
   type Report,
   reportMetricLabel,
 } from "./contracts";
-import { defaultTabCode, findLayoutItem, findTab, moveInOrder } from "./layout";
+import { defaultTabCode, findLayoutItem, findTab } from "./layout";
 import { type DateRange, PreviewRangeControls } from "./PreviewRangeControls";
 import {
   usePreviewMeta,
@@ -52,7 +52,6 @@ import {
 } from "./queries";
 import { ReportCanvas } from "./ReportCanvas";
 import { ReportPageHeader } from "./ReportPageHeader";
-import { StructurePanel } from "./StructurePanel";
 import { useUnsavedChangesWarning } from "./useUnsavedChangesWarning";
 import { ValueCorrection } from "./ValueCorrection";
 import { WidgetInspector } from "./WidgetInspector";
@@ -117,10 +116,8 @@ function Builder({
   const meta = usePreviewMeta(scope);
   const reorder = useReorderLayout(scope);
   const updateItem = useUpdateLayoutItem(scope);
-  const isLarge = useMediaQuery("(min-width: 64rem)");
   const isWide = useMediaQuery("(min-width: 80rem)");
   const [isPortalView, setIsPortalView] = useState(false);
-  const [isStructureOpen, setIsStructureOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<number>();
   const [isInspectorDirty, setIsInspectorDirty] = useState(false);
   const [pendingSelection, setPendingSelection] = useState<{
@@ -175,8 +172,7 @@ function Builder({
     else setSelectedItemId(itemId);
   }
 
-  function saveOrder(order: ReorderItem[] | undefined) {
-    if (!order) return;
+  function saveOrder(order: ReorderItem[]) {
     reorder.mutate(order, {
       onError: (error) =>
         toast({
@@ -298,19 +294,9 @@ function Builder({
       />
     ) : null;
 
-  const structure = (
-    <StructurePanel
-      onReorder={saveOrder}
-      onSelectTab={(code) => {
-        replaceView({ tab: code });
-        setIsStructureOpen(false);
-      }}
-      sections={sections}
-      selectedTabCode={tabCode}
-    />
-  );
   const inspector = selectedItem ? (
     <WidgetInspector
+      accents={layout.data?.accents}
       item={selectedItem}
       onDirtyChange={setIsInspectorDirty}
       scope={scope}
@@ -336,10 +322,7 @@ function Builder({
             <ShareButton report={report} />
             <Button
               aria-pressed={isPortalView}
-              onClick={() => {
-                setIsPortalView((current) => !current);
-                setIsStructureOpen(false);
-              }}
+              onClick={() => setIsPortalView((current) => !current)}
               variant={isPortalView ? "default" : "outline"}
             >
               {isPortalView ? (
@@ -379,30 +362,16 @@ function Builder({
             Loading date range...
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-3">
-          {preview.data && (
-            <p className="text-muted-foreground text-xs">
-              {formatDateRange(
-                preview.data.period.from,
-                preview.data.period.to,
-              )}{" "}
-              compared with{" "}
-              {formatDateRange(
-                preview.data.period.compare_from,
-                preview.data.period.compare_to,
-              )}
-            </p>
-          )}
-          {!isLarge && !isPortalView && (
-            <Button
-              onClick={() => setIsStructureOpen(true)}
-              size="sm"
-              variant="outline"
-            >
-              <ListTree aria-hidden className="size-4" /> Structure
-            </Button>
-          )}
-        </div>
+        {preview.data && (
+          <p className="text-muted-foreground text-xs">
+            {formatDateRange(preview.data.period.from, preview.data.period.to)}{" "}
+            compared with{" "}
+            {formatDateRange(
+              preview.data.period.compare_from,
+              preview.data.period.compare_to,
+            )}
+          </p>
+        )}
       </Card>
       {isPortalView && (
         <p className="bg-primary-soft text-primary rounded-lg border border-blue-200 p-3 text-sm">
@@ -414,24 +383,18 @@ function Builder({
         className={
           isPortalView
             ? "grid gap-4"
-            : "grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_20rem]"
+            : "grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]"
         }
       >
-        {!isPortalView && isLarge && (
-          <aside className="bg-card self-start rounded-lg border p-3">
-            {structure}
-          </aside>
-        )}
         <div className="min-w-0">
           <ReportCanvas
             budgetsUrl={`${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`}
             currency={meta.data?.currency ?? report.currency}
             isPortalView={isPortalView}
             onChannelSelect={(channel) => replaceView({ channel })}
+            onEditSection={(itemId) => requestSelect(itemId)}
             onEditWidget={(itemId) => requestSelect(itemId)}
-            onMoveWidget={(tab, itemId, offset) =>
-              saveOrder(moveInOrder(tab.children, itemId, offset))
-            }
+            onReorder={saveOrder}
             onSelectTab={(code) => replaceView({ tab: code })}
             onToggleWidget={toggleWidget}
             preview={{
@@ -453,7 +416,7 @@ function Builder({
                 <h2 className="text-strong font-semibold">Inspector</h2>
                 <p className="text-muted-foreground">
                   Choose the pencil on a widget to edit its title, settings or
-                  text.
+                  text, or a section&apos;s ⋯ menu to change its colour.
                 </p>
               </div>
             )}
@@ -461,18 +424,12 @@ function Builder({
         )}
       </div>
       <Drawer
-        isOpen={!isPortalView && !isLarge && isStructureOpen}
-        onClose={() => setIsStructureOpen(false)}
-        side="left"
-        title="Report structure"
-      >
-        {structure}
-      </Drawer>
-      <Drawer
         isOpen={!isPortalView && !isWide && Boolean(inspector)}
         onClose={() => requestSelect(undefined)}
         size="wide"
-        title="Edit widget"
+        title={
+          selectedItem?.level === "section" ? "Edit section" : "Edit widget"
+        }
       >
         {!isWide && inspector}
       </Drawer>
