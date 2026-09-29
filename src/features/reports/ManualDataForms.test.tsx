@@ -259,6 +259,90 @@ describe("Manual content editors", () => {
     });
   });
 
+  it("saves several progress list totals with their comparisons", async () => {
+    const { fixture, item } = manualWidget({
+      code: "cultural_segments",
+      title: "Audience by Cultural Segment",
+      type: "progress_list",
+      content: {
+        items: [{ label: "South Asian", value: 30, format: "percent" }],
+        footer: [
+          {
+            label: "Total reach",
+            value: 7460000,
+            format: "number",
+            change: {
+              value: 12.6,
+              format: "percent",
+              direction: "up",
+              sentiment: "positive",
+              label: "vs 2021 Census",
+            },
+          },
+        ],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item);
+    const footer = screen.getByRole("group", { name: "Footer" });
+    expect(within(footer).getByLabelText("Change")).toHaveValue("12.6");
+    await userEvent.click(screen.getByRole("button", { name: "Add total" }));
+    await userEvent.type(
+      within(footer).getAllByLabelText("Label")[1]!,
+      "Total share of reach",
+    );
+    await userEvent.type(within(footer).getAllByLabelText("Value")[1]!, "100");
+    await userEvent.selectOptions(
+      within(footer).getAllByLabelText("Format")[1]!,
+      "percent",
+    );
+    await userEvent.selectOptions(
+      within(footer).getAllByLabelText("Direction")[1]!,
+      "down",
+    );
+    await save();
+    expect(
+      await screen.findByText("Choose a tone, or clear the comparison."),
+    ).toBeVisible();
+    expect(sent).toHaveLength(0);
+    await userEvent.selectOptions(
+      within(footer).getAllByLabelText("Tone")[1]!,
+      "negative",
+    );
+    await save();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      content: {
+        footer: [
+          {
+            label: "Total reach",
+            value: 7460000,
+            format: "number",
+            change: {
+              value: 12.6,
+              format: "percent",
+              direction: "up",
+              sentiment: "positive",
+              label: "vs 2021 Census",
+            },
+          },
+          {
+            label: "Total share of reach",
+            value: 100,
+            format: "percent",
+            change: {
+              value: null,
+              format: "percent",
+              direction: "down",
+              sentiment: "negative",
+              label: null,
+            },
+          },
+        ],
+      },
+    });
+  });
+
   it("asks for a number before saving a donut segment", async () => {
     const { fixture, item } = manualWidget({
       code: "generation_split",

@@ -37,6 +37,18 @@ export const formatLabels: Record<ValueFormat, string> = {
   text: "Text",
 };
 
+// A manual comparison on a footer total, e.g. "+12.6% vs 2021 Census".
+export const changeDirections = ["up", "down", "flat"] as const;
+export const changeSentiments = ["positive", "negative", "neutral"] as const;
+export const changeDirectionLabels: Record<
+  (typeof changeDirections)[number],
+  string
+> = { up: "Up", down: "Down", flat: "Flat" };
+export const changeSentimentLabels: Record<
+  (typeof changeSentiments)[number],
+  string
+> = { positive: "Positive", negative: "Negative", neutral: "Neutral" };
+
 export const manualLimits = {
   kpiList: 20,
   barChart: 50,
@@ -97,6 +109,20 @@ const common = {
   subtitle: text(255, "subtitle"),
   as_of: z.union([z.literal(""), z.iso.date("Enter a valid date.")]),
 };
+
+function hasChange(entry: {
+  changeValue: string;
+  changeDirection: string;
+  changeSentiment: string;
+  changeLabel: string;
+}) {
+  return (
+    entry.changeValue.trim() !== "" ||
+    entry.changeDirection !== "" ||
+    entry.changeSentiment !== "" ||
+    entry.changeLabel.trim() !== ""
+  );
+}
 
 // A value whose format is `text` is display text; any other must be numeric.
 function checkValue(
@@ -217,8 +243,14 @@ export const manualSchemas = {
             label: required(100, "label"),
             value: z.string(),
             format: anyFormat,
-            // A change entered through the API is kept as it is.
-            change: z.unknown(),
+            changeValue: optionalAmount("change").refine(
+              (value) => (parseAmount(value) ?? 0) >= 0,
+              "Enter the change as 0 or more; the direction shows which way.",
+            ),
+            changeFormat: numericFormat,
+            changeDirection: z.union([z.literal(""), z.enum(changeDirections)]),
+            changeSentiment: z.union([z.literal(""), z.enum(changeSentiments)]),
+            changeLabel: text(60, "comparison label"),
           }),
         )
         .max(manualLimits.progressFooter, "Add up to 4 totals."),
@@ -256,9 +288,23 @@ export const manualSchemas = {
           context,
         );
       });
-      values.footer.forEach((entry, index) =>
-        checkValue(entry, ["footer", index, "value"], context),
-      );
+      values.footer.forEach((entry, index) => {
+        checkValue(entry, ["footer", index, "value"], context);
+        if (!hasChange(entry)) return;
+        // The API needs both to show the comparison; value and label are optional.
+        if (!entry.changeDirection)
+          context.addIssue({
+            code: "custom",
+            path: ["footer", index, "changeDirection"],
+            message: "Choose a direction, or clear the comparison.",
+          });
+        if (!entry.changeSentiment)
+          context.addIssue({
+            code: "custom",
+            path: ["footer", index, "changeSentiment"],
+            message: "Choose a tone, or clear the comparison.",
+          });
+      });
     }),
   field_table: z
     .object({
@@ -467,11 +513,24 @@ export function toManualValues<Type extends ManualType>(
       }),
       footer: list(content.footer).map((entry) => {
         const kpi = record(entry);
+        const change = record(kpi.change);
         return {
           label: string(kpi.label),
           value: display(kpi.value),
           format: oneOf(valueFormats, kpi.format, "number"),
-          change: kpi.change ?? null,
+          changeValue: display(change.value),
+          changeFormat: oneOf(numericFormats, change.format, "percent"),
+          changeDirection: oneOf(
+            ["", ...changeDirections] as const,
+            change.direction,
+            "",
+          ),
+          changeSentiment: oneOf(
+            ["", ...changeSentiments] as const,
+            change.sentiment,
+            "",
+          ),
+          changeLabel: string(change.label),
         };
       }),
     }),
@@ -693,7 +752,15 @@ function toContent<Type extends ManualType>(
                 label: kpi.label.trim(),
                 value: amountOrText(kpi.value, kpi.format),
                 format: kpi.format,
-                change: kpi.change ?? null,
+                change: hasChange(kpi)
+                  ? {
+                      value: parseAmount(kpi.changeValue) ?? null,
+                      format: kpi.changeFormat,
+                      direction: kpi.changeDirection,
+                      sentiment: kpi.changeSentiment,
+                      label: kpi.changeLabel.trim() || null,
+                    }
+                  : null,
               })),
             }
           : {}),
@@ -776,6 +843,13 @@ const secondaryFields: Record<string, string> = {
   value: "secondaryValue",
   format: "secondaryFormat",
 };
+const changeFields: Record<string, string> = {
+  value: "changeValue",
+  format: "changeFormat",
+  direction: "changeDirection",
+  sentiment: "changeSentiment",
+  label: "changeLabel",
+};
 
 // API field keys (`content.items.2.label`) → form fields. Keys that don't
 // name a control land on the nearest one, so the message is still shown.
@@ -802,6 +876,8 @@ export function manualFieldForServerKey<Type extends ManualType>(
       return `items.${index}.${part === "value" ? "value" : "label"}`;
     case "progress_list":
       if (field === "groups") return `groups.${index}.${part ?? "key"}`;
+      if (field === "footer" && part === "change")
+        return `footer.${index}.${changeFields[rest[0] ?? ""] ?? "changeDirection"}`;
       if (field === "footer")
         return `footer.${index}.${part === "label" || part === "format" ? part : "value"}`;
       if (part === "secondary")

@@ -30,6 +30,10 @@ import {
 } from "./inspector-parts";
 import { itemTitle } from "./layout";
 import {
+  changeDirectionLabels,
+  changeDirections,
+  changeSentimentLabels,
+  changeSentiments,
   emptyRow,
   formatLabels,
   manualFieldForServerKey,
@@ -115,6 +119,20 @@ const formatOptions = (formats: readonly ValueFormat[]) =>
   formats.map((format) => ({ value: format, label: formatLabels[format] }));
 const numericFormatOptions = formatOptions(numericFormats);
 const anyFormatOptions = formatOptions(valueFormats);
+const directionOptions = [
+  { value: "", label: "No comparison" },
+  ...changeDirections.map((direction) => ({
+    value: direction,
+    label: changeDirectionLabels[direction],
+  })),
+];
+const sentimentOptions = [
+  { value: "", label: "Choose a tone" },
+  ...changeSentiments.map((sentiment) => ({
+    value: sentiment,
+    label: changeSentimentLabels[sentiment],
+  })),
+];
 
 function arrayError(error: unknown) {
   const record = error as
@@ -439,7 +457,7 @@ function ProgressListForm(
       <RowListEditor
         addLabel="Add total"
         count={footer.fields.length}
-        description="Optional totals under the list, e.g. a readiness score."
+        description="Optional. Up to 4 totals under the list, each shown as its own column."
         error={arrayError(errors.footer)}
         legend="Footer"
         max={manualLimits.progressFooter}
@@ -450,21 +468,71 @@ function ProgressListForm(
             label: "",
             value: "",
             format: "number",
-            change: null,
+            changeValue: "",
+            changeFormat: "percent",
+            changeDirection: "",
+            changeSentiment: "",
+            changeLabel: "",
           })
         }
         remove={footer.remove}
         renderRow={(index) => (
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Field form={form} label="Label" name={`footer.${index}.label`} />
-            <Field form={form} label="Value" name={`footer.${index}.value`} />
-            <Field
-              as="select"
-              form={form}
-              label="Format"
-              name={`footer.${index}.format`}
-              options={anyFormatOptions}
-            />
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Field form={form} label="Label" name={`footer.${index}.label`} />
+              <Field form={form} label="Value" name={`footer.${index}.value`} />
+              <Field
+                as="select"
+                form={form}
+                label="Format"
+                name={`footer.${index}.format`}
+                options={anyFormatOptions}
+              />
+            </div>
+            <fieldset className="space-y-2 rounded-md border p-3">
+              <legend className="text-strong px-1 text-sm font-medium">
+                Comparison
+              </legend>
+              <p className="text-muted-foreground text-xs">
+                Optional. Typed in and never recalculated, so name a fixed
+                reference, e.g. vs 2021 Census.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Field
+                  as="select"
+                  form={form}
+                  label="Direction"
+                  name={`footer.${index}.changeDirection`}
+                  options={directionOptions}
+                />
+                <Field
+                  as="select"
+                  form={form}
+                  label="Tone"
+                  name={`footer.${index}.changeSentiment`}
+                  options={sentimentOptions}
+                />
+                <Field
+                  description="Optional. Leave empty to show only the direction."
+                  form={form}
+                  inputMode="decimal"
+                  label="Change"
+                  name={`footer.${index}.changeValue`}
+                />
+                <Field
+                  as="select"
+                  form={form}
+                  label="Change format"
+                  name={`footer.${index}.changeFormat`}
+                  options={numericFormatOptions}
+                />
+                <Field
+                  form={form}
+                  label="Comparison label"
+                  name={`footer.${index}.changeLabel`}
+                />
+              </div>
+            </fieldset>
           </div>
         )}
         rowKeys={footer.fields.map((field) => field.id)}
