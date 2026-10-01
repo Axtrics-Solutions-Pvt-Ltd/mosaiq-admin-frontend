@@ -7,7 +7,10 @@ import { StatePanel } from "@/components/shared/StatePanel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { ValueAdornment } from "@/features/report-widgets/contracts";
+import type {
+  ValueAdornment,
+  ValuesPanel,
+} from "@/features/report-widgets/contracts";
 import {
   WidgetCard,
   WidgetMessage,
@@ -30,9 +33,11 @@ import {
   findTab,
   holdsWidgets,
   itemTitle,
+  layoutItemElementId,
   moveInOrder,
   moveToInOrder,
   tabsOf,
+  withPausedTabs,
 } from "./layout";
 import {
   DragHandle,
@@ -149,9 +154,12 @@ function SortableWidget({
     <section
       aria-label={label}
       className={cn(
+        // Keeps a revealed widget clear of the sticky top bar.
+        "scroll-mt-[calc(4rem+var(--page-padding))]",
         className,
         isDragging && "relative z-10 rounded-lg shadow-lg",
       )}
+      id={layoutItemElementId(item.id)}
       ref={setNodeRef}
       style={style}
     >
@@ -184,6 +192,7 @@ export function ReportCanvas({
   selectedItemId,
   selectedTabCode,
   valueAdornment,
+  valuesPanel,
 }: {
   currency: string;
   isPortalView: boolean;
@@ -202,6 +211,7 @@ export function ReportCanvas({
   selectedItemId: number | undefined;
   selectedTabCode: string | undefined;
   valueAdornment: (widget: PreviewWidget) => ValueAdornment | undefined;
+  valuesPanel?: (widget: PreviewWidget) => ValuesPanel | undefined;
 }) {
   const canDragWidgets = useMediaQuery("(min-width: 48rem)");
   const visibleSections = isPortalView ? sections.filter(isShown) : sections;
@@ -325,7 +335,9 @@ export function ReportCanvas({
             accent={selection.section.accent}
             items={sectionTabs}
             label={`${itemTitle(selection.section)} tabs`}
-            onReorder={onReorder}
+            onReorder={(order) =>
+              onReorder(withPausedTabs(selection.section, order))
+            }
             onSelect={(item) => onSelectTab(item.code)}
             selectedId={tab?.id}
             size="tab"
@@ -456,6 +468,9 @@ export function ReportCanvas({
                       onChannelSelect={onChannelSelect}
                       valueAdornment={
                         isPortalView ? undefined : valueAdornment(widget)
+                      }
+                      valuesPanel={
+                        isPortalView ? undefined : valuesPanel?.(widget)
                       }
                       widget={{ ...widget, title: itemTitle(item) }}
                     />

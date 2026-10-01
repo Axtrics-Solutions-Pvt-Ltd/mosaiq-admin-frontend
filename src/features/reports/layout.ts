@@ -21,6 +21,11 @@ export function accentStyle(
   } as CSSProperties;
 }
 
+// The canvas element of a widget, so the builder can scroll it into view.
+export function layoutItemElementId(itemId: number) {
+  return `layout-item-${itemId}`;
+}
+
 export function findLayoutItem(
   items: readonly LayoutItem[],
   id: number,
@@ -48,9 +53,35 @@ export function holdsWidgets(section: LayoutItem) {
   return section.children[0]?.level === "widget";
 }
 
+// Tabs the builder leaves out for now, although the API still serves them.
+// Remove a code here to bring its tab back; nothing else needs to change.
+const pausedTabCodes: ReadonlySet<string> = new Set(["reports"]);
+
+const isPausedTab = (item: LayoutItem) =>
+  item.level === "tab" && pausedTabCodes.has(item.code);
+
 // The items the canvas opens as tabs within one section.
 export function tabsOf(section: LayoutItem): readonly LayoutItem[] {
-  return holdsWidgets(section) ? [section] : section.children;
+  return holdsWidgets(section)
+    ? [section]
+    : section.children.filter((tab) => !isPausedTab(tab));
+}
+
+// A tab-row reorder covers only the shown tabs, but the API wants every child
+// of the section, so the paused tabs keep their places after them.
+export function withPausedTabs(
+  section: LayoutItem,
+  order: readonly ReorderItem[],
+): ReorderItem[] {
+  const paused = section.children
+    .filter(isPausedTab)
+    .sort((a, b) => a.position - b.position)
+    .map((item, index) => ({
+      id: item.id,
+      position: order.length + index,
+      is_enabled: item.is_enabled,
+    }));
+  return [...order, ...paused];
 }
 
 export function findTab(sections: readonly LayoutItem[], tabCode: string) {

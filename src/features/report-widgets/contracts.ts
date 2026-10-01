@@ -7,6 +7,10 @@ import { valueFormats } from "@/lib/formatters";
 // `value` or `items.0.value`. The builder uses it for correction controls.
 export type ValueAdornment = (path: string) => ReactNode;
 
+// The builder's hold on a chart's values table: one note for all its values,
+// and a counter that opens the table each time it changes.
+export type ValuesPanel = { note?: string; revealRequest?: number };
+
 // Widget payloads follow the public report contract §5. The portal and the
 // admin preview receive the same shape; the preview adds an `editing` block
 // that the report builder reads separately.
@@ -205,7 +209,26 @@ const payloadSchemas = {
     columns: z.array(
       z.object({ key: z.string(), label: z.string(), format: formatSchema }),
     ),
-    rows: z.array(z.record(z.string(), displayValue)),
+    // A cell is a raw value, or an object with its own format and an
+    // optional status chip (contract §5, data_table).
+    rows: z.array(
+      z.record(
+        z.string(),
+        z.union([
+          displayValue,
+          z.object({
+            value: displayValue,
+            format: formatSchema.nullable().optional(),
+            status: z
+              .object({ code: z.string(), label: z.string() })
+              .nullable()
+              .optional(),
+          }),
+        ]),
+      ),
+    ),
+    total: z.number().int().nullable().optional(),
+    truncated: z.boolean().nullable().optional(),
   }),
   heatmap: z.object({
     columns: z.array(z.string()),

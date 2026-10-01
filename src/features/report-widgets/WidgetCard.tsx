@@ -40,7 +40,9 @@ export function WidgetCard({
           )}
           {notice}
         </div>
-        {actions && <div className="flex shrink-0 gap-1">{actions}</div>}
+        {actions && (
+          <div className="flex shrink-0 items-center gap-1">{actions}</div>
+        )}
       </header>
       <div className="flex-1 p-4 pt-2 sm:p-5 sm:pt-3">{children}</div>
     </Card>

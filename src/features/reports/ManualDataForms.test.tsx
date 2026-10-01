@@ -191,6 +191,164 @@ describe("Manual content editors", () => {
     });
   });
 
+  it("keeps a data table's status chips and saves a new one", async () => {
+    const { fixture, item } = manualWidget({
+      code: "mmm_channel_diagnosis",
+      title: "Channel Diagnosis",
+      type: "data_table",
+      content: {
+        columns: [
+          { key: "channel", label: "Channel", format: "text" },
+          { key: "roi", label: "ROI", format: "multiplier" },
+          { key: "action", label: "Action", format: "text" },
+        ],
+        rows: [
+          {
+            channel: "Paid social",
+            roi: 4.1,
+            action: {
+              value: "Scale",
+              status: { code: "strong", label: "Strong" },
+            },
+          },
+          { channel: "Print", roi: 0.9, action: "Cut" },
+        ],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item);
+    expect(screen.getAllByLabelText("Action")[0]).toHaveValue("Scale");
+    expect(screen.getAllByLabelText("Action status")[0]).toHaveValue("strong");
+    expect(screen.queryByLabelText("ROI status")).not.toBeInTheDocument();
+    await userEvent.selectOptions(
+      screen.getAllByLabelText("Action status")[1]!,
+      "needs_attention",
+    );
+    await save();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      content: {
+        rows: [
+          {
+            channel: "Paid social",
+            roi: 4.1,
+            action: {
+              value: "Scale",
+              status: { code: "strong", label: "Strong" },
+            },
+          },
+          {
+            channel: "Print",
+            roi: 0.9,
+            action: {
+              value: "Cut",
+              status: { code: "needs_attention", label: "Needs attention" },
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it("asks for a status before saving a chip label on its own", async () => {
+    const { fixture, item } = manualWidget({
+      code: "mmm_channel_diagnosis",
+      title: "Channel Diagnosis",
+      type: "data_table",
+      content: {
+        columns: [
+          { key: "channel", label: "Channel", format: "text" },
+          { key: "action", label: "Action", format: "text" },
+        ],
+        rows: [{ channel: "Print", action: "Cut" }],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item);
+    await userEvent.type(screen.getByLabelText("Action status label"), "Cut");
+    await save();
+    expect(
+      await screen.findByText("Choose a status, or clear its label."),
+    ).toBeVisible();
+    expect(sent).toHaveLength(0);
+  });
+
+  it("saves a gauge's value, status and details", async () => {
+    const { fixture, item } = manualWidget({
+      code: "opportunity_index",
+      title: "Audience Opportunity Index",
+      type: "gauge",
+      content: {
+        value: 72,
+        max: 100,
+        format: "number",
+        label: "Priority score",
+        status: null,
+        details: [],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item);
+    const [value] = screen.getAllByLabelText("Value");
+    await userEvent.clear(value!);
+    await userEvent.type(value!, "86");
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "healthy");
+    await userEvent.click(screen.getByRole("button", { name: "Add detail" }));
+    await userEvent.type(screen.getAllByLabelText("Label")[1]!, "Rank");
+    await userEvent.type(screen.getAllByLabelText("Value")[1]!, "2");
+    await save();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      content: {
+        value: 86,
+        max: 100,
+        format: "number",
+        label: "Priority score",
+        status: { code: "healthy", label: "Healthy" },
+        details: [{ label: "Rank", value: 2, format: "number" }],
+      },
+    });
+  });
+
+  it("edits a written field table with the table editor", async () => {
+    const { fixture, item } = manualWidget({
+      code: "ai_strategic_insights",
+      title: "AI-Generated Strategic Insights",
+      type: "field_table",
+      kind: "text",
+      content: {
+        columns: ["Insight type", "Draft output", "Use case"],
+        rows: [
+          {
+            field: "Opportunity",
+            value: "Grow in-language search",
+            note: null,
+          },
+        ],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item);
+    expect(screen.getByLabelText("Value")).toHaveValue(
+      "Grow in-language search",
+    );
+    await userEvent.type(screen.getByLabelText("Note"), "Q4 planning");
+    await save();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      content: {
+        columns: ["Insight type", "Draft output", "Use case"],
+        rows: [
+          {
+            field: "Opportunity",
+            value: "Grow in-language search",
+            note: "Q4 planning",
+          },
+        ],
+      },
+    });
+  });
+
   it("drops a heatmap column's cells with the column", async () => {
     const { fixture, item } = manualWidget({
       code: "cultural_values_index",

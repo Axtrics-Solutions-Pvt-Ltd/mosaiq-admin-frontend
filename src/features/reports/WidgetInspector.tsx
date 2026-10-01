@@ -28,11 +28,13 @@ import { ApiError } from "@/lib/api/errors";
 import type { ReportScope } from "./api";
 import {
   type Accent,
+  type EditingValue,
   type LayoutItem,
   reportMetricCodes,
   reportMetricLabel,
 } from "./contracts";
 import {
+  activeCampaignsMaxLimit,
   breakdownMetricCodes,
   breakdownWidgetCodes,
   creativeMaxLimit,
@@ -151,14 +153,98 @@ function MetricChecklist({
   );
 }
 
+// What the preview shows for the selected live widget, so the inspector can
+// explain where its numbers are edited and switch the preview's channel.
+export type LiveEditing = {
+  values: readonly EditingValue[];
+  channel: string | undefined;
+  channels: readonly { code: string; name: string }[];
+  onChannelChange: (channel: string | undefined) => void;
+  // Opens the selected widget's values table, where the pencils are.
+  onRevealValues?: () => void;
+};
+
+// Widgets whose rows come straight from the channel data, with no pencils.
+const rowWidgetNotes: Record<string, string> = {
+  active_campaigns:
+    "Campaign rows come straight from the channel data, so their numbers can't be edited here.",
+  creative_performance:
+    "Creative results come straight from the channel data, so their numbers can't be edited here.",
+};
+
+function LiveNumbersNote({
+  item,
+  liveEditing,
+}: {
+  item: LayoutItem;
+  liveEditing?: LiveEditing;
+}) {
+  const rowNote = rowWidgetNotes[item.code];
+  // A base value with no single workspace: its pencil is off until the
+  // preview is narrowed to one channel.
+  const combinesWorkspaces = (liveEditing?.values ?? []).some(
+    (value) => value.is_base && value.workspace_id === undefined,
+  );
+  const channels = liveEditing?.channels ?? [];
+  const channel = liveEditing?.channel;
+  const onChannelChange = liveEditing?.onChannelChange;
+  const onRevealValues = liveEditing?.onRevealValues;
+  const canPickChannel = channels.length > 1 && !rowNote;
+  const showChannelPicker =
+    canPickChannel && (combinesWorkspaces || channel !== undefined);
+
+  let note =
+    "Numbers in this widget come from the channel data. To change one, use the pencil beside the value in the preview. Calculated values such as ROAS show a lock: correct the values they are calculated from instead.";
+  if (rowNote) note = rowNote;
+  else if (breakdownWidgetCodes.has(item.code))
+    note =
+      "These shares follow the report's corrected totals and can't be edited one by one.";
+  else if (combinesWorkspaces)
+    note =
+      channel === undefined && canPickChannel
+        ? "This report combines several channels, so these totals can't be edited directly. Choose a channel below, then use the pencil beside a value in the preview."
+        : "These values combine several workspaces, so they can't be corrected from this preview.";
+
+  return (
+    <div className="bg-muted text-muted-foreground space-y-3 rounded-md border p-3 text-xs">
+      <p>{note}</p>
+      {onChannelChange && showChannelPicker && (
+        <FormField id="inspector-edit-channel" label="Edit numbers for">
+          <Select
+            id="inspector-edit-channel"
+            onChange={(event) => {
+              onChannelChange(event.target.value || undefined);
+              onRevealValues?.();
+            }}
+            // Opening the picker shows where the numbers are edited, even
+            // before a channel is chosen. Pointer-down covers a click on a
+            // picker that already has focus.
+            onFocus={onRevealValues}
+            onPointerDown={onRevealValues}
+            value={channel ?? ""}
+          >
+            <option value="">All channels</option>
+            {channels.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      )}
+    </div>
+  );
+}
+
 // Live widgets change presentation only. Their numbers come from the data
 // and are corrected from the pencil on a value, so there are no value inputs.
 function LiveWidgetForm({
   item,
+  liveEditing,
   onDirtyChange,
   save,
   isSaving,
-}: InspectorFormProps) {
+}: InspectorFormProps & { liveEditing?: LiveEditing }) {
   const form = useForm<LiveFormValues>({
     resolver: zodResolver(liveFormSchema),
     defaultValues: toLiveValues(item),
@@ -279,6 +365,24 @@ function LiveWidgetForm({
           </FormField>
         </>
       )}
+      {item.code === "active_campaigns" && (
+        <FormField
+          description={`Up to ${activeCampaignsMaxLimit}, largest spend first. Leave empty for the default.`}
+          error={errors.limit?.message}
+          id="inspector-limit"
+          label="Campaigns shown"
+        >
+          <Input
+            aria-describedby="inspector-limit-description"
+            aria-invalid={Boolean(errors.limit)}
+            autoComplete="off"
+            id="inspector-limit"
+            inputMode="numeric"
+            placeholder="Default (50)"
+            {...form.register("limit")}
+          />
+        </FormField>
+      )}
       {breakdownWidgetCodes.has(item.code) && (
         <FormField id="inspector-metric" label="Metric">
           <Select id="inspector-metric" {...form.register("metric")}>
@@ -291,10 +395,7 @@ function LiveWidgetForm({
           </Select>
         </FormField>
       )}
-      <p className="bg-muted text-muted-foreground rounded-md border p-3 text-xs">
-        Numbers in this widget come from the channel data. To change one, use
-        the pencil beside the value in the preview.
-      </p>
+      <LiveNumbersNote item={item} liveEditing={liveEditing} />
     </FormShell>
   );
 }
@@ -537,12 +638,14 @@ export function WidgetInspector({
   accents = [],
   budgets,
   item,
+  liveEditing,
   onDirtyChange,
   scope,
 }: {
   accents?: readonly Accent[];
   budgets?: InspectorBudgets;
   item: LayoutItem;
+  liveEditing?: LiveEditing;
   onDirtyChange: (isDirty: boolean) => void;
   scope: ReportScope;
 }) {
@@ -620,8 +723,21 @@ export function WidgetInspector({
       {isSection && (
         <SectionForm accents={accents} key={formKey} {...formProps} />
       )}
-      {item.kind === "live" && <LiveWidgetForm key={formKey} {...formProps} />}
-      {item.kind === "text" && <TextWidgetForm key={formKey} {...formProps} />}
+      {item.kind === "live" && (
+        <LiveWidgetForm
+          key={formKey}
+          {...formProps}
+          liveEditing={liveEditing}
+        />
+      )}
+      {/* Written content in a table shape (AI Strategic Insights) uses the
+          table editor; headlines and lists use the text editor. */}
+      {item.kind === "text" &&
+        (hasManualEditor(item.type) ? (
+          <ManualDataForm key={formKey} {...formProps} />
+        ) : (
+          <TextWidgetForm key={formKey} {...formProps} />
+        ))}
       {item.kind === "manual_data" &&
         (hasManualEditor(item.type) ? (
           <ManualDataForm key={formKey} {...formProps} />

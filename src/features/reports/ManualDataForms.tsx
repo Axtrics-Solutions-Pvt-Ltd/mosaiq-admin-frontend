@@ -30,12 +30,14 @@ import {
 } from "./inspector-parts";
 import { itemTitle } from "./layout";
 import {
+  cellStatusCodes,
   changeDirectionLabels,
   changeDirections,
   changeSentimentLabels,
   changeSentiments,
   emptyRow,
   formatLabels,
+  gaugeStatusCodes,
   manualFieldForServerKey,
   manualLimits,
   manualPatch,
@@ -43,8 +45,12 @@ import {
   type ManualType,
   type ManualValues,
   numericFormats,
+  statusCodeLabels,
   toManualValues,
 } from "./manual-forms";
+
+type StatusCell =
+  ManualValues<"data_table">["rows"][number]["statuses"][number];
 
 function useManualForm<Type extends ManualType>(
   type: Type,
@@ -126,6 +132,12 @@ const directionOptions = [
     label: changeDirectionLabels[direction],
   })),
 ];
+const statusOptions = (codes: readonly (keyof typeof statusCodeLabels)[]) => [
+  { value: "", label: "No status" },
+  ...codes.map((code) => ({ value: code, label: statusCodeLabels[code] })),
+];
+const cellStatusOptions = statusOptions(cellStatusCodes);
+const gaugeStatusOptions = statusOptions(gaugeStatusCodes);
 const sentimentOptions = [
   { value: "", label: "Choose a tone" },
   ...changeSentiments.map((sentiment) => ({
@@ -611,19 +623,26 @@ function useCellColumns<
   >["control"];
   const columns = useFieldArray({ control, name: "columns" });
   const rows = useFieldArray({ control, name: "rows" });
-  const reshape = (change: (cells: string[]) => string[]) =>
+  // Data table rows also hold one status per column, reshaped the same way.
+  const reshape = (change: <Cell>(cells: Cell[], blank: Cell) => Cell[]) =>
     rows.replace(
-      (form.getValues() as ManualValues<"heatmap">).rows.map((row) => ({
-        ...row,
-        values: change([...row.values]),
-      })),
+      (form.getValues() as ManualValues<"heatmap">).rows.map((row) => {
+        const statuses = (row as { statuses?: StatusCell[] }).statuses;
+        return {
+          ...row,
+          values: change([...row.values], ""),
+          ...(statuses
+            ? { statuses: change([...statuses], { code: "", label: "" }) }
+            : {}),
+        };
+      }),
     );
   return {
     columns,
     rows,
     addColumn: (column: ManualValues<Type>["columns"][number]) => {
       columns.append(column as ManualValues<"heatmap">["columns"][number]);
-      reshape((cells) => [...cells, ""]);
+      reshape((cells, blank) => [...cells, blank]);
     },
     removeColumn: (index: number) => {
       columns.remove(index);
@@ -631,9 +650,9 @@ function useCellColumns<
     },
     moveColumn: (from: number, to: number) => {
       columns.move(from, to);
-      reshape((cells) => {
+      reshape((cells, blank) => {
         const [moved] = cells.splice(from, 1);
-        cells.splice(to, 0, moved ?? "");
+        cells.splice(to, 0, moved ?? blank);
         return cells;
       });
     },
@@ -648,7 +667,13 @@ function DataTableForm(
   const { form, ...submit } = useManualForm("data_table", props, props.initial);
   const grid = useCellColumns<"data_table">(form);
   const columnValues = useWatch({ control: form.control, name: "columns" });
+  const rowValues = useWatch({ control: form.control, name: "rows" });
   const errors = form.formState.errors;
+  // Text columns after the first can carry status chips; any column keeps
+  // the chips it already has.
+  const hasStatus = (rowIndex: number, columnIndex: number) =>
+    (columnIndex > 0 && columnValues[columnIndex]?.format === "text") ||
+    Boolean(rowValues[rowIndex]?.statuses[columnIndex]?.code);
   return (
     <ManualShell
       {...submit}
@@ -694,27 +719,51 @@ function DataTableForm(
       <RowListEditor
         addLabel="Add row"
         count={grid.rows.fields.length}
-        description="Leave a cell empty to show a dash."
+        description="Leave a cell empty to show a dash. A text cell can also show a status chip."
         error={arrayError(errors.rows)}
         legend="Rows"
         max={manualLimits.dataRows}
         move={grid.rows.move}
         noun="row"
         onAdd={() =>
-          grid.rows.append({ values: columnValues.map(() => "") } as never)
+          grid.rows.append(emptyRow("data_table", form.getValues()) as never)
         }
         remove={grid.rows.remove}
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-2">
-            {columnValues.map((column, columnIndex) => (
-              <Field
-                form={form}
-                inputMode={column.format === "text" ? undefined : "decimal"}
-                key={grid.columns.fields[columnIndex]?.id ?? columnIndex}
-                label={column.label.trim() || `Column ${columnIndex + 1}`}
-                name={`rows.${index}.values.${columnIndex}`}
-              />
-            ))}
+            {columnValues.map((column, columnIndex) => {
+              const label = column.label.trim() || `Column ${columnIndex + 1}`;
+              return (
+                <div
+                  className="space-y-2"
+                  key={grid.columns.fields[columnIndex]?.id ?? columnIndex}
+                >
+                  <Field
+                    form={form}
+                    inputMode={column.format === "text" ? undefined : "decimal"}
+                    label={label}
+                    name={`rows.${index}.values.${columnIndex}`}
+                  />
+                  {hasStatus(index, columnIndex) && (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Field
+                        as="select"
+                        form={form}
+                        label={`${label} status`}
+                        name={`rows.${index}.statuses.${columnIndex}.code`}
+                        options={cellStatusOptions}
+                      />
+                      <Field
+                        description="Optional. Defaults to the status name."
+                        form={form}
+                        label={`${label} status label`}
+                        name={`rows.${index}.statuses.${columnIndex}.label`}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         rowKeys={grid.rows.fields.map((field) => field.id)}
@@ -787,6 +836,98 @@ function HeatmapForm(
   );
 }
 
+function GaugeForm(
+  props: InspectorFormProps & {
+    initial: ManualValues<"gauge">;
+  },
+) {
+  const { form, ...submit } = useManualForm("gauge", props, props.initial);
+  const details = useFieldArray({ control: form.control, name: "details" });
+  return (
+    <ManualShell
+      {...submit}
+      form={form}
+      isSaving={props.isSaving}
+      item={props.item}
+    >
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Field form={form} inputMode="decimal" label="Value" name="value" />
+        <Field
+          description="Leave empty for 100."
+          form={form}
+          inputMode="decimal"
+          label="Maximum"
+          name="max"
+        />
+        <Field
+          as="select"
+          form={form}
+          label="Format"
+          name="format"
+          options={numericFormatOptions}
+        />
+      </div>
+      <Field
+        description="Optional. Shown with the value, e.g. Priority score."
+        form={form}
+        label="Label"
+        name="label"
+      />
+      <fieldset className="space-y-2 rounded-md border p-3">
+        <legend className="text-strong px-1 text-sm font-medium">Status</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Field
+            as="select"
+            form={form}
+            label="Status"
+            name="status.code"
+            options={gaugeStatusOptions}
+          />
+          <Field
+            description="Optional. Defaults to the status name."
+            form={form}
+            label="Status label"
+            name="status.label"
+          />
+        </div>
+      </fieldset>
+      <RowListEditor
+        addLabel="Add detail"
+        count={details.fields.length}
+        description="Optional. Up to 6 values shown under the gauge."
+        error={arrayError(form.formState.errors.details)}
+        legend="Details"
+        max={manualLimits.gaugeDetails}
+        move={details.move}
+        noun="detail"
+        onAdd={() =>
+          details.append(
+            emptyRow(
+              "gauge",
+              form.getValues(),
+            ) as ManualValues<"gauge">["details"][number],
+          )
+        }
+        remove={details.remove}
+        renderRow={(index) => (
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Field form={form} label="Label" name={`details.${index}.label`} />
+            <Field form={form} label="Value" name={`details.${index}.value`} />
+            <Field
+              as="select"
+              form={form}
+              label="Format"
+              name={`details.${index}.format`}
+              options={anyFormatOptions}
+            />
+          </div>
+        )}
+        rowKeys={details.fields.map((field) => field.id)}
+      />
+    </ManualShell>
+  );
+}
+
 // One generic editor per render type, reused by every manual widget of it.
 export function ManualDataForm(props: InspectorFormProps) {
   const { item } = props;
@@ -826,6 +967,8 @@ export function ManualDataForm(props: InspectorFormProps) {
       return (
         <HeatmapForm {...props} initial={toManualValues("heatmap", item)} />
       );
+    case "gauge":
+      return <GaugeForm {...props} initial={toManualValues("gauge", item)} />;
     default:
       return null;
   }

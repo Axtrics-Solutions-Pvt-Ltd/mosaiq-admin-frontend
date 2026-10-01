@@ -11,7 +11,9 @@ import {
   moveInOrder,
   moveToInOrder,
   replaceLayoutItem,
+  tabsOf,
   toggleInOrder,
+  withPausedTabs,
 } from "./layout";
 
 const sections = () =>
@@ -72,6 +74,31 @@ describe("layout helpers", () => {
     const replaced = replaceLayoutItem(tree, tab);
     expect(replaced[0]!.children[0]!.title).toBe("Summary");
     expect(replaced[0]!.children[0]!.children).toHaveLength(2);
+  });
+
+  it("leaves the paused Reports tab out but keeps it in a tab reorder", () => {
+    const section = sections()[0]!;
+    const reports = {
+      ...section.children[1]!,
+      id: 9,
+      code: "reports",
+      position: 2,
+      is_enabled: false,
+      children: [],
+    };
+    const withReports = {
+      ...section,
+      children: [...section.children, reports],
+    };
+    expect(tabsOf(withReports).map((tab) => tab.code)).not.toContain("reports");
+    expect(findTab([withReports], "reports")).toBeUndefined();
+    expect(
+      withPausedTabs(withReports, moveInOrder(tabsOf(withReports), 3, -1)!),
+    ).toEqual([
+      { id: 3, position: 0, is_enabled: true },
+      { id: 2, position: 1, is_enabled: true },
+      { id: 9, position: 2, is_enabled: false },
+    ]);
   });
 
   it("opens the first shown tab and serves a flat section as one tab", () => {

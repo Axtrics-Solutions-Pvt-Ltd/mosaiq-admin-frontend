@@ -6,6 +6,7 @@ import { BarChartWidget } from "./BarChartWidget";
 import {
   parseWidget,
   type ValueAdornment,
+  type ValuesPanel,
   type WidgetEnvelope,
 } from "./contracts";
 import { CreativeGridWidget } from "./CreativeGridWidget";
@@ -52,12 +53,14 @@ function WidgetBody({
   emptyAction,
   onChannelSelect,
   valueAdornment,
+  valuesPanel,
   widget,
 }: {
   currency: string;
   emptyAction?: ReactNode;
   onChannelSelect?: (channelCode: string) => void;
   valueAdornment?: ValueAdornment;
+  valuesPanel?: ValuesPanel;
   widget: WidgetEnvelope;
 }): ReactNode {
   const parsed = parseWidget(widget);
@@ -109,6 +112,7 @@ function WidgetBody({
           payload={parsed.payload}
           title={title}
           valueAdornment={valueAdornment}
+          valuesPanel={valuesPanel}
         />
       );
     case "bar_chart":
@@ -193,6 +197,7 @@ export function WidgetRenderer({
   notice,
   onChannelSelect,
   valueAdornment,
+  valuesPanel,
   widget,
 }: {
   actions?: ReactNode;
@@ -203,6 +208,7 @@ export function WidgetRenderer({
   notice?: ReactNode;
   onChannelSelect?: (channelCode: string) => void;
   valueAdornment?: ValueAdornment;
+  valuesPanel?: ValuesPanel;
   widget: WidgetEnvelope;
 }) {
   return (
@@ -217,6 +223,7 @@ export function WidgetRenderer({
         emptyAction={emptyAction}
         onChannelSelect={onChannelSelect}
         valueAdornment={valueAdornment}
+        valuesPanel={valuesPanel}
         widget={widget}
       />
     </WidgetCard>

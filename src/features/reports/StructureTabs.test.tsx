@@ -203,16 +203,22 @@ describe("Structure tabs", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("underlines the selected section in its colour and shades its tabs", async () => {
+  it("fills each section in its colour, strong when selected, and shades its tabs", async () => {
     useLayoutApi(() => HttpResponse.json({ data: layoutFixture() }));
     renderWithScope(<Harness />);
     const section = await screen.findByRole("button", {
       name: "Reporting Dashboard",
     });
-    expect(section).toHaveClass("text-[color:var(--section-accent-strong)]");
-    expect(section).not.toHaveClass("text-white");
+    expect(section).toHaveClass("text-primary-foreground");
     const item = section.closest("li")!;
-    expect(item).toHaveClass("border-[color:var(--section-accent-strong)]");
+    expect(item).toHaveClass("bg-[color:var(--section-accent-strong)]");
+    const other = screen.getByRole("button", {
+      name: /^Media Mix Model(?! options)/,
+    });
+    expect(other).toHaveClass("text-[color:var(--section-accent-strong)]");
+    expect(other.closest("li")).toHaveClass(
+      "bg-[color:var(--section-accent-soft)]",
+    );
     expect(item.style.getPropertyValue("--section-accent-strong")).toBe(
       "#1D4ED8",
     );
@@ -239,9 +245,10 @@ describe("Structure tabs", () => {
     const section = await screen.findByRole("button", {
       name: "Reporting Dashboard",
     });
-    expect(section).toHaveClass("text-strong");
+    expect(section).toHaveClass("text-primary-foreground");
+    expect(section.closest("li")).toHaveClass("bg-primary");
     expect(section.closest("li")).not.toHaveClass(
-      "border-[color:var(--section-accent-strong)]",
+      "bg-[color:var(--section-accent-strong)]",
     );
   });
 

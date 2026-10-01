@@ -77,6 +77,38 @@ describe("WidgetRenderer", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens a chart's values table on request and shows one shared note", () => {
+    const adornment = (path: string) => <span>adornment:{path}</span>;
+    const lineChart = widget(widgetFixtures.line_chart);
+    const { rerender } = render(
+      <WidgetRenderer
+        currency="USD"
+        valueAdornment={adornment}
+        valuesPanel={{ note: "Choose a channel to correct one." }}
+        widget={lineChart}
+      />,
+    );
+    const values = screen
+      .getByText("Values and corrections")
+      .closest("details");
+    expect(values).not.toHaveAttribute("open");
+    rerender(
+      <WidgetRenderer
+        currency="USD"
+        valueAdornment={adornment}
+        valuesPanel={{
+          note: "Choose a channel to correct one.",
+          revealRequest: 1,
+        }}
+        widget={lineChart}
+      />,
+    );
+    expect(values).toHaveAttribute("open");
+    expect(
+      screen.getAllByText("Choose a channel to correct one."),
+    ).toHaveLength(1);
+  });
+
   it("filters a grouped progress list with its toggle and shows the footer", async () => {
     render(
       <WidgetRenderer
@@ -135,6 +167,53 @@ describe("WidgetRenderer", () => {
     expect(within(row).getAllByText("—")).toHaveLength(2);
     expect(screen.getByText("$127.9K")).toBeVisible();
     expect(screen.getByText("2.18x")).toBeVisible();
+  });
+
+  it("shows data table status chips and how many rows were sent", () => {
+    render(
+      <WidgetRenderer
+        currency="USD"
+        widget={widget({
+          code: "mmm_channel_diagnosis",
+          type: "data_table",
+          kind: "manual_data",
+          title: "Channel Diagnosis",
+          empty: false,
+          columns: [
+            { key: "channel", label: "Channel", format: "text" },
+            { key: "spend", label: "Spend", format: "currency" },
+            { key: "status", label: "Status", format: "text" },
+          ],
+          rows: [
+            {
+              channel: "Paid social",
+              spend: 182000,
+              status: {
+                value: "Scale",
+                status: { code: "strong", label: "Strong" },
+              },
+            },
+            {
+              channel: "Search",
+              spend: 146000,
+              status: {
+                value: "Live",
+                status: { code: "live", label: "Live" },
+              },
+            },
+          ],
+          total: 6,
+          truncated: true,
+        })}
+      />,
+    );
+    expect(screen.queryByText(/Unsupported widget/)).not.toBeInTheDocument();
+    const paidSocial = screen.getByRole("row", { name: /Paid social/ });
+    expect(within(paidSocial).getByText("Scale")).toBeVisible();
+    expect(within(paidSocial).getByText("Strong")).toBeVisible();
+    const search = screen.getByRole("row", { name: /Search/ });
+    expect(within(search).getAllByText("Live")).toHaveLength(1);
+    expect(screen.getByText("Showing 2 of 6")).toBeVisible();
   });
 
   it("shows a gauge's value, status in text and details", () => {

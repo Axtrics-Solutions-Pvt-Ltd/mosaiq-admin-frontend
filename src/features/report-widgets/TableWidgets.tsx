@@ -41,6 +41,14 @@ export const statusTones: Record<
   on_watch: "warning",
   needs_attention: "danger",
   info: "neutral",
+  // Campaign statuses and manual signal words (contract §5, data_table).
+  live: "success",
+  paused: "danger",
+  review: "warning",
+  at_risk: "danger",
+  strong: "success",
+  rising: "success",
+  watch: "warning",
 };
 
 export function MetricTableWidget({
@@ -149,6 +157,34 @@ export function FieldTableWidget({
 
 const isNumericFormat = (format: string) => format !== "text";
 
+type DataCell = WidgetPayload<"data_table">["rows"][number][string];
+type CellFormat = WidgetPayload<"data_table">["columns"][number]["format"];
+
+// A raw cell is formatted by its column. A cell object may bring its own
+// format and a status chip; its value is left out when the chip says the same.
+function DataCellContent({
+  cell,
+  currency,
+  format,
+}: {
+  cell: DataCell | undefined;
+  currency: string;
+  format: CellFormat;
+}) {
+  if (cell === null || typeof cell !== "object")
+    return formatValue(cell, format, currency);
+  const value = formatValue(cell.value, cell.format ?? format, currency);
+  if (!cell.status) return value;
+  return (
+    <>
+      {cell.value !== null && value !== cell.status.label && value}
+      <Badge tone={statusTones[cell.status.code] ?? "neutral"}>
+        {cell.status.label}
+      </Badge>
+    </>
+  );
+}
+
 export function DataTableWidget({
   currency,
   payload,
@@ -192,7 +228,11 @@ export function DataTableWidget({
               )}
               scope="row"
             >
-              {formatValue(row[first.key], first.format, currency)}
+              <DataCellContent
+                cell={row[first.key]}
+                currency={currency}
+                format={first.format}
+              />
             </th>
             {rest.map((column) => (
               <td
@@ -204,7 +244,11 @@ export function DataTableWidget({
                 key={column.key}
               >
                 <span className="inline-flex items-center gap-1">
-                  {formatValue(row[column.key], column.format, currency)}
+                  <DataCellContent
+                    cell={row[column.key]}
+                    currency={currency}
+                    format={column.format}
+                  />
                   {valueAdornment?.(`rows.${index}.${column.key}`)}
                 </span>
               </td>
@@ -212,6 +256,18 @@ export function DataTableWidget({
           </tr>
         ))}
       </tbody>
+      {payload.truncated && payload.total != null && (
+        <tfoot>
+          <tr className="border-t">
+            <td
+              className="text-muted-foreground pt-2 text-xs"
+              colSpan={payload.columns.length}
+            >
+              Showing {payload.rows.length} of {payload.total}
+            </td>
+          </tr>
+        </tfoot>
+      )}
     </ScrollTable>
   );
 }

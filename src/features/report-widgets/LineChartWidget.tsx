@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useId, useState } from "react";
 import {
   CartesianGrid,
@@ -16,7 +17,7 @@ import { formatValue } from "@/lib/formatters";
 import { cn } from "@/lib/utils/cn";
 
 import { bucketLabel, chartColor } from "./chart";
-import type { ValueAdornment, WidgetPayload } from "./contracts";
+import type { ValueAdornment, ValuesPanel, WidgetPayload } from "./contracts";
 
 type Series = WidgetPayload<"line_chart">["series"][number];
 
@@ -25,13 +26,24 @@ export function LineChartWidget({
   payload,
   title,
   valueAdornment,
+  valuesPanel,
 }: {
   currency: string;
   payload: WidgetPayload<"line_chart">;
   title: string;
   valueAdornment?: ValueAdornment;
+  valuesPanel?: ValuesPanel;
 }) {
   const selectId = useId();
+  const revealRequest = valuesPanel?.revealRequest;
+  // A widget mounted after a reveal request (the preview reloads when the
+  // channel changes) starts open.
+  const [isValuesOpen, setIsValuesOpen] = useState(revealRequest !== undefined);
+  const [seenRevealRequest, setSeenRevealRequest] = useState(revealRequest);
+  if (revealRequest !== seenRevealRequest) {
+    setSeenRevealRequest(revealRequest);
+    if (revealRequest !== undefined) setIsValuesOpen(true);
+  }
   const variants = payload.variants ?? [];
   // A variant only chooses which series are drawn; it needs no API call.
   const [variantKey, setVariantKey] = useState(variants[0]?.key);
@@ -173,13 +185,18 @@ export function LineChartWidget({
       {valueAdornment ? (
         // Chart points are too small to hold controls, so the builder puts
         // each point's pencil in a table that is also the text alternative.
-        <details className="group text-sm">
+        <details
+          className="text-sm"
+          onToggle={(event) => setIsValuesOpen(event.currentTarget.open)}
+          open={isValuesOpen}
+        >
           <summary className="text-primary focus-visible:ring-ring w-fit cursor-pointer rounded-sm font-medium focus-visible:ring-2 focus-visible:outline-none">
             Values and corrections
           </summary>
-          <div className="mt-2 overflow-x-auto">
+          <div className="relative mt-2 overflow-x-auto">
             <ValuesTable
               buckets={buckets}
+              className="table-fixed"
               currency={currency}
               payload={payload}
               rows={rows}
@@ -187,6 +204,21 @@ export function LineChartWidget({
               valueAdornment={valueAdornment}
               visible={visible}
             />
+            {valuesPanel?.note && (
+              // One explanation over the value columns, below their headers,
+              // in place of the same message on every value.
+              <div className="bg-card/85 absolute inset-y-0 top-8 right-0 left-24 flex items-center justify-center p-4 backdrop-blur-xs">
+                <div className="bg-card max-w-sm rounded-md border px-4 py-3 text-center shadow-sm">
+                  <p className="text-strong flex items-center justify-center gap-1.5 font-medium">
+                    <Lock aria-hidden className="size-4" />
+                    These totals can&apos;t be edited
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {valuesPanel.note}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </details>
       ) : (
@@ -227,8 +259,13 @@ function ValuesTable({
     <table className={cn("w-full text-left tabular-nums", className)}>
       <caption className="sr-only">{title}</caption>
       <thead className="text-muted-foreground text-xs">
-        <tr>
-          <th className="py-1.5 pr-3 font-medium" scope="col">
+        {/* The visible table fixes its header height and Period width so
+            the builder's note can sit over the value columns. */}
+        <tr className={valueAdornment ? "h-8" : undefined}>
+          <th
+            className={cn("py-1.5 pr-3 font-medium", valueAdornment && "w-24")}
+            scope="col"
+          >
             Period
           </th>
           {visible.map((series) => (

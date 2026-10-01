@@ -1,6 +1,13 @@
 "use client";
 
-import { Eye, PencilRuler, Share2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  PencilRuler,
+  Share2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -40,7 +47,13 @@ import {
   type Report,
   reportMetricLabel,
 } from "./contracts";
-import { defaultTabCode, findLayoutItem, findTab } from "./layout";
+import {
+  defaultTabCode,
+  findLayoutItem,
+  findTab,
+  itemTitle,
+  layoutItemElementId,
+} from "./layout";
 import { type DateRange, PreviewRangeControls } from "./PreviewRangeControls";
 import {
   usePreviewMeta,
@@ -53,7 +66,11 @@ import {
 import { ReportCanvas } from "./ReportCanvas";
 import { ReportPageHeader } from "./ReportPageHeader";
 import { useUnsavedChangesWarning } from "./useUnsavedChangesWarning";
-import { ValueCorrection } from "./ValueCorrection";
+import {
+  combinedValuesNote,
+  isCombinedValue,
+  ValueCorrection,
+} from "./ValueCorrection";
 import { WidgetInspector } from "./WidgetInspector";
 
 // Opens the Links tab. The count comes from the report, so it is 0 while the
@@ -101,6 +118,94 @@ function correctionsHistoryUrl(report: Report, value: EditingValue) {
   return `${clientDetailUrl(report.client_id, report.agency_id)}&${params}`;
 }
 
+// Scrolls a canvas widget into view, e.g. after stepping to it from the
+// inspector, so the widget and its settings stay side by side.
+function revealLayoutItem(itemId: number) {
+  const isReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  document.getElementById(layoutItemElementId(itemId))?.scrollIntoView({
+    behavior: isReducedMotion ? "auto" : "smooth",
+    block: "nearest",
+  });
+}
+
+// Desktop inspector header: where the open widget sits in the tab, stepping
+// to its neighbours and closing. The drawer has its own close button.
+function InspectorNav({
+  item,
+  onClose,
+  onSelect,
+  siblings,
+}: {
+  item: LayoutItem;
+  onClose: () => void;
+  onSelect: (itemId: number) => void;
+  siblings: readonly LayoutItem[];
+}) {
+  const index = siblings.findIndex((sibling) => sibling.id === item.id);
+  const previous = index > 0 ? siblings[index - 1] : undefined;
+  const next = index >= 0 ? siblings[index + 1] : undefined;
+  return (
+    // -top-4 cancels the aside's padding: sticky offsets are measured from
+    // the padding edge, so top-0 would leave a gap that content scrolls into.
+    <div className="bg-card sticky -top-4 z-10 -mx-4 -mt-4 mb-4 flex items-center gap-1 border-b px-4 py-2">
+      <p className="text-muted-foreground mr-auto text-xs font-medium">
+        {index >= 0
+          ? `Widget ${index + 1} of ${siblings.length}`
+          : item.level === "section"
+            ? "Editing section"
+            : "Editing widget"}
+      </p>
+      {index >= 0 && (
+        <>
+          <Button
+            aria-label={
+              previous
+                ? `Edit previous widget: ${itemTitle(previous)}`
+                : "No previous widget"
+            }
+            className="size-8"
+            disabled={!previous}
+            onClick={() => previous && onSelect(previous.id)}
+            size="icon"
+            title="Previous widget"
+            type="button"
+            variant="ghost"
+          >
+            <ChevronUp aria-hidden className="size-4" />
+          </Button>
+          <Button
+            aria-label={
+              next ? `Edit next widget: ${itemTitle(next)}` : "No next widget"
+            }
+            className="size-8"
+            disabled={!next}
+            onClick={() => next && onSelect(next.id)}
+            size="icon"
+            title="Next widget"
+            type="button"
+            variant="ghost"
+          >
+            <ChevronDown aria-hidden className="size-4" />
+          </Button>
+        </>
+      )}
+      <Button
+        aria-label="Close inspector"
+        className="size-8"
+        onClick={onClose}
+        size="icon"
+        title="Close"
+        type="button"
+        variant="ghost"
+      >
+        <X aria-hidden className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
 function Builder({
   report,
   scope,
@@ -122,8 +227,15 @@ function Builder({
   // Bumped by "Add budgets" so the inspector scrolls to the budgets.
   const [budgetFocusRequest, setBudgetFocusRequest] = useState(0);
   const [isInspectorDirty, setIsInspectorDirty] = useState(false);
+  // Bumped by the inspector's "Edit numbers for" so the widget's values
+  // table opens where the pencils are.
+  const [valuesReveal, setValuesReveal] = useState<{
+    itemId: number;
+    count: number;
+  }>();
   const [pendingSelection, setPendingSelection] = useState<{
     itemId: number | undefined;
+    shouldReveal: boolean;
   }>();
   const [correction, setCorrection] = useState<CorrectionContext | null>(null);
   const [appliedCorrections, setAppliedCorrections] =
@@ -153,6 +265,10 @@ function Builder({
     selectedItemId !== undefined
       ? findLayoutItem(sections, selectedItemId)
       : undefined;
+  // The widgets the inspector steps through, in canvas order.
+  const tabWidgets = (
+    findTab(sections, tabCode ?? "")?.tab.children ?? []
+  ).filter((item) => item.level === "widget");
   const tabValues = (preview.data?.widgets ?? []).flatMap(
     (widget) => widget.editing.values,
   );
@@ -168,10 +284,14 @@ function Builder({
     router.replace(`${pathname}?${params}`, { scroll: false });
   }
 
-  function requestSelect(itemId: number | undefined) {
+  function requestSelect(itemId: number | undefined, shouldReveal = false) {
     if (itemId === selectedItemId) return;
-    if (isInspectorDirty) setPendingSelection({ itemId });
-    else setSelectedItemId(itemId);
+    if (isInspectorDirty) {
+      setPendingSelection({ itemId, shouldReveal });
+      return;
+    }
+    setSelectedItemId(itemId);
+    if (shouldReveal && itemId !== undefined) revealLayoutItem(itemId);
   }
 
   function saveOrder(order: ReorderItem[]) {
@@ -257,6 +377,8 @@ function Builder({
         <ValueCorrection
           // Chart points cover part of the period; their dates tell apart
           // controls that would otherwise share a name.
+          // A chart's values table carries one note for combined totals.
+          isCombinedExplained={widget.type === "line_chart"}
           dateLabel={
             period &&
             (value.date_from !== period.from || value.date_to !== period.to)
@@ -269,6 +391,17 @@ function Builder({
           value={value}
         />
       ) : null;
+    };
+  }
+
+  function valuesPanel(widget: PreviewWidget) {
+    const itemId = widget.editing.item_id;
+    return {
+      note: widget.editing.values.some(isCombinedValue)
+        ? combinedValuesNote
+        : undefined,
+      revealRequest:
+        valuesReveal?.itemId === itemId ? valuesReveal.count : undefined,
     };
   }
 
@@ -311,6 +444,20 @@ function Builder({
         workspaces: report.workspaces,
       }}
       item={selectedItem}
+      liveEditing={{
+        values:
+          preview.data?.widgets.find(
+            (widget) => widget.editing.item_id === selectedItem.id,
+          )?.editing.values ?? [],
+        channel: view.channel,
+        channels: meta.data?.channels ?? [],
+        onChannelChange: (channel) => replaceView({ channel }),
+        onRevealValues: () =>
+          setValuesReveal((current) => ({
+            itemId: selectedItem.id,
+            count: (current?.count ?? 0) + 1,
+          })),
+      }}
       onDirtyChange={setIsInspectorDirty}
       scope={scope}
     />
@@ -426,16 +573,36 @@ function Builder({
             selectedItemId={isPortalView ? undefined : selectedItemId}
             selectedTabCode={tabCode}
             valueAdornment={valueAdornment}
+            valuesPanel={valuesPanel}
           />
         </div>
         {!isPortalView && isWide && (
-          <aside className="bg-card self-start rounded-lg border p-4">
+          // Sticky below the top bar with its own scroll, so the inspector
+          // stays beside a widget edited far down the canvas. The key starts
+          // each item's settings from the top.
+          <aside
+            className="bg-card sticky top-[calc(4rem+var(--page-padding))] max-h-[calc(100dvh-4rem-2*var(--page-padding))] self-start overflow-y-auto overscroll-contain rounded-lg border p-4"
+            key={selectedItem?.id ?? "empty"}
+          >
+            {selectedItem && (
+              <InspectorNav
+                item={selectedItem}
+                onClose={() => requestSelect(undefined)}
+                onSelect={(itemId) => requestSelect(itemId, true)}
+                siblings={tabWidgets}
+              />
+            )}
             {inspector ?? (
               <div className="space-y-2 text-sm">
                 <h2 className="text-strong font-semibold">Inspector</h2>
                 <p className="text-muted-foreground">
                   Choose the pencil on a widget to edit its title, settings or
                   text, or a section&apos;s ⋯ menu to change its colour.
+                </p>
+                <p className="text-muted-foreground">
+                  To change a live number, use the pencil beside the value in
+                  the preview. With several channels, choose one in the Channel
+                  filter first.
                 </p>
               </div>
             )}
@@ -461,6 +628,11 @@ function Builder({
         onConfirm={() => {
           setIsInspectorDirty(false);
           setSelectedItemId(pendingSelection?.itemId);
+          if (
+            pendingSelection?.shouldReveal &&
+            pendingSelection.itemId !== undefined
+          )
+            revealLayoutItem(pendingSelection.itemId);
           setPendingSelection(undefined);
         }}
         title="Discard widget changes?"

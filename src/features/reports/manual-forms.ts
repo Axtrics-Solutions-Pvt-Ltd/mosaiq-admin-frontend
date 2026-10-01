@@ -16,8 +16,46 @@ export const manualTypes = [
   "bar_chart",
   "data_table",
   "heatmap",
+  "gauge",
 ] as const;
 export type ManualType = (typeof manualTypes)[number];
+
+// Status chip codes the API accepts on a data table cell, and on a gauge.
+export const cellStatusCodes = [
+  "healthy",
+  "on_watch",
+  "needs_attention",
+  "info",
+  "live",
+  "paused",
+  "review",
+  "at_risk",
+  "strong",
+  "rising",
+  "watch",
+] as const;
+export const gaugeStatusCodes = [
+  "healthy",
+  "on_watch",
+  "needs_attention",
+  "info",
+] as const;
+export const statusCodeLabels: Record<
+  (typeof cellStatusCodes)[number],
+  string
+> = {
+  healthy: "Healthy",
+  on_watch: "On watch",
+  needs_attention: "Needs attention",
+  info: "Info",
+  live: "Live",
+  paused: "Paused",
+  review: "Review",
+  at_risk: "At risk",
+  strong: "Strong",
+  rising: "Rising",
+  watch: "Watch",
+};
 
 export function hasManualEditor(type: string | null): type is ManualType {
   return type !== null && (manualTypes as readonly string[]).includes(type);
@@ -61,6 +99,7 @@ export const manualLimits = {
   dataRows: 100,
   heatmapColumns: 12,
   heatmapRows: 30,
+  gaugeDetails: 6,
 } as const;
 
 const numberPattern = /^-?\d+(\.\d+)?$/;
@@ -143,6 +182,21 @@ function checkValue(
       code: "custom",
       path,
       message: "Enter a number, or choose the Text format.",
+    });
+}
+
+// A status label names a chip, so it needs a status. A chip without a label
+// is saved with the status name.
+function checkStatus(
+  status: { code: string; label: string },
+  path: (string | number)[],
+  context: z.RefinementCtx,
+) {
+  if (!status.code && status.label.trim())
+    context.addIssue({
+      code: "custom",
+      path: [...path, "code"],
+      message: "Choose a status, or clear its label.",
     });
 }
 
@@ -354,7 +408,16 @@ export const manualSchemas = {
         "column",
       ),
       rows: rows(
-        z.object({ values: z.array(z.string()) }),
+        z.object({
+          values: z.array(z.string()),
+          // One per column; an empty code means a plain cell.
+          statuses: z.array(
+            z.object({
+              code: z.union([z.literal(""), z.enum(cellStatusCodes)]),
+              label: text(60, "status label"),
+            }),
+          ),
+        }),
         1,
         manualLimits.dataRows,
         "row",
@@ -390,6 +453,13 @@ export const manualSchemas = {
               path,
               message: "Enter a number, or leave it empty.",
             });
+          const status = row.statuses[columnIndex];
+          if (status)
+            checkStatus(
+              status,
+              ["rows", rowIndex, "statuses", columnIndex],
+              context,
+            );
         }),
       );
     }),
@@ -411,6 +481,36 @@ export const manualSchemas = {
       "row",
     ),
   }),
+  gauge: z
+    .object({
+      ...common,
+      value: amount("value"),
+      max: optionalAmount("maximum").refine((max) => {
+        const parsed = parseAmount(max);
+        return parsed === undefined || parsed > 0;
+      }, "Enter a maximum above 0."),
+      format: numericFormat,
+      label: text(100, "label"),
+      status: z.object({
+        code: z.union([z.literal(""), z.enum(gaugeStatusCodes)]),
+        label: text(60, "status label"),
+      }),
+      details: z
+        .array(
+          z.object({
+            label: required(100, "label"),
+            value: z.string(),
+            format: anyFormat,
+          }),
+        )
+        .max(manualLimits.gaugeDetails, "Add up to 6 details."),
+    })
+    .superRefine((values, context) => {
+      checkStatus(values.status, ["status"], context);
+      values.details.forEach((detail, index) =>
+        checkValue(detail, ["details", index, "value"], context),
+      );
+    }),
 } satisfies Record<ManualType, z.ZodType>;
 
 export type ManualValues<Type extends ManualType> = z.infer<
@@ -437,6 +537,15 @@ function oneOf<Value extends string>(
   fallback: Value,
 ): Value {
   return options.find((option) => option === value) ?? fallback;
+}
+
+// A stored status chip; unknown codes are dropped, as the API rejects them.
+function toStatus(value: unknown) {
+  const status = record(value);
+  return {
+    code: oneOf(["", ...cellStatusCodes] as const, status.code, ""),
+    label: string(status.label),
+  };
 }
 
 function commonValues(item: LayoutItem) {
@@ -567,7 +676,18 @@ export function toManualValues<Type extends ManualType>(
         columns,
         rows: list(content.rows).map((entry) => {
           const row = record(entry);
-          return { values: columns.map((column) => display(row[column.key])) };
+          // A cell is a raw value or `{ value, format?, status? }`.
+          const cells = columns.map((column) => row[column.key]);
+          return {
+            values: cells.map((cell) =>
+              display(
+                typeof cell === "object" && cell !== null
+                  ? record(cell).value
+                  : cell,
+              ),
+            ),
+            statuses: cells.map((cell) => toStatus(record(cell).status)),
+          };
         }),
       };
     },
@@ -588,6 +708,28 @@ export function toManualValues<Type extends ManualType>(
         }),
       };
     },
+    gauge: () => {
+      const status = toStatus(content.status);
+      return {
+        ...base,
+        value: display(content.value),
+        max: display(content.max),
+        format: oneOf(numericFormats, content.format, "percent"),
+        label: string(content.label),
+        status: {
+          code: oneOf(["", ...gaugeStatusCodes] as const, status.code, ""),
+          label: status.label,
+        },
+        details: list(content.details).map((entry) => {
+          const detail = record(entry);
+          return {
+            label: string(detail.label),
+            value: display(detail.value),
+            format: oneOf(valueFormats, detail.format, "number"),
+          };
+        }),
+      };
+    },
   }[type]() as ManualValues<Type>;
   return withStarterRows(type, values);
 }
@@ -595,7 +737,9 @@ export function toManualValues<Type extends ManualType>(
 type RowsKey<Type extends ManualType> = Type extends
   "field_table" | "data_table" | "heatmap"
   ? "rows"
-  : "items";
+  : Type extends "gauge"
+    ? "details"
+    : "items";
 export type ManualRow<Type extends ManualType> =
   ManualValues<Type>[RowsKey<Type> &
     keyof ManualValues<Type>] extends readonly (infer Row)[]
@@ -632,15 +776,20 @@ function blankRow(type: ManualType, values: ManualValues<ManualType>) {
     }
     case "field_table":
       return { field: "", value: "", note: "" };
-    case "data_table":
+    case "data_table": {
+      const columns = (values as ManualValues<"data_table">).columns;
       return {
-        values: (values as ManualValues<"data_table">).columns.map(() => ""),
+        values: columns.map(() => ""),
+        statuses: columns.map(() => ({ code: "", label: "" })),
       };
+    }
     case "heatmap":
       return {
         label: "",
         values: (values as ManualValues<"heatmap">).columns.map(() => ""),
       };
+    case "gauge":
+      return { label: "", value: "", format: "number" };
   }
 }
 
@@ -648,6 +797,8 @@ function withStarterRows<Type extends ManualType>(
   type: Type,
   values: ManualValues<Type>,
 ): ManualValues<Type> {
+  // A gauge's details are optional, so it starts with none.
+  if (type === "gauge") return values;
   const next = { ...values } as Record<string, unknown>;
   if (type === "data_table" || type === "heatmap") {
     const columns = next.columns as unknown[];
@@ -664,6 +815,12 @@ function withStarterRows<Type extends ManualType>(
   if ((next[rowsKey] as unknown[]).length === 0)
     next[rowsKey] = [emptyRow(type, next as ManualValues<Type>)];
   return next as ManualValues<Type>;
+}
+
+function toChip(status: { code: string; label: string }) {
+  if (!status.code) return null;
+  const code = status.code as (typeof cellStatusCodes)[number];
+  return { code, label: status.label.trim() || statusCodeLabels[code] };
 }
 
 function amountOrText(value: string, format: ValueFormat) {
@@ -793,12 +950,15 @@ function toContent<Type extends ManualType>(
           Object.fromEntries(
             columns.map((column, index) => {
               const cell = row.values[index] ?? "";
-              return [
-                column.key,
+              const value =
                 column.format === "text"
                   ? cell.trim() || null
-                  : (parseAmount(cell) ?? null),
-              ];
+                  : (parseAmount(cell) ?? null);
+              const chip = toChip(
+                row.statuses[index] ?? { code: "", label: "" },
+              );
+              // Only a cell with a status chip is sent as an object.
+              return [column.key, chip ? { value, status: chip } : value];
             }),
           ),
         ),
@@ -813,6 +973,22 @@ function toContent<Type extends ManualType>(
           values: form.columns.map(
             (_, index) => parseAmount(row.values[index] ?? "") ?? null,
           ),
+        })),
+      };
+    }
+    case "gauge": {
+      const form = values as ManualValues<"gauge">;
+      return {
+        value: parseAmount(form.value) ?? null,
+        // Left empty, the API uses 100.
+        max: parseAmount(form.max) ?? null,
+        format: form.format,
+        label: form.label.trim() || null,
+        status: toChip(form.status),
+        details: form.details.map((detail) => ({
+          label: detail.label.trim(),
+          value: amountOrText(detail.value, detail.format),
+          format: detail.format,
         })),
       };
     }
@@ -864,6 +1040,13 @@ export function manualFieldForServerKey<Type extends ManualType>(
   if (root !== "content") return undefined;
   const [field, index, part, ...rest] = path;
   if (field === undefined) return undefined;
+  if (type === "gauge") {
+    if (field === "status")
+      return `status.${index === "label" ? "label" : "code"}`;
+    if (field === "details" && index !== undefined)
+      return `details.${index}.${part === "label" || part === "format" ? part : "value"}`;
+    return field;
+  }
   if (index === undefined) return field;
   switch (type) {
     case "kpi_list":
@@ -890,9 +1073,11 @@ export function manualFieldForServerKey<Type extends ManualType>(
       if (field === "columns") return `columns.${index}.${part ?? "key"}`;
       const columns = (values as ManualValues<"data_table">).columns;
       const column = columns.findIndex((entry) => entry.key.trim() === part);
-      return column >= 0
-        ? `rows.${index}.values.${column}`
-        : `rows.${index}.values.0`;
+      if (column < 0) return `rows.${index}.values.0`;
+      // `content.rows.0.status.status.label` is a cell's chip.
+      if (rest[0] === "status" && rest[1] !== undefined)
+        return `rows.${index}.statuses.${column}.${rest[1] === "code" ? "code" : "label"}`;
+      return `rows.${index}.values.${column}`;
     }
     case "heatmap":
       if (field === "columns") return `columns.${index}.label`;

@@ -13,8 +13,8 @@ import {
 import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
 
-import { layoutItemResponseSchema } from "./contracts";
-import { WidgetInspector } from "./WidgetInspector";
+import { type EditingValue, layoutItemResponseSchema } from "./contracts";
+import { type LiveEditing, WidgetInspector } from "./WidgetInspector";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
@@ -79,11 +79,34 @@ function section(overrides: Partial<LayoutItemFixture>) {
   });
 }
 
-function renderInspector(item: ReturnType<typeof widget>["item"]) {
+function editingValue(overrides: Partial<EditingValue>): EditingValue {
+  return {
+    path: "value",
+    metric: "spend",
+    is_base: true,
+    date_from: "2026-09-01",
+    date_to: "2026-09-30",
+    total: 1200,
+    edited: false,
+    correction_ids: [],
+    ...overrides,
+  };
+}
+
+const channels = [
+  { code: "meta", name: "Meta" },
+  { code: "google", name: "Google Ads" },
+];
+
+function renderInspector(
+  item: ReturnType<typeof widget>["item"],
+  liveEditing?: LiveEditing,
+) {
   return renderWithScope(
     <WidgetInspector
       accents={accentFixtures}
       item={item}
+      liveEditing={liveEditing}
       onDirtyChange={vi.fn()}
       scope={scope}
     />,
@@ -99,6 +122,88 @@ describe("WidgetInspector", () => {
     expect(screen.queryAllByRole("spinbutton")).toHaveLength(0);
     expect(screen.getAllByRole("textbox")).toHaveLength(2);
     expect(screen.getByText(/use the pencil beside the value/)).toBeVisible();
+  });
+
+  it("asks for a channel when a live widget's totals combine several", async () => {
+    const onChannelChange = vi.fn();
+    const onRevealValues = vi.fn();
+    renderInspector(
+      widget({
+        code: "spend_vs_conversions",
+        title: "Spend vs Conversions",
+        type: "line_chart",
+      }).item,
+      {
+        values: [editingValue({ path: "series.0.points.0.y" })],
+        channel: undefined,
+        channels,
+        onChannelChange,
+        onRevealValues,
+      },
+    );
+    expect(screen.getByText(/combines several channels/)).toBeVisible();
+    // Focusing the picker opens the values table before a channel is chosen.
+    await userEvent.click(screen.getByLabelText("Edit numbers for"));
+    expect(onRevealValues).toHaveBeenCalled();
+    await userEvent.selectOptions(
+      screen.getByLabelText("Edit numbers for"),
+      "google",
+    );
+    expect(onChannelChange).toHaveBeenCalledWith("google");
+  });
+
+  it("points to the pencils once a channel narrows the values", () => {
+    renderInspector(
+      widget({
+        code: "spend_vs_conversions",
+        title: "Spend vs Conversions",
+        type: "line_chart",
+      }).item,
+      {
+        values: [editingValue({ workspace_id: 5 })],
+        channel: "meta",
+        channels,
+        onChannelChange: vi.fn(),
+      },
+    );
+    expect(screen.getByText(/use the pencil beside the value/)).toBeVisible();
+    expect(screen.getByLabelText("Edit numbers for")).toHaveValue("meta");
+  });
+
+  it("says campaign rows can't be edited and offers no channel", () => {
+    renderInspector(
+      widget({
+        code: "active_campaigns",
+        title: "Active Campaigns",
+        type: "data_table",
+      }).item,
+      { values: [], channel: undefined, channels, onChannelChange: vi.fn() },
+    );
+    expect(
+      screen.getByText(/Campaign rows come straight from the channel data/),
+    ).toBeVisible();
+    expect(screen.queryByLabelText("Edit numbers for")).not.toBeInTheDocument();
+  });
+
+  it("saves the number of active campaigns shown", async () => {
+    const { fixture, item } = widget({
+      code: "active_campaigns",
+      title: "Active Campaigns",
+      type: "data_table",
+    });
+    const sent = usePatchApi(fixture);
+    renderInspector(item);
+    const limit = screen.getByLabelText("Campaigns shown");
+    await userEvent.type(limit, "500");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("Enter a whole number from 1 to 200."),
+    ).toBeVisible();
+    await userEvent.clear(limit);
+    await userEvent.type(limit, "10");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ settings: { limit: 10 } });
   });
 
   it("saves a KPI card's metric choice and title as settings", async () => {

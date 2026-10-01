@@ -60,15 +60,36 @@ function StructureTab({
         // otherwise it widens the page on phones.
         "relative flex shrink-0 items-center gap-0.5",
         size === "section"
-          ? "rounded-md border-b-2 border-transparent py-0.5 pr-0.5 pl-0.5"
+          ? "border-b-2 py-0.5 pr-0.5 pl-0.5"
           : "border-b-2 border-transparent py-1 md:-mb-px",
-        size === "section" && isSelected && "bg-card shadow-sm",
-        // The selected section and tab are underlined in the section colour.
-        isSelected &&
+        // Every section is underlined in its colour, selected or not, so the
+        // sections stay distinct from each other at rest.
+        size === "section" &&
+          (hasAccent
+            ? "border-[color:var(--section-accent-strong)]"
+            : "border-primary"),
+        // Sections are filled in their colour, light at rest and strong when
+        // selected, so they read as a level above the underlined tabs. Their
+        // checkboxes take the section colour instead of the primary blue.
+        size === "section" &&
+          !isSelected &&
+          hasAccent &&
+          "bg-[color:var(--section-accent-soft)] [&_input:checked]:border-[color:var(--section-accent-strong)] [&_input:checked]:bg-[color:var(--section-accent-strong)] [&_input:enabled:hover]:border-[color:var(--section-accent-strong)]",
+        size === "section" &&
+          isSelected && [
+            "[&>button]:text-primary-foreground [&>button:hover]:text-primary-foreground shadow-sm [&_input]:border-white [&_input:checked]:border-white [&_input:checked]:bg-white/25 [&_input:enabled:hover]:border-white [&>button:hover]:bg-white/15",
+            hasAccent
+              ? "bg-[color:var(--section-accent-strong)]"
+              : "bg-primary",
+          ],
+        // The selected tab is underlined in the section colour.
+        size === "tab" &&
+          isSelected &&
           hasAccent &&
           "border-[color:var(--section-accent-strong)]",
         size === "tab" && isSelected && !hasAccent && "border-primary",
-        isDragging && "bg-card z-10 rounded-md shadow-md",
+        isDragging && "bg-card z-10 shadow-md",
+        isDragging && size === "tab" && "rounded-md",
       )}
       ref={setNodeRef}
       style={
@@ -89,12 +110,14 @@ function StructureTab({
         className={cn(
           "inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium whitespace-nowrap",
           isSelected
-            ? hasAccent
-              ? "text-[color:var(--section-accent-strong)]"
-              : size === "section"
-                ? "text-strong"
+            ? size === "section"
+              ? "text-primary-foreground"
+              : hasAccent
+                ? "text-[color:var(--section-accent-strong)]"
                 : "text-primary"
-            : "text-muted-foreground hover:text-strong",
+            : size === "section" && hasAccent
+              ? "text-[color:var(--section-accent-strong)]"
+              : "text-muted-foreground hover:text-strong",
           !isSelected &&
             size === "tab" &&
             hasAccent &&

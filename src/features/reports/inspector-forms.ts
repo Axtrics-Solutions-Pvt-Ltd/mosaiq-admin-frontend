@@ -10,6 +10,7 @@ import type { LayoutItem, LayoutItemPatch } from "./contracts";
 export const kpiCardsMaxMetrics = 5;
 export const detailedTableMaxRows = 10;
 export const creativeMaxLimit = 24;
+export const activeCampaignsMaxLimit = 200;
 export const breakdownWidgetCodes: ReadonlySet<string> = new Set([
   "age_breakdown",
   "gender_breakdown",
@@ -49,6 +50,18 @@ export const liveFormSchema = z
     metric: z.string(),
   })
   .superRefine((values, context) => {
+    const limit = values.limit.trim();
+    if (
+      limit &&
+      (!/^\d+$/.test(limit) ||
+        Number(limit) < 1 ||
+        Number(limit) > activeCampaignsMaxLimit)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["limit"],
+        message: `Enter a whole number from 1 to ${activeCampaignsMaxLimit}.`,
+      });
     for (const [code, target] of Object.entries(values.targets))
       if (target.trim() && !targetPattern.test(target.trim().replace(/,/g, "")))
         context.addIssue({
@@ -275,6 +288,8 @@ export function livePatch(
     set("sort_metric", values.sort_metric || undefined);
     set("limit", values.limit ? Number(values.limit) : undefined);
   }
+  if (item.code === "active_campaigns")
+    set("limit", values.limit.trim() ? Number(values.limit.trim()) : undefined);
   if (breakdownWidgetCodes.has(item.code))
     set("metric", values.metric || undefined);
   return { settings: settingsOrNull(next) };
