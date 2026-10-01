@@ -84,6 +84,7 @@ describe("CorrectionDialog", () => {
     ).toBeVisible();
     expect(screen.getByText("Campaign: Autumn sale")).toBeVisible();
     expect(screen.getByText("1,200")).toBeVisible();
+    await userEvent.clear(screen.getByLabelText(/New total/));
     await userEvent.type(screen.getByLabelText(/New total/), "1,500");
     await userEvent.type(screen.getByLabelText("Note"), "Tracking outage");
     await userEvent.click(
@@ -103,9 +104,23 @@ describe("CorrectionDialog", () => {
     ]);
   });
 
+  it("starts with the current total and won't save it unchanged", async () => {
+    const sent = useCorrectionApi();
+    renderWithScope(<CorrectionDialog context={context} onClose={vi.fn()} />);
+    expect(screen.getByLabelText(/New total/)).toHaveValue("1200");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save correction" }),
+    );
+    expect(
+      await screen.findByText("Enter a total different from the current one."),
+    ).toBeVisible();
+    expect(sent).toEqual([]);
+  });
+
   it("rejects a decimal for a whole-number metric without saving", async () => {
     const sent = useCorrectionApi();
     renderWithScope(<CorrectionDialog context={context} onClose={vi.fn()} />);
+    await userEvent.clear(screen.getByLabelText(/New total/));
     await userEvent.type(screen.getByLabelText(/New total/), "12.5");
     await userEvent.click(
       screen.getByRole("button", { name: "Save correction" }),
@@ -130,6 +145,7 @@ describe("CorrectionDialog", () => {
     );
     const onClose = vi.fn();
     renderWithScope(<CorrectionDialog context={context} onClose={onClose} />);
+    await userEvent.clear(screen.getByLabelText(/New total/));
     await userEvent.type(screen.getByLabelText(/New total/), "900");
     await userEvent.click(
       screen.getByRole("button", { name: "Save correction" }),
@@ -138,6 +154,33 @@ describe("CorrectionDialog", () => {
       await screen.findByText("The total is too large for this metric."),
     ).toBeVisible();
     expect(screen.getByLabelText(/New total/)).toHaveValue("900");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("shows an API error on a fixed field such as the dates above the form", async () => {
+    useCorrectionApi(() =>
+      HttpResponse.json(
+        {
+          message: "There is no data for this metric in the selected range.",
+          errors: {
+            date_from: [
+              "There is no data for this metric in the selected range.",
+            ],
+          },
+        },
+        { status: 422 },
+      ),
+    );
+    const onClose = vi.fn();
+    renderWithScope(<CorrectionDialog context={context} onClose={onClose} />);
+    await userEvent.clear(screen.getByLabelText(/New total/));
+    await userEvent.type(screen.getByLabelText(/New total/), "1000");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save correction" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "There is no data for this metric in the selected range.",
+    );
     expect(onClose).not.toHaveBeenCalled();
   });
 });

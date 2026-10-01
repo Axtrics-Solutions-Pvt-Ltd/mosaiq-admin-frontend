@@ -294,6 +294,71 @@ export const previewTabSchema = z.object({
   }),
 });
 
+// Creative Performance editing (API phase 1). Keys come from the connector
+// and stay the same across syncs and date ranges.
+export const creativeKeyPattern = /^[A-Za-z0-9_:-]{1,150}$/;
+export const creativeMaxMetrics = 4;
+export const creativeMaxPins = 24;
+export const creativeMaxHidden = 200;
+export const creativeMaxOverrides = 200;
+export const creativeTitleMaxLength = 150;
+export const defaultCreativeMetrics = [
+  "impressions",
+  "ctr",
+  "conversions",
+  "cpa",
+] as const;
+
+export const creativeThumbnailTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+export const maxCreativeThumbnailBytes = 5 * 1024 * 1024;
+
+// The API's own messages, so a file refused here reads the same as one the
+// API refuses (it also checks the content, not just the type).
+export function creativeThumbnailProblem(file: File) {
+  if (!(creativeThumbnailTypes as readonly string[]).includes(file.type))
+    return "Upload a JPEG, PNG or WebP image.";
+  if (file.size > maxCreativeThumbnailBytes)
+    return "The image must be 5 MB or smaller.";
+  return null;
+}
+
+const listedCreativeSchema = z.object({
+  key: z.string(),
+  // The saved name, or the channel's when there is none.
+  title: z.string(),
+  original_title: z.string(),
+  campaign: z.string().nullable(),
+  format: z.string().nullable(),
+  thumbnail_url: z.string().nullable(),
+  has_custom_thumbnail: z.boolean(),
+  is_hidden: z.boolean(),
+  is_pinned: z.boolean(),
+  rank_value: z.number().nullable(),
+});
+
+export const creativeListSchema = z.object({
+  data: z.array(listedCreativeSchema),
+  meta: z.object({
+    current_page: z.number().int().positive(),
+    last_page: z.number().int().positive(),
+    per_page: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+    sort_metric: z.string(),
+  }),
+});
+
+export const creativeThumbnailResponseSchema = z.object({
+  data: z.object({
+    key: z.string(),
+    thumbnail_url: z.string().nullable(),
+    has_custom_thumbnail: z.boolean(),
+  }),
+});
+
 export type Report = z.infer<typeof reportSchema>;
 export type ReportWorkspace = z.infer<typeof reportWorkspaceSchema>;
 export type ReportStatus = (typeof reportStatuses)[number];
@@ -312,3 +377,5 @@ export type PreviewMeta = z.infer<typeof previewMetaSchema>["data"];
 export type PreviewTab = z.infer<typeof previewTabSchema>["data"];
 export type PreviewWidget = PreviewTab["widgets"][number];
 export type EditingValue = z.infer<typeof editingValueSchema>;
+export type ListedCreative = z.infer<typeof listedCreativeSchema>;
+export type CreativeList = z.infer<typeof creativeListSchema>;

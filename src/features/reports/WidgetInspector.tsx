@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, RotateCcw } from "lucide-react";
+import { LocateFixed, Plus, RotateCcw } from "lucide-react";
 import { type FocusEvent, type Ref, useEffect, useRef, useState } from "react";
 import {
   useFieldArray,
@@ -26,7 +26,7 @@ import {
 import type { WidgetPart } from "@/features/report-widgets/contracts";
 import { ApiError } from "@/lib/api/errors";
 
-import type { ReportScope } from "./api";
+import type { PreviewRange, ReportScope } from "./api";
 import {
   type Accent,
   type EditingValue,
@@ -34,12 +34,12 @@ import {
   reportMetricCodes,
   reportMetricLabel,
 } from "./contracts";
+import { CreativeSettings } from "./CreativeSettings";
 import type { InspectorDraft } from "./draft-preview";
 import {
   activeCampaignsMaxLimit,
   breakdownMetricCodes,
   breakdownWidgetCodes,
-  creativeMaxLimit,
   detailedTableMaxRows,
   kpiCardsMaxMetrics,
   liveFormSchema,
@@ -122,6 +122,8 @@ export function formFieldForServerKey(
     if (field === "row_overrides" && code && part)
       return `overrides.${code}.${part}`;
     if (field === "targets" && code) return `targets.${code}`;
+    // A creative's name is checked per key; the error shows on the list.
+    if (field === "creative_overrides") return "creative_titles";
     return field;
   }
   if (root === "content") {
@@ -194,6 +196,10 @@ export type LiveEditing = {
   onChannelChange: (channel: string | undefined) => void;
   // Opens the selected widget's values table, where the pencils are.
   onRevealValues?: () => void;
+  // Scrolls the preview to the selected widget's glowing values.
+  onShowValues?: () => void;
+  // The preview's date range and channel, for lists that follow it.
+  range?: PreviewRange;
 };
 
 // Widgets with one row per campaign or creative. Their values belong to one
@@ -202,7 +208,7 @@ const rowWidgetNotes: Record<string, string> = {
   active_campaigns:
     "Each campaign's numbers come from its channel's data. To change one, use the pencil beside the value in the preview. The correction also changes that channel's totals. CTR is calculated: use its lock to correct the campaign's clicks or impressions.",
   creative_performance:
-    "Creative results come straight from the channel data, so their numbers can't be edited here.",
+    "Creative numbers come from the channel data and can't be corrected yet. Choose what each card shows and manage the creatives above.",
 };
 
 function LiveNumbersNote({
@@ -222,6 +228,8 @@ function LiveNumbersNote({
   const channel = liveEditing?.channel;
   const onChannelChange = liveEditing?.onChannelChange;
   const onRevealValues = liveEditing?.onRevealValues;
+  const onShowValues = liveEditing?.onShowValues;
+  const hasValues = (liveEditing?.values.length ?? 0) > 0;
   const canPickChannel = channels.length > 1 && !rowNote;
   const showChannelPicker =
     canPickChannel && (combinesWorkspaces || channel !== undefined);
@@ -241,6 +249,16 @@ function LiveNumbersNote({
   return (
     <div className="bg-muted text-muted-foreground space-y-3 rounded-md border p-3 text-xs">
       <p>{note}</p>
+      {onShowValues && hasValues && (
+        <Button
+          onClick={onShowValues}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <LocateFixed aria-hidden className="size-4" /> Show me where
+        </Button>
+      )}
       {onChannelChange && showChannelPicker && (
         <FormField id="inspector-edit-channel" label="Edit numbers for">
           <Select
@@ -277,7 +295,8 @@ function LiveWidgetForm({
   onDirtyChange,
   save,
   isSaving,
-}: InspectorFormProps & { liveEditing?: LiveEditing }) {
+  scope,
+}: InspectorFormProps & { liveEditing?: LiveEditing; scope: ReportScope }) {
   const form = useForm<LiveFormValues>({
     resolver: zodResolver(liveFormSchema),
     defaultValues: toLiveValues(item),
@@ -378,31 +397,12 @@ function LiveWidgetForm({
         </>
       )}
       {item.code === "creative_performance" && (
-        <>
-          <FormField id="inspector-sort" label="Rank creatives by">
-            <Select id="inspector-sort" {...form.register("sort_metric")}>
-              <option value="">Default (Conversions)</option>
-              {reportMetricCodes.map((code) => (
-                <option key={code} value={code}>
-                  {reportMetricLabel(code)}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-          <FormField id="inspector-limit" label="Creatives shown">
-            <Select id="inspector-limit" {...form.register("limit")}>
-              <option value="">Default (6)</option>
-              {Array.from(
-                { length: creativeMaxLimit },
-                (_, index) => index + 1,
-              ).map((count) => (
-                <option key={count} value={count}>
-                  {count}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </>
+        <CreativeSettings
+          form={form}
+          item={item}
+          range={liveEditing?.range ?? {}}
+          scope={scope}
+        />
       )}
       {item.code === "active_campaigns" && (
         <FormField
@@ -864,6 +864,7 @@ export function WidgetInspector({
               key={formKey}
               {...formProps}
               liveEditing={liveEditing}
+              scope={scope}
             />
           )}
           {/* Written content in a table shape (AI Strategic Insights) uses the

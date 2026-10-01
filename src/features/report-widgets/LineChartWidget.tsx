@@ -193,7 +193,8 @@ export function LineChartWidget({
           <summary className="text-primary focus-visible:ring-ring w-fit cursor-pointer rounded-sm font-medium focus-visible:ring-2 focus-visible:outline-none">
             Values and corrections
           </summary>
-          <div className="relative mt-2 overflow-x-auto">
+          {/* The builder's values glow lands here, not on the chart. */}
+          <div className="relative mt-2 overflow-x-auto" data-widget-values>
             <ValuesTable
               buckets={buckets}
               className="table-fixed"

@@ -138,6 +138,32 @@ describe("WidgetInspector", () => {
     expect(screen.getByText(/use the pencil beside the value/)).toBeVisible();
   });
 
+  it("points to the preview's values only when the widget has some", async () => {
+    const onShowValues = vi.fn();
+    const editing = {
+      channel: undefined,
+      channels,
+      onChannelChange: vi.fn(),
+      onShowValues,
+    };
+    const { unmount } = renderInspector(widget({}).item, {
+      ...editing,
+      values: [],
+    });
+    expect(
+      screen.queryByRole("button", { name: "Show me where" }),
+    ).not.toBeInTheDocument();
+    unmount();
+    renderInspector(widget({}).item, {
+      ...editing,
+      values: [editingValue({ path: "value" })],
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Show me where" }),
+    );
+    expect(onShowValues).toHaveBeenCalled();
+  });
+
   it("asks for a channel when a live widget's totals combine several", async () => {
     const onChannelChange = vi.fn();
     const onRevealValues = vi.fn();

@@ -409,11 +409,27 @@ function Builder({
     setHighlight((current) => ({ itemId, count: (current?.count ?? 0) + 1 }));
   }
 
+  // A chart keeps its pencils in a collapsed values table; opening the chart
+  // opens the table too, so its glowing values are in view.
+  function revealChartValues(itemId: number) {
+    const widget = preview.data?.widgets.find(
+      (candidate) => candidate.editing.item_id === itemId,
+    );
+    if (widget?.type !== "line_chart" || widget.editing.values.length === 0)
+      return;
+    setValuesReveal((current) => ({
+      itemId,
+      count: (current?.count ?? 0) + 1,
+    }));
+  }
+
   function select(itemId: number | undefined, shouldReveal: boolean) {
     setSelectedItemId(itemId);
     // The inspector it was in is gone, and with it the focus.
     setActivePart(undefined);
-    if (itemId !== undefined) highlightItem(itemId, shouldReveal);
+    if (itemId === undefined) return;
+    revealChartValues(itemId);
+    highlightItem(itemId, shouldReveal);
   }
 
   function requestSelect(
@@ -665,11 +681,16 @@ function Builder({
         channel: view.channel,
         channels: meta.data?.channels ?? [],
         onChannelChange: changeChannel,
+        range: { from: view.from, to: view.to, channel: view.channel },
         onRevealValues: () =>
           setValuesReveal((current) => ({
             itemId: selectedItem.id,
             count: (current?.count ?? 0) + 1,
           })),
+        onShowValues: () => {
+          revealChartValues(selectedItem.id);
+          highlightItem(selectedItem.id, true);
+        },
       }}
       focusPart={focusPart?.itemId === selectedItem.id ? focusPart : undefined}
       formRef={inspectorForm}

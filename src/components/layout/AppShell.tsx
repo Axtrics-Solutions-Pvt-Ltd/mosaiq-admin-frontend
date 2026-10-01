@@ -81,6 +81,26 @@ function AppShellContent({ children }: { children: ReactNode }) {
     }
   }
   const [collapsed, setCollapsed] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node))
+        setIsProfileMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setIsProfileMenuOpen(false);
+      profileMenuRef.current?.querySelector("summary")?.focus();
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isProfileMenuOpen]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const previousPath = useRef(pathname);
   useEffect(() => {
@@ -187,7 +207,14 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 </Select>
               </div>
             )}
-            <details className="relative">
+            <details
+              className="relative"
+              onToggle={(event) =>
+                setIsProfileMenuOpen(event.currentTarget.open)
+              }
+              open={isProfileMenuOpen}
+              ref={profileMenuRef}
+            >
               <summary
                 aria-label="Open profile menu"
                 className="bg-primary-soft text-primary flex size-10 list-none items-center justify-center rounded-full font-semibold [&::-webkit-details-marker]:hidden"
@@ -211,6 +238,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 <Link
                   className="hover:bg-muted mt-1 flex items-center gap-2 rounded-sm px-3 py-2"
                   href={routes.profile}
+                  onClick={() => setIsProfileMenuOpen(false)}
                 >
                   <UserRound aria-hidden className="size-4" />
                   Edit profile
@@ -218,6 +246,7 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 <Link
                   className="hover:bg-muted mt-1 flex items-center gap-2 rounded-sm px-3 py-2"
                   href={`${routes.profile}#change-password`}
+                  onClick={() => setIsProfileMenuOpen(false)}
                 >
                   <KeyRound aria-hidden className="size-4" />
                   Change password

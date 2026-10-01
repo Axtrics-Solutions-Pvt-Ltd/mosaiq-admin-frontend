@@ -118,6 +118,22 @@ export const reportPaths = {
     reportId: number,
     itemId: number,
   ) => `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/reset`,
+  // Creative Performance only: every creative in range, and one creative's
+  // uploaded thumbnail.
+  layoutItemCreatives: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) => `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/creatives`,
+  layoutItemCreativeThumbnail: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+    creativeKey: string,
+  ) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/creatives/${encodeURIComponent(creativeKey)}/thumbnail`,
   previewMeta: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/preview/meta`,
   previewTab: (

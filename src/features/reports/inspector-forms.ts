@@ -2,7 +2,14 @@ import { z } from "zod";
 
 import { baseMetricCodes } from "@/features/channels/contracts";
 
-import type { LayoutItem, LayoutItemPatch } from "./contracts";
+import {
+  creativeMaxHidden,
+  creativeMaxOverrides,
+  creativeMaxPins,
+  creativeTitleMaxLength,
+  type LayoutItem,
+  type LayoutItemPatch,
+} from "./contracts";
 
 // Form models for the widget inspector and their conversion to the PATCH body.
 // Limits mirror the API catalogue (`ReportCatalogue`, `ContentRules`).
@@ -46,10 +53,35 @@ export const liveFormSchema = z
       }),
     ),
     sort_metric: z.string(),
+    // Creative Performance: "" keeps the API's best-first order.
+    sort_direction: z.enum(["", "asc", "desc"]),
+    hidden_keys: z
+      .array(z.string())
+      .max(creativeMaxHidden, `Hide up to ${creativeMaxHidden} creatives.`),
+    pinned_keys: z
+      .array(z.string())
+      .max(creativeMaxPins, `Pin up to ${creativeMaxPins} creatives.`),
+    // Creative key → the name shown in the report. Empty uses the channel's.
+    creative_titles: z.record(z.string(), z.string()),
     limit: z.string(),
     metric: z.string(),
   })
   .superRefine((values, context) => {
+    const titles = Object.values(values.creative_titles).filter((title) =>
+      title.trim(),
+    );
+    if (titles.some((title) => title.trim().length > creativeTitleMaxLength))
+      context.addIssue({
+        code: "custom",
+        path: ["creative_titles"],
+        message: `Keep each name to ${creativeTitleMaxLength} characters.`,
+      });
+    if (titles.length > creativeMaxOverrides)
+      context.addIssue({
+        code: "custom",
+        path: ["creative_titles"],
+        message: `Rename up to ${creativeMaxOverrides} creatives.`,
+      });
     const limit = values.limit.trim();
     if (
       limit &&
@@ -179,6 +211,17 @@ export function toLiveValues(item: LayoutItem): LiveFormValues {
       }),
     ),
     sort_metric: text(settings.sort_metric),
+    sort_direction:
+      settings.sort_direction === "asc" || settings.sort_direction === "desc"
+        ? settings.sort_direction
+        : "",
+    hidden_keys: strings(settings.hidden_keys),
+    pinned_keys: strings(settings.pinned_keys),
+    creative_titles: Object.fromEntries(
+      Object.entries(record(settings.creative_overrides)).map(
+        ([key, override]) => [key, text(record(override).title)],
+      ),
+    ),
     limit: typeof settings.limit === "number" ? String(settings.limit) : "",
     metric: text(settings.metric),
   };
@@ -286,13 +329,41 @@ export function livePatch(
   }
   if (item.code === "creative_performance") {
     set("sort_metric", values.sort_metric || undefined);
+    set("sort_direction", values.sort_direction || undefined);
     set("limit", values.limit ? Number(values.limit) : undefined);
+    set("metrics", values.metrics.length ? values.metrics : undefined);
+    const hidden = values.hidden_keys;
+    set("hidden_keys", hidden.length ? hidden : undefined);
+    // The API refuses a pin on a hidden creative.
+    const pinned = values.pinned_keys.filter((key) => !hidden.includes(key));
+    set("pinned_keys", pinned.length ? pinned : undefined);
+    set("creative_overrides", creativeOverrides(item, values));
   }
   if (item.code === "active_campaigns")
     set("limit", values.limit.trim() ? Number(values.limit.trim()) : undefined);
   if (breakdownWidgetCodes.has(item.code))
     set("metric", values.metric || undefined);
   return { settings: settingsOrNull(next) };
+}
+
+// Names from the form over the stored overrides, keeping any other stored
+// field of an override. A creative left with nothing is dropped.
+function creativeOverrides(item: LayoutItem, values: LiveFormValues) {
+  const stored = record(item.settings.creative_overrides);
+  const keys = new Set([
+    ...Object.keys(stored),
+    ...Object.keys(values.creative_titles),
+  ]);
+  const overrides = Object.fromEntries(
+    [...keys].flatMap((key) => {
+      const override = { ...record(stored[key]) };
+      delete override.title;
+      const title = values.creative_titles[key]?.trim();
+      if (title) override.title = title;
+      return Object.keys(override).length ? [[key, override]] : [];
+    }),
+  );
+  return Object.keys(overrides).length ? overrides : undefined;
 }
 
 export function textPatch(

@@ -51,6 +51,11 @@ function CorrectionForm({
   const mutation = useCreateCorrection();
   const [submitError, setSubmitError] = useState("");
   const isInteger = isIntegerMetric(context.metricCode);
+  // The current total starts in the input so a correction edits it in place.
+  // Amounts are rounded to cents because stored totals can carry more places.
+  const currentTotal = isInteger
+    ? Math.round(context.currentTotal)
+    : Math.round(context.currentTotal * 100) / 100;
   const {
     register,
     handleSubmit,
@@ -58,11 +63,18 @@ function CorrectionForm({
     formState: { errors },
   } = useForm<CorrectionFormValues, unknown, CorrectionFormOutput>({
     resolver: zodResolver(correctionFormSchema(context.metricCode)),
-    defaultValues: { corrected_total: "", note: "" },
+    defaultValues: { corrected_total: String(currentTotal), note: "" },
   });
 
   async function submit(values: CorrectionFormOutput) {
     setSubmitError("");
+    if (values.corrected_total === currentTotal) {
+      setError("corrected_total", {
+        type: "unchanged",
+        message: "Enter a total different from the current one.",
+      });
+      return;
+    }
     try {
       await mutation.mutateAsync({
         agencyId: context.agencyId,
@@ -93,8 +105,11 @@ function CorrectionForm({
       if (totalError)
         setError("corrected_total", { type: "server", message: totalError });
       if (noteError) setError("note", { type: "server", message: noteError });
-      // Errors on the fixed context (dates, metric, campaign) have no input.
-      if (!totalError && !noteError) setSubmitError(error.message);
+      // Errors on the fixed context (dates, metric, campaign) have no input,
+      // so the API's validation text is shown above the form instead.
+      const contextError = Object.values(error.fieldErrors)[0];
+      if (!totalError && !noteError)
+        setSubmitError(contextError ?? error.message);
     }
   }
 

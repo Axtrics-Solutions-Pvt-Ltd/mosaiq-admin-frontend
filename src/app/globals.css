@@ -35,6 +35,36 @@ input[type="checkbox"] {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
+/* Thin, token-coloured scrollbars instead of the platform default, which on
+   Windows is a wide grey track with arrow buttons. WebKit/Blink get the full
+   custom bar; Firefox only supports the standard width and colour hints. */
+::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
 ::selection {
   background: var(--brand-primary-soft);
   color: var(--text-strong);
@@ -91,6 +121,50 @@ dialog::backdrop {
 }
 .animate-editing-highlight {
   animation: editing-highlight 900ms ease-out 3;
+}
+/* The open widget's correctable values, pencils and locks alike: a halo
+   pulses out three times, then a steady ring stays until the widget closes
+   (WCAG 2.2.2). The widget's own root holds its values, unless it marks a
+   smaller area such as a chart's values table. Reduced motion keeps only the
+   ring. The replay copy restarts the pulse when the builder asks again. */
+@keyframes values-glow {
+  from {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 45%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 40%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 45%, transparent),
+      0 0 0 7px transparent;
+  }
+}
+@keyframes values-glow-replay {
+  from {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 45%, transparent),
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 40%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--brand-primary) 45%, transparent),
+      0 0 0 7px transparent;
+  }
+}
+[data-values-glow]
+  [data-widget-part="content"]:not(:has([data-widget-values]))
+  > *,
+[data-values-glow] [data-widget-values] {
+  border-radius: 0.5rem;
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--brand-primary) 45%, transparent);
+  animation: values-glow 1.2s ease-out 3;
+}
+[data-values-glow="b"]
+  [data-widget-part="content"]:not(:has([data-widget-values]))
+  > *,
+[data-values-glow="b"] [data-widget-values] {
+  animation-name: values-glow-replay;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

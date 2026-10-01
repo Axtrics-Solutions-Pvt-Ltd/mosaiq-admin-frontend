@@ -10,14 +10,17 @@ import { clientReportPreviewKey } from "@/features/corrections/queries";
 
 import {
   createReport,
+  type CreativeListFilters,
   deleteReport,
   duplicateReport,
   getPreviewMeta,
   getPreviewTab,
   getReport,
   getReportLayout,
+  listCreatives,
   listReports,
   type PreviewRange,
+  removeCreativeThumbnail,
   reorderReportLayout,
   type ReportListFilters,
   type ReportScope,
@@ -25,6 +28,7 @@ import {
   updateLayoutItem,
   updateReport,
   updateReportWorkspaces,
+  uploadCreativeThumbnail,
 } from "./api";
 import type {
   LayoutItemPatch,
@@ -57,6 +61,24 @@ export const reportKeys = {
       range.from ?? "",
       range.to ?? "",
       range.channel ?? "",
+    ] as const,
+  // Under the preview prefix, so saving the widget's settings or reloading
+  // the preview refreshes the list too.
+  creatives: (scope: ReportScope, itemId: number) =>
+    [...reportKeys.preview(scope), "creatives", itemId] as const,
+  creativeList: (
+    scope: ReportScope,
+    itemId: number,
+    filters: CreativeListFilters,
+  ) =>
+    [
+      ...reportKeys.creatives(scope, itemId),
+      filters.from ?? "",
+      filters.to ?? "",
+      filters.channel ?? "",
+      filters.search ?? "",
+      filters.page ?? 1,
+      filters.per_page ?? "",
     ] as const,
 };
 
@@ -130,6 +152,20 @@ export function usePreviewTabs(
         getPreviewTab(scope, tabCode, range, signal),
       enabled: isEnabled && validScope(scope),
     })),
+  });
+}
+
+export function useCreatives(
+  scope: ReportScope,
+  itemId: number,
+  filters: CreativeListFilters,
+) {
+  return useQuery({
+    queryKey: reportKeys.creativeList(scope, itemId, filters),
+    queryFn: ({ signal }) => listCreatives(scope, itemId, filters, signal),
+    enabled: validScope(scope) && valid(itemId),
+    // Keep the current page on screen while the next one or a search loads.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -289,6 +325,40 @@ export function useResetLayoutItem(scope: ReportScope) {
           ? { ...layout, sections: replaceLayoutItem(layout.sections, item) }
           : layout,
       ),
+    onSettled: () =>
+      client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
+  });
+}
+
+// An uploaded image shows on the canvas, in the portal and in the list, so
+// the whole preview reloads after either change.
+export function useUploadCreativeThumbnail(scope: ReportScope) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      creativeKey,
+      file,
+    }: {
+      itemId: number;
+      creativeKey: string;
+      file: File;
+    }) => uploadCreativeThumbnail(scope, itemId, creativeKey, file),
+    onSettled: () =>
+      client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
+  });
+}
+
+export function useRemoveCreativeThumbnail(scope: ReportScope) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      creativeKey,
+    }: {
+      itemId: number;
+      creativeKey: string;
+    }) => removeCreativeThumbnail(scope, itemId, creativeKey),
     onSettled: () =>
       client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
   });

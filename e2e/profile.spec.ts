@@ -13,6 +13,11 @@ test("agency user edits their own name and changes password", async ({
   await expect(
     page.getByRole("heading", { name: "Your profile" }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Edit profile" })).toBeHidden();
+  await page.getByLabel("Open profile menu").click();
+  await expect(page.getByRole("link", { name: "Edit profile" })).toBeVisible();
+  await page.getByRole("heading", { name: "Your profile" }).click();
+  await expect(page.getByRole("link", { name: "Edit profile" })).toBeHidden();
   await page
     .getByRole("textbox", { name: /Name/ })
     .fill(`Alex Rivera ${testInfo.project.name}`);

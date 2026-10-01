@@ -625,3 +625,50 @@ export function layoutFixture() {
     ],
   };
 }
+
+// GET .../layout/{item}/creatives for Creative Performance (API phase 1).
+export type ListedCreativeFixture = {
+  key: string;
+  title: string;
+  original_title: string;
+  campaign: string | null;
+  format: string | null;
+  thumbnail_url: string | null;
+  has_custom_thumbnail: boolean;
+  is_hidden: boolean;
+  is_pinned: boolean;
+  rank_value: number | null;
+};
+
+export function listedCreative(
+  fixture: Pick<ListedCreativeFixture, "key" | "original_title"> &
+    Partial<ListedCreativeFixture>,
+): ListedCreativeFixture {
+  return {
+    title: fixture.original_title,
+    campaign: "Brand Awareness",
+    format: "image",
+    thumbnail_url: `https://cdn.example.test/${fixture.key}.jpg`,
+    has_custom_thumbnail: false,
+    is_hidden: false,
+    is_pinned: false,
+    rank_value: 3500,
+    ...fixture,
+  };
+}
+
+export function creativeListFixture(
+  creatives: ListedCreativeFixture[],
+  meta: { current_page?: number; last_page?: number } = {},
+) {
+  return {
+    data: creatives,
+    meta: {
+      current_page: meta.current_page ?? 1,
+      last_page: meta.last_page ?? 1,
+      per_page: 10,
+      total: creatives.length,
+      sort_metric: "conversions",
+    },
+  };
+}

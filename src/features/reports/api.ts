@@ -2,6 +2,8 @@ import { apiRequest } from "@/lib/api/client";
 import { reportPaths } from "@/lib/api/paths";
 
 import {
+  creativeListSchema,
+  creativeThumbnailResponseSchema,
   type LayoutItemPatch,
   layoutItemResponseSchema,
   layoutResponseSchema,
@@ -32,6 +34,12 @@ export type PreviewRange = {
   from?: string;
   to?: string;
   channel?: string;
+};
+
+export type CreativeListFilters = PreviewRange & {
+  search?: string;
+  page?: number;
+  per_page?: number;
 };
 
 function withQuery(
@@ -195,4 +203,60 @@ export async function getPreviewTab(
     { signal },
   );
   return previewTabSchema.parse(result).data;
+}
+
+export async function listCreatives(
+  { agencyId, clientId, reportId }: ReportScope,
+  itemId: number,
+  filters: CreativeListFilters,
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    withQuery(
+      reportPaths.layoutItemCreatives(agencyId, clientId, reportId, itemId),
+      filters,
+    ),
+    { signal },
+  );
+  return creativeListSchema.parse(result);
+}
+
+export async function uploadCreativeThumbnail(
+  { agencyId, clientId, reportId }: ReportScope,
+  itemId: number,
+  creativeKey: string,
+  file: File,
+) {
+  const body = new FormData();
+  body.append("file", file, file.name);
+  const result = await apiRequest<unknown>(
+    reportPaths.layoutItemCreativeThumbnail(
+      agencyId,
+      clientId,
+      reportId,
+      itemId,
+      creativeKey,
+    ),
+    { method: "POST", body },
+  );
+  return creativeThumbnailResponseSchema.parse(result).data;
+}
+
+// Back to the channel's image. Harmless when nothing was uploaded.
+export async function removeCreativeThumbnail(
+  { agencyId, clientId, reportId }: ReportScope,
+  itemId: number,
+  creativeKey: string,
+) {
+  const result = await apiRequest<unknown>(
+    reportPaths.layoutItemCreativeThumbnail(
+      agencyId,
+      clientId,
+      reportId,
+      itemId,
+      creativeKey,
+    ),
+    { method: "DELETE" },
+  );
+  return creativeThumbnailResponseSchema.parse(result).data;
 }

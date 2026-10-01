@@ -91,6 +91,7 @@ function SortableWidget({
   item,
   label,
   activePart,
+  valuesGlow,
   marker,
   onPick,
 }: {
@@ -101,6 +102,10 @@ function SortableWidget({
   label?: string;
   // The part whose inspector field has focus, outlined on the card.
   activePart?: WidgetPart;
+  // Rings the values its pencils and locks sit beside, so the inspector's
+  // "use the pencil in the preview" has a place to point at. The two keys
+  // name the same pulse; switching between them replays it.
+  valuesGlow?: "a" | "b";
   marker?: ReactNode;
   // A click on the card itself opens it, at the field for the part clicked.
   // The toolbar's Edit button stays the keyboard way in.
@@ -120,6 +125,7 @@ function SortableWidget({
     <section
       aria-label={label}
       data-active-part={activePart}
+      data-values-glow={valuesGlow}
       className={cn(
         // Keeps a revealed widget clear of the sticky top bar.
         "relative scroll-mt-[calc(4rem+var(--page-padding))]",
@@ -235,6 +241,14 @@ export function ReportCanvas({
       : undefined;
   const activePartFor = (item: LayoutItem) =>
     selectedItemId === item.id ? activePart : undefined;
+  // Only the open widget glows, and only when it has values to correct.
+  // Each new highlight of it switches the key, which replays the pulse.
+  const valuesGlowFor = (item: LayoutItem, widget: PreviewWidget) => {
+    if (selectedItemId !== item.id || widget.editing.values.length === 0)
+      return undefined;
+    const count = highlight?.itemId === item.id ? highlight.count : 0;
+    return count % 2 === 0 ? "a" : "b";
+  };
 
   const moveWidget = (item: LayoutItem, offset: -1 | 1) => {
     const order = tab && moveInOrder(tab.children, item.id, offset);
@@ -413,6 +427,7 @@ export function ReportCanvas({
                   key={item.id}
                   label={itemTitle(item)}
                   activePart={activePartFor(item)}
+                  valuesGlow={valuesGlowFor(item, widget)}
                   marker={marker(item)}
                   onPick={pickFor(item)}
                 >
