@@ -69,6 +69,29 @@ dialog::backdrop {
 .animate-toast-out {
   animation: toast-out 150ms ease-in forwards;
 }
+/* Three pulses, then still: a moving highlight that doesn't stop would
+   distract (WCAG 2.2.2). */
+@keyframes editing-highlight {
+  from {
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--brand-primary) 55%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 0.75rem transparent;
+  }
+}
+/* The card part whose field has focus in the builder's inspector. */
+[data-active-part="title"] [data-widget-part="title"],
+[data-active-part="subtitle"] [data-widget-part="subtitle"],
+[data-active-part="as_of"] [data-widget-part="as_of"],
+[data-active-part="content"] [data-widget-part="content"] {
+  outline: 2px dashed var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+.animate-editing-highlight {
+  animation: editing-highlight 900ms ease-out 3;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

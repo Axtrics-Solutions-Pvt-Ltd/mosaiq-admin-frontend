@@ -115,21 +115,6 @@ test("a report is created, shaped, written and corrected in the builder", async 
   await applied.getByRole("button", { name: "Close", exact: true }).click();
   await expect(applied).toBeHidden();
 
-  // The portal preview leaves the hidden tab out.
-  await page.getByRole("button", { name: "Preview as portal" }).click();
-  const tabs = page.getByRole("navigation", {
-    name: "Reporting Dashboard tabs",
-  });
-  await expect(
-    tabs.getByRole("button", { name: "Executive Summary" }),
-  ).toBeVisible();
-  await expect(
-    tabs.getByRole("button", { name: "Detailed Metrics" }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Edit AI Summary" }),
-  ).toHaveCount(0);
-
   const hasOverflow = await page.evaluate(
     () =>
       document.documentElement.scrollWidth >

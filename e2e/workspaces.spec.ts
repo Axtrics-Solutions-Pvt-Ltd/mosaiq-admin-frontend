@@ -27,8 +27,6 @@ test("workspace directory opens every detail section without overflow", async ({
   for (const name of [
     "Overview",
     "Connection",
-    "Market Profile",
-    "Modules",
     "Team and Access",
     "Activity",
   ]) {

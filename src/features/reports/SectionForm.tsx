@@ -44,7 +44,7 @@ export function SectionForm({
     resolver: zodResolver(sectionFormSchema),
     defaultValues: toSectionValues(item),
   });
-  const { formError, onSubmit } = useSubmit(
+  const { formError, onDiscard, onSubmit } = useSubmit(
     form,
     save,
     (values) => sectionPatch(item, values),
@@ -63,6 +63,7 @@ export function SectionForm({
       isDirty={form.formState.isDirty}
       isSaving={isSaving}
       label={`${itemTitle(item)} settings`}
+      onDiscard={onDiscard}
       onSubmit={onSubmit}
     >
       <FormField

@@ -4,7 +4,6 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
-  Copy,
   Ellipsis,
   Eye,
   Gauge,
@@ -70,14 +69,6 @@ function AgencyActions({ agency }: { agency: AgencySummary }) {
         >
           <Gauge aria-hidden className="size-4" /> Open workspaces
         </Link>
-        <button
-          className="text-muted-foreground flex w-full cursor-not-allowed items-center gap-2 rounded-sm px-3 py-2 text-left opacity-70"
-          disabled
-          title="Available during functional integration"
-          type="button"
-        >
-          <Copy aria-hidden className="size-4" /> Duplicate (preview only)
-        </button>
       </div>
     </details>
   );

@@ -10,7 +10,9 @@ import {
   createAgency,
   getAgencyRecord,
   listAgencies,
+  removeAgencyLogo,
   updateAgency,
+  uploadAgencyLogo,
 } from "./api";
 import type { AgencyCreatePayload, AgencyProfile } from "./contracts";
 
@@ -91,5 +93,28 @@ export function useUpdateAgency() {
       queryClient.setQueryData(agencyKeys.detail(record.id), record);
       queryClient.invalidateQueries({ queryKey: agencyKeys.all });
     },
+  });
+}
+
+/**
+ * Saves or clears the agency logo: a File uploads it, null removes it. Agency
+ * queries refresh afterwards so lists and the header show the new logo.
+ */
+export function useSaveAgencyLogo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      agencyId,
+      file,
+    }: {
+      agencyId: number;
+      file: File | null;
+    }): Promise<string | null> => {
+      if (file) return uploadAgencyLogo(agencyId, file);
+      await removeAgencyLogo(agencyId);
+      return null;
+    },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: agencyKeys.all }),
   });
 }

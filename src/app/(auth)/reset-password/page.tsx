@@ -8,7 +8,6 @@ export default function ResetPasswordPage() {
   return (
     <AuthCard
       description="Choose a new password for your administrator account."
-      isPreview={false}
       footer={
         <Link
           className="text-primary font-medium hover:underline"

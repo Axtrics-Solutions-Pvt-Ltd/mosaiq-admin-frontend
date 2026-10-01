@@ -63,14 +63,14 @@ function useManualForm<Type extends ManualType>(
     >,
     defaultValues: initialValues as DefaultValues<ManualValues<Type>>,
   });
-  const { formError, onSubmit } = useSubmit(
+  const { formError, onDiscard, onSubmit } = useSubmit(
     form,
     save,
     (values) => manualPatch(type, item, values),
     (key, values) => manualFieldForServerKey(type, key, values),
   );
   useReportDirty(form.formState.isDirty, onDirtyChange);
-  return { form, formError, onSubmit };
+  return { form, formError, onDiscard, onSubmit };
 }
 
 function fieldId(name: string) {
@@ -158,6 +158,7 @@ function ManualShell<Values extends ManualValues<ManualType>>({
   formError,
   isSaving,
   item,
+  onDiscard,
   onSubmit,
 }: {
   children: ReactNode;
@@ -165,6 +166,7 @@ function ManualShell<Values extends ManualValues<ManualType>>({
   formError: string;
   isSaving: boolean;
   item: InspectorFormProps["item"];
+  onDiscard: () => void;
   onSubmit: () => void;
 }) {
   return (
@@ -173,6 +175,7 @@ function ManualShell<Values extends ManualValues<ManualType>>({
       isDirty={form.formState.isDirty}
       isSaving={isSaving}
       label={`${itemTitle(item)} content`}
+      onDiscard={onDiscard}
       onSubmit={onSubmit}
     >
       <TitleFields form={form} item={item} />

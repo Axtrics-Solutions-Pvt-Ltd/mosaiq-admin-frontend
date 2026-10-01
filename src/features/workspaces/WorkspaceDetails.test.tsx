@@ -83,7 +83,94 @@ beforeEach(() => {
         },
       }),
     ),
+    http.get(workspacePaths.users(2, 4, 7), () =>
+      HttpResponse.json({
+        data: [
+          {
+            user_id: 11,
+            name: "Avery Admin",
+            email: "avery@example.com",
+            role_code: "AGENCY_ADMIN",
+            access: "agency",
+            status: "active",
+            granted_at: "2026-09-01T09:00:00.000000Z",
+            invitation_expires_at: null,
+          },
+          {
+            user_id: null,
+            name: null,
+            email: "pending@example.com",
+            role_code: "MANAGER",
+            access: "workspace",
+            status: "invited",
+            granted_at: null,
+            invitation_expires_at: "2026-10-08T09:00:00.000000Z",
+          },
+        ],
+      }),
+    ),
+    http.get(workspacePaths.activity(2, 4, 7), () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: 5,
+            action: "workspace.fetched",
+            result: "success",
+            actor: { id: 11, name: "Avery Admin" },
+            metadata: { rows_upserted: 1200 },
+            created_at: "2026-09-02T09:00:00.000000Z",
+          },
+        ],
+        meta: { current_page: 1, last_page: 1, total: 1 },
+      }),
+    ),
   );
+});
+
+describe("WorkspaceDetails team and activity tabs", () => {
+  it("lists workspace users and pending invitations for an Agency Admin", async () => {
+    renderWithScope(
+      <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
+      { membership: { agencyId: 2, roleCode: "AGENCY_ADMIN" } },
+    );
+    await userEvent.click(
+      await screen.findByRole("tab", { name: "Team and Access" }),
+    );
+    const panel = screen.getByRole("tabpanel", { name: "Team and Access" });
+    expect(
+      (await within(panel).findAllByText("Avery Admin")).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(panel).getAllByText("pending@example.com").length,
+    ).toBeGreaterThan(0);
+    expect(within(panel).queryByText("UI preview")).not.toBeInTheDocument();
+  });
+
+  it("hides the team tab from a Manager", async () => {
+    renderWithScope(
+      <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
+      { membership: { agencyId: 2, roleCode: "MANAGER" } },
+    );
+    expect(
+      await screen.findByRole("tab", { name: "Activity" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: "Team and Access" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows workspace activity", async () => {
+    renderWithScope(
+      <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
+      { membership: { agencyId: 2, roleCode: "MANAGER" } },
+    );
+    await userEvent.click(await screen.findByRole("tab", { name: "Activity" }));
+    const panel = screen.getByRole("tabpanel", { name: "Activity" });
+    expect(
+      await within(panel).findByText("Channel data fetched"),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText(/Avery Admin/)).toBeInTheDocument();
+  });
 });
 
 describe("WorkspaceDetails delete action", () => {

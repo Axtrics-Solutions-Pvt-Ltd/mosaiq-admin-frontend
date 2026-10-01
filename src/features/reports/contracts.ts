@@ -258,6 +258,9 @@ const editingValueSchema = z.object({
   is_base: z.boolean(),
   inputs: z.array(z.string()).optional(),
   workspace_id: idSchema.optional(),
+  // Set on a campaign row's value, which corrects that campaign only.
+  campaign_key: z.string().nullable().optional(),
+  campaign_name: z.string().nullable().optional(),
   date_from: z.string(),
   date_to: z.string(),
   total: z.number().nullable(),

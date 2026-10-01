@@ -38,6 +38,7 @@ function SubmitButton({
 const loginSchema = z.object({
   email: z.email("Enter a valid work email address."),
   password: z.string().min(1, "Enter your password."),
+  remember: z.boolean(),
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
@@ -57,7 +58,7 @@ export function LoginForm({
     formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", remember: false },
   });
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -137,9 +138,9 @@ export function LoginForm({
       <div className="flex items-center justify-between gap-4">
         <label
           className="text-muted-foreground flex items-center gap-2 text-sm"
-          title="Remember me is not yet supported by the API"
+          htmlFor="login-remember"
         >
-          <Checkbox disabled /> Remember me (unavailable)
+          <Checkbox id="login-remember" {...register("remember")} /> Remember me
         </label>
         <Link
           className="text-primary text-sm font-medium hover:underline"

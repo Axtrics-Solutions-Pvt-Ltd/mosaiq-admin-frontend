@@ -1,8 +1,22 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
-import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
+import {
+  createContext,
+  type ReactNode,
+  type Ref,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useImperativeHandle,
+  useState,
+} from "react";
+import {
+  type FieldValues,
+  type Path,
+  type UseFormReturn,
+  useWatch,
+} from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
@@ -25,6 +39,19 @@ export type InspectorFormProps = {
   isSaving: boolean;
 };
 
+// Lets the builder save the open form from its unsaved-changes dialog.
+export type InspectorFormHandle = {
+  // Resolves true once saved; false leaves the form showing its errors.
+  submit: () => Promise<boolean>;
+};
+
+// The builder's hold on whichever form the inspector shows: the form's
+// unsaved edits for the canvas preview, and a handle to save it.
+export const InspectorFormContext = createContext<{
+  onDraftChange?: (patch: LayoutItemPatch | undefined) => void;
+  formRef?: Ref<InspectorFormHandle>;
+}>({});
+
 // Saves the form and maps API field errors (`content.items.2.label`) onto the
 // matching controls through `fieldFor`. Entered values stay in place.
 export function useSubmit<Values extends FieldValues>(
@@ -34,12 +61,13 @@ export function useSubmit<Values extends FieldValues>(
   fieldFor: (key: string, values: Values) => string | undefined,
 ) {
   const [formError, setFormError] = useState("");
-  const onSubmit = form.handleSubmit(async (values) => {
+  const { formRef, onDraftChange } = useContext(InspectorFormContext);
+  const saveValues = async (values: Values) => {
     setFormError("");
     const error = await save(toPatch(values));
     if (!error) {
       form.reset(values);
-      return;
+      return true;
     }
     let isMapped = false;
     for (const [key, message] of Object.entries(error.fieldErrors)) {
@@ -50,8 +78,37 @@ export function useSubmit<Values extends FieldValues>(
       }
     }
     setFormError(isMapped ? "Review the highlighted fields." : error.message);
+    return false;
+  };
+  const onSubmit = form.handleSubmit(async (values) => {
+    await saveValues(values);
   });
-  return { formError, onSubmit };
+  useImperativeHandle(formRef, () => ({
+    submit: async () => {
+      let isSaved = false;
+      await form.handleSubmit(async (values) => {
+        isSaved = await saveValues(values);
+      })();
+      return isSaved;
+    },
+  }));
+
+  // Every edit goes to the canvas preview while the form has unsaved edits.
+  const values = useWatch({ control: form.control });
+  const isDirty = form.formState.isDirty;
+  const publishDraft = useEffectEvent(() =>
+    onDraftChange?.(isDirty ? toPatch(form.getValues()) : undefined),
+  );
+  useEffect(() => publishDraft(), [values, isDirty]);
+  const clearDraft = useEffectEvent(() => onDraftChange?.(undefined));
+  useEffect(() => () => clearDraft(), []);
+
+  // Back to the last saved values: the stored ones, or those of the last save.
+  const onDiscard = () => {
+    setFormError("");
+    form.reset();
+  };
+  return { formError, onDiscard, onSubmit };
 }
 
 export function useReportDirty(
@@ -138,41 +195,79 @@ export function FormShell({
   isDirty,
   isSaving,
   label,
+  onDiscard,
   onSubmit,
+  previewNote,
+  saveLabel = "Save",
 }: {
   children: ReactNode;
   formError: string;
   isDirty: boolean;
   isSaving: boolean;
   label: string;
+  onDiscard: () => void;
   onSubmit: () => void;
+  // Shown with unsaved edits the canvas can't preview in full.
+  previewNote?: string;
+  saveLabel?: string;
 }) {
   return (
     <form
       aria-label={label}
       className="space-y-4"
       noValidate
+      onKeyDown={(event) => {
+        // Ctrl/Cmd+S saves instead of opening the browser's save dialog.
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === "s"
+        ) {
+          event.preventDefault();
+          if (isDirty && !isSaving) onSubmit();
+        }
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      {formError && (
-        <p
-          className="text-destructive rounded-md border p-2 text-sm"
-          role="alert"
-        >
-          {formError}
-        </p>
-      )}
       {children}
-      <div className="flex items-center justify-between gap-2 border-t pt-4">
-        <span className="text-muted-foreground text-xs">
-          {isDirty ? "Unsaved changes" : "No unsaved changes"}
-        </span>
-        <Button disabled={isSaving || !isDirty} type="submit">
-          {isSaving ? "Saving..." : "Save"}
-        </Button>
+      {/* Pinned to the bottom of the inspector's scroll area, so saving never
+          needs a scroll past a long list. -bottom-4 and -mx-4 cancel the
+          panel's padding, as the inspector's sticky header does at the top. */}
+      <div className="bg-card sticky -bottom-4 z-10 -mx-4 space-y-2 border-t px-4 py-3">
+        {formError && (
+          <p
+            className="text-destructive rounded-md border p-2 text-sm"
+            role="alert"
+          >
+            {formError}
+          </p>
+        )}
+        {isDirty && previewNote && (
+          <p className="text-muted-foreground text-xs">{previewNote}</p>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            {isDirty && (
+              <span aria-hidden className="bg-warning size-2 rounded-full" />
+            )}
+            {isDirty ? "Unsaved changes" : "No unsaved changes"}
+          </span>
+          <div className="flex shrink-0 gap-2 whitespace-nowrap">
+            <Button
+              disabled={isSaving || !isDirty}
+              onClick={onDiscard}
+              type="button"
+              variant="ghost"
+            >
+              Discard
+            </Button>
+            <Button disabled={isSaving || !isDirty} type="submit">
+              {isSaving ? "Saving..." : saveLabel}
+            </Button>
+          </div>
+        </div>
       </div>
     </form>
   );

@@ -8,7 +8,6 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard
       description="Enter your work email and we'll send a reset link if your account is eligible."
-      isPreview={false}
       footer={
         <Link
           className="text-primary font-medium hover:underline"

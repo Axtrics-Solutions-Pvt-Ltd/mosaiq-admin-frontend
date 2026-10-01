@@ -48,7 +48,6 @@ export const routes = {
   },
   roles: "/roles",
   channels: "/channels",
-  curation: "/curation",
   governance: "/governance",
   designSystem: "/design-system",
 } as const;

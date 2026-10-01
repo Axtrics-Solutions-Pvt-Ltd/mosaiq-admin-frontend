@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerApiConfig } from "@/config/env";
+import { forwardedAuthCookies, relayAuthCookies } from "@/lib/api/cookies";
 
 type ServerApiConfig = ReturnType<typeof getServerApiConfig>;
 
@@ -17,25 +18,13 @@ function csrfToken(cookie: string) {
   }
 }
 
-function forwardCookie(request: Request, config: ServerApiConfig) {
-  return (request.headers.get("cookie") ?? "")
-    .split(";")
-    .map((part) => part.trim())
-    .filter(
-      (part) =>
-        part.startsWith("XSRF-TOKEN=") ||
-        part.startsWith(`${config.sessionCookieName}=`),
-    )
-    .join("; ");
-}
-
 function buildForwardHeaders(
   request: Request,
   config: ServerApiConfig,
   method: "GET" | "POST" | "PUT" | "DELETE",
   hasJsonBody: boolean,
 ) {
-  const cookie = forwardCookie(request, config);
+  const cookie = forwardedAuthCookies(request, config.sessionCookieName);
   const headers = new Headers({
     Accept: "application/json",
     Origin: config.adminOrigin,
@@ -49,13 +38,14 @@ function buildForwardHeaders(
   return headers;
 }
 
-async function relayUpstream(upstream: Response) {
+async function relayUpstream(upstream: Response, config: ServerApiConfig) {
   const contentType = upstream.headers.get("Content-Type") ?? "";
   const responseHeaders = new Headers({ "Cache-Control": "no-store" });
   if (contentType.includes("application/json"))
     responseHeaders.set("Content-Type", "application/json");
   const requestId = upstream.headers.get("X-Request-ID");
   if (requestId) responseHeaders.set("X-Request-ID", requestId);
+  relayAuthCookies(upstream, responseHeaders, config);
   if (upstream.status >= 300 && !contentType.includes("application/json"))
     return Response.json(
       { message: "The service could not complete the request." },
@@ -100,7 +90,7 @@ export async function forwardAdminRequest(
       cache: "no-store",
       redirect: "manual",
     });
-    return await relayUpstream(upstream);
+    return await relayUpstream(upstream, config);
   } catch {
     return Response.json(
       { message: "The service is unavailable." },
@@ -120,7 +110,7 @@ export async function forwardAdminFileDownload(request: Request, path: string) {
       cache: "no-store",
       redirect: "manual",
     });
-    if (!upstream.ok) return relayUpstream(upstream);
+    if (!upstream.ok) return relayUpstream(upstream, config);
     const responseHeaders = new Headers({ "Cache-Control": "no-store" });
     const contentType = upstream.headers.get("Content-Type");
     if (contentType) responseHeaders.set("Content-Type", contentType);
@@ -160,7 +150,7 @@ export async function forwardAdminUpload(
       cache: "no-store",
       redirect: "manual",
     });
-    return await relayUpstream(upstream);
+    return await relayUpstream(upstream, config);
   } catch {
     return Response.json(
       { message: "The service is unavailable." },

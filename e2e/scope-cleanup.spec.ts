@@ -2,7 +2,12 @@ import { expect, signIn, test } from "./fixtures";
 
 test("retired data management screens are not found", async ({ page }) => {
   await signIn(page);
-  for (const path of ["/data-import", "/import-history", "/connectors"]) {
+  for (const path of [
+    "/data-import",
+    "/import-history",
+    "/connectors",
+    "/curation",
+  ]) {
     await page.goto(path);
     await expect(
       page.getByRole("heading", { name: "Page not found" }),

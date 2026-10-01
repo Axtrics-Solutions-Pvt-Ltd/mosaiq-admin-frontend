@@ -1,8 +1,10 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
+import { createRef } from "react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { WidgetPart } from "@/features/report-widgets/contracts";
 import { reportPaths } from "@/lib/api/paths";
 import {
   accentFixture,
@@ -14,7 +16,13 @@ import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
 
 import { type EditingValue, layoutItemResponseSchema } from "./contracts";
-import { type LiveEditing, WidgetInspector } from "./WidgetInspector";
+import type { InspectorFormHandle } from "./inspector-parts";
+import { itemTitle } from "./layout";
+import {
+  type LiveEditing,
+  WidgetInspector,
+  widgetTypeLabel,
+} from "./WidgetInspector";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
@@ -114,6 +122,12 @@ function renderInspector(
   );
 }
 
+// jsdom can't open a popover, so the header menu is found from its trigger.
+function actionsMenu(name: string | RegExp) {
+  const trigger = screen.getByRole("button", { name });
+  return document.getElementById(trigger.getAttribute("popovertarget")!)!;
+}
+
 describe("WidgetInspector", () => {
   it("gives a live widget no way to type its numbers", () => {
     renderInspector(widget({}).item);
@@ -170,7 +184,7 @@ describe("WidgetInspector", () => {
     expect(screen.getByLabelText("Edit numbers for")).toHaveValue("meta");
   });
 
-  it("says campaign rows can't be edited and offers no channel", () => {
+  it("points campaign rows to their pencils and offers no channel", () => {
     renderInspector(
       widget({
         code: "active_campaigns",
@@ -180,7 +194,7 @@ describe("WidgetInspector", () => {
       { values: [], channel: undefined, channels, onChannelChange: vi.fn() },
     );
     expect(
-      screen.getByText(/Campaign rows come straight from the channel data/),
+      screen.getByText(/Each campaign's numbers come from its channel's data/),
     ).toBeVisible();
     expect(screen.queryByLabelText("Edit numbers for")).not.toBeInTheDocument();
   });
@@ -336,7 +350,12 @@ describe("WidgetInspector", () => {
       }),
     );
     renderInspector(item);
-    await userEvent.click(screen.getByRole("button", { name: "Reset widget" }));
+    // Reset can't be undone, so it is in the header menu, away from Save.
+    await userEvent.click(
+      within(actionsMenu(`More actions for ${itemTitle(item)}`)).getByText(
+        "Reset widget",
+      ),
+    );
     expect(resets).toBe(0);
     const dialog = screen.getByRole("dialog", { name: "Reset this widget?" });
     await userEvent.click(
@@ -354,7 +373,127 @@ describe("WidgetInspector", () => {
     ).toBeChecked();
     expect(screen.getByLabelText("Title")).toBeVisible();
     expect(screen.queryByLabelText("Subtitle")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reset section" })).toBeVisible();
+    expect(
+      within(actionsMenu(/^More actions for/)).getByText("Reset section"),
+    ).toBeInTheDocument();
+  });
+
+  it("discards unsaved edits back to the saved values", async () => {
+    const { fixture, item } = widget({
+      id: 12,
+      code: "what_worked",
+      title: "What Worked",
+      type: "bullet_list",
+      kind: "text",
+      content: { items: ["Video drove CTR"] },
+    });
+    const sent = usePatchApi(fixture);
+    renderInspector(item);
+    const discard = screen.getByRole("button", { name: "Discard" });
+    expect(discard).toBeDisabled();
+    await userEvent.type(screen.getByLabelText("Subtitle"), "Draft");
+    await userEvent.click(screen.getByRole("button", { name: "Add point" }));
+    expect(screen.getByText("Unsaved changes")).toBeVisible();
+    await userEvent.click(discard);
+    expect(screen.getByLabelText("Subtitle")).toHaveValue("");
+    expect(screen.queryByLabelText("Point 2")).not.toBeInTheDocument();
+    expect(screen.getByText("No unsaved changes")).toBeVisible();
+    expect(sent).toHaveLength(0);
+  });
+
+  it("hands its unsaved edits to the canvas and saves for the builder", async () => {
+    const { fixture, item } = widget({
+      id: 12,
+      code: "what_worked",
+      title: "What Worked",
+      type: "bullet_list",
+      kind: "text",
+      content: { items: ["Video drove CTR"] },
+    });
+    const sent = usePatchApi(fixture);
+    const onDraftChange = vi.fn();
+    const formRef = createRef<InspectorFormHandle>();
+    renderWithScope(
+      <WidgetInspector
+        formRef={formRef}
+        item={item}
+        onDirtyChange={vi.fn()}
+        onDraftChange={onDraftChange}
+        scope={scope}
+      />,
+      { platformRoleCode: "SUPER_ADMIN" },
+    );
+    await userEvent.type(screen.getByLabelText("Point 1"), " again");
+    expect(onDraftChange).toHaveBeenLastCalledWith({
+      itemId: 12,
+      patch: expect.objectContaining({
+        content: { items: ["Video drove CTR again"] },
+      }),
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onDraftChange).toHaveBeenLastCalledWith(undefined);
+
+    await userEvent.type(screen.getByLabelText("Point 1"), "!");
+    let isSaved: boolean | undefined;
+    await act(async () => {
+      isSaved = await formRef.current?.submit();
+    });
+    expect(isSaved).toBe(true);
+    expect(sent).toEqual([
+      expect.objectContaining({ content: { items: ["Video drove CTR!"] } }),
+    ]);
+    expect(onDraftChange).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("names the widget type in words", () => {
+    expect(widgetTypeLabel("recommendation_list")).toBe("Recommendations");
+    expect(widgetTypeLabel("sankey_chart")).toBe("Sankey chart");
+  });
+
+  it("links card parts and fields both ways", async () => {
+    const { item } = widget({
+      id: 10,
+      code: "ai_summary",
+      title: "AI Summary",
+      type: "text_hero",
+      kind: "text",
+    });
+    const onActivePartChange = vi.fn();
+    // A click on a part of the card focuses its field.
+    const renderFocused = (part: WidgetPart) =>
+      renderWithScope(
+        <WidgetInspector
+          focusPart={{ part, count: 1 }}
+          item={item}
+          onActivePartChange={onActivePartChange}
+          onDirtyChange={vi.fn()}
+          scope={scope}
+        />,
+        { platformRoleCode: "SUPER_ADMIN" },
+      );
+    renderFocused("subtitle").unmount();
+    expect(onActivePartChange).toHaveBeenLastCalledWith("subtitle");
+    renderFocused("content");
+    expect(screen.getByLabelText("Headline")).toHaveFocus();
+    expect(onActivePartChange).toHaveBeenLastCalledWith("content");
+    await userEvent.click(screen.getByLabelText("Title"));
+    expect(onActivePartChange).toHaveBeenLastCalledWith("title");
+  });
+
+  it("saves with Ctrl+S from inside the form", async () => {
+    const { fixture, item } = widget({
+      id: 10,
+      code: "ai_summary",
+      title: "AI Summary",
+      type: "text_hero",
+      kind: "text",
+    });
+    const sent = usePatchApi(fixture);
+    renderInspector(item);
+    await userEvent.type(screen.getByLabelText("Headline"), "Meta leads");
+    await userEvent.keyboard("{Control>}s{/Control}");
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ content: { headline: "Meta leads" } });
   });
 
   it("saves a section colour with the section's other settings", async () => {

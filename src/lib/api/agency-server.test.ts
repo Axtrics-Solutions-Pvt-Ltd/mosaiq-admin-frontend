@@ -58,4 +58,33 @@ describe("agency gateway", () => {
     expect(headers.get("Cookie")).not.toContain("unrelated");
     expect(result.status).toBe(200);
   });
+
+  it("forwards the remember-me cookie and relays a restored session", async () => {
+    const upstreamHeaders = new Headers({ "Content-Type": "application/json" });
+    upstreamHeaders.append(
+      "Set-Cookie",
+      "mosaiq-session=new; Path=/; Domain=api.example.test; HttpOnly",
+    );
+    upstreamHeaders.append("Set-Cookie", "unrelated=1; Path=/");
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ data: [] }), {
+          headers: upstreamHeaders,
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await forwardAgencyRequest(
+      new Request("http://localhost:3000/api/v1/agencies", {
+        headers: { cookie: "remember_web_abc=token; unrelated=secret" },
+      }),
+      "/api/v1/agencies",
+      "GET",
+    );
+    const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
+    expect(headers.get("Cookie")).toBe("remember_web_abc=token");
+    const cookies = result.headers.getSetCookie();
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toMatch(/^mosaiq-session=new;/);
+    expect(cookies[0]).not.toContain("Domain=");
+  });
 });

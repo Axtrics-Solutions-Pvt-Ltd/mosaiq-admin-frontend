@@ -4,8 +4,16 @@ import { Cell, Pie, PieChart } from "recharts";
 
 import { Badge } from "@/components/ui/Badge";
 import { formatValue } from "@/lib/formatters";
+import { cn } from "@/lib/utils/cn";
 
-import { chartColor } from "./chart";
+import {
+  chartColor,
+  ringCenterClass,
+  ringFrameClass,
+  ringLabelClass,
+  ringValueRowClass,
+  ringValueSize,
+} from "./chart";
 import type { ValueAdornment, WidgetPayload } from "./contracts";
 import { ChangeBadge } from "./KpiWidget";
 import { statusTones } from "./TableWidgets";
@@ -27,9 +35,10 @@ export function GaugeWidget({
     { key: "rest", value: payload.max - filled },
   ];
   const details = payload.details ?? [];
+  const centerValue = formatValue(payload.value, payload.format, currency);
   return (
     <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,12rem)_1fr]">
-      <div className="relative mx-auto aspect-square w-full max-w-48">
+      <div className={ringFrameClass}>
         <div aria-hidden className="absolute inset-0">
           <PieChart
             // A text alternative sits beside each chart, so the SVG itself
@@ -54,17 +63,21 @@ export function GaugeWidget({
             </Pie>
           </PieChart>
         </div>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="pointer-events-auto flex items-center gap-1">
-            <span className="text-strong text-2xl font-semibold tabular-nums">
-              {formatValue(payload.value, payload.format, currency)}
+        <div className={ringCenterClass}>
+          <span className={ringValueRowClass}>
+            <span
+              className={cn(
+                "text-strong max-w-full min-w-0 truncate font-semibold tabular-nums",
+                ringValueSize(centerValue),
+              )}
+              title={centerValue}
+            >
+              {centerValue}
             </span>
             {valueAdornment?.("value")}
           </span>
           {payload.label && payload.label !== payload.status?.label && (
-            <span className="text-muted-foreground text-xs">
-              {payload.label}
-            </span>
+            <span className={ringLabelClass}>{payload.label}</span>
           )}
         </div>
       </div>

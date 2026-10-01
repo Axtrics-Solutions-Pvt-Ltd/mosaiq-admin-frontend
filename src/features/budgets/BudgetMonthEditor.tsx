@@ -278,7 +278,9 @@ export function BudgetMonthEditor({
   return (
     <section
       aria-labelledby="budget-editor-title"
-      className="scroll-mt-4 space-y-3 border-t pt-4"
+      // A panel of its own: budgets save separately from the widget's
+      // settings above, with their own Save.
+      className="bg-muted scroll-mt-4 space-y-3 rounded-lg border p-3"
       ref={sectionRef}
     >
       <div className="space-y-1">
@@ -290,8 +292,8 @@ export function BudgetMonthEditor({
         </h3>
         <p className="text-muted-foreground text-xs">
           Pacing compares spend with these budgets, prorated to the report
-          range. They are shared by every report of this client. Leave a month
-          empty for no budget.
+          range. They are shared by every report of this client and saved on
+          their own, with Save budgets. Leave a month empty for no budget.
         </p>
       </div>
       {body()}

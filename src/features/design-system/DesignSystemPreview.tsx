@@ -29,7 +29,23 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
 import { Toast } from "@/components/ui/Toast";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useCurrentUser } from "@/features/auth/queries";
+
+/** An internal component showcase, shown to Super Admins only. */
 export function DesignSystemPreview() {
+  const currentUser = useCurrentUser();
+  if (currentUser.isPending) return <Skeleton className="h-56 w-full" />;
+  if (currentUser.data?.platformRoleCode !== "SUPER_ADMIN")
+    return (
+      <StatePanel
+        description="The component showcase is only available to Super Admins."
+        kind="permission"
+        title="Design system unavailable"
+      />
+    );
+  return <DesignSystemShowcase />;
+}
+function DesignSystemShowcase() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -277,6 +293,7 @@ export function DesignSystemPreview() {
         </p>
       </Drawer>
       <ConfirmationDialog
+        body={<p>This showcase dialog does not change any data.</p>}
         description="Review the consequences before continuing."
         isOpen={confirmOpen}
         onCancel={() => setConfirmOpen(false)}

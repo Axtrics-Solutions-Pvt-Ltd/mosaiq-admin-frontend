@@ -128,7 +128,38 @@ export const workspaceFetchResponseSchema = z.object({
   }),
 });
 
+// Everyone who can reach a workspace, plus pending invitations that grant it.
+const workspaceUserSchema = z.object({
+  user_id: z.number().int().positive().nullable(),
+  name: z.string().nullable(),
+  email: z.string(),
+  role_code: z.string(),
+  access: z.enum(["agency", "all_workspaces", "workspace"]),
+  status: z.enum(["active", "inactive", "invited"]),
+  granted_at: z.string().nullable(),
+  invitation_expires_at: z.string().nullable(),
+});
+export const workspaceUserListSchema = z.object({
+  data: z.array(workspaceUserSchema),
+});
+const workspaceActivitySchema = z.object({
+  id: z.number().int().positive(),
+  action: z.string(),
+  result: z.enum(["success", "failure"]),
+  actor: z
+    .object({ id: z.number().int().positive(), name: z.string() })
+    .nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  created_at: z.string().nullable(),
+});
+export const workspaceActivityListSchema = z.object({
+  data: z.array(workspaceActivitySchema),
+  meta: paginationSchema,
+});
+
 export type WorkspaceRecord = z.infer<typeof workspaceSchema>;
+export type WorkspaceUser = z.infer<typeof workspaceUserSchema>;
+export type WorkspaceActivity = z.infer<typeof workspaceActivitySchema>;
 export type ClientRecord = z.infer<typeof clientSchema>;
 export type WorkspaceProfile = z.infer<typeof workspaceProfileSchema>;
 export type ConnectionStatus = z.infer<typeof connectionStatusSchema>;

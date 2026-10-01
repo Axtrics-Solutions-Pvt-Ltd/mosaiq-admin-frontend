@@ -54,13 +54,17 @@ export function BulletListWidget({
       {payload.items.map((item, index) => (
         // Written items have no id; their position is their identity.
         <li className="flex gap-2.5" key={index}>
-          <span
-            className={cn(
-              "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-              tone.className,
-            )}
-          >
-            <Icon aria-hidden className="size-3.5" />
+          {/* A one-line-tall slot keeps the marker centred on the first line
+              of text regardless of the item's font size or wrapping. */}
+          <span className="flex h-lh shrink-0 items-center">
+            <span
+              className={cn(
+                "flex size-5 items-center justify-center rounded-full",
+                tone.className,
+              )}
+            >
+              <Icon aria-hidden className="size-3.5" />
+            </span>
             <span className="sr-only">{tone.label}: </span>
           </span>
           <span className="whitespace-pre-line">{item}</span>

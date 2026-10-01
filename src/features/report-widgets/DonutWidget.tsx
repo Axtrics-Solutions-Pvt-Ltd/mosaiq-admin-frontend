@@ -3,8 +3,16 @@
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
 
 import { formatValue } from "@/lib/formatters";
+import { cn } from "@/lib/utils/cn";
 
-import { chartColor } from "./chart";
+import {
+  chartColor,
+  ringCenterClass,
+  ringFrameClass,
+  ringLabelClass,
+  ringValueRowClass,
+  ringValueSize,
+} from "./chart";
 import type { ValueAdornment, WidgetPayload } from "./contracts";
 import { ChangeBadge } from "./KpiWidget";
 
@@ -26,9 +34,12 @@ export function DonutWidget({
     label: item.label,
     value: item.value ?? 0,
   }));
+  const centerValue = payload.center
+    ? formatValue(payload.center.value, payload.center.format, currency)
+    : "";
   return (
     <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,12rem)_1fr]">
-      <div className="relative mx-auto aspect-square w-full max-w-48">
+      <div className={ringFrameClass}>
         <div aria-hidden className="absolute inset-0">
           <PieChart
             // A text alternative sits beside each chart, so the SVG itself
@@ -79,17 +90,17 @@ export function DonutWidget({
           </PieChart>
         </div>
         {payload.center && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-muted-foreground text-xs">
-              {payload.center.label}
-            </span>
-            <span className="pointer-events-auto flex items-center gap-1">
-              <span className="text-strong text-xl font-semibold tabular-nums">
-                {formatValue(
-                  payload.center.value,
-                  payload.center.format,
-                  currency,
+          <div className={ringCenterClass}>
+            <span className={ringLabelClass}>{payload.center.label}</span>
+            <span className={ringValueRowClass}>
+              <span
+                className={cn(
+                  "text-strong max-w-full min-w-0 truncate font-semibold tabular-nums",
+                  ringValueSize(centerValue),
                 )}
+                title={centerValue}
+              >
+                {centerValue}
               </span>
               {valueAdornment?.("center.value")}
             </span>

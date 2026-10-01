@@ -11,8 +11,7 @@ export type Capability =
   | "reports.manage"
   | "reports.delete"
   | "channels.manage"
-  | "curation.manage"
-  | "settings.manage";
+  | "audit.view";
 
 // The only roles that can be granted now. Analyst, Viewer and Client User are
 // legacy codes that existing memberships may still carry.
@@ -30,8 +29,7 @@ const orgAdminCapabilities: readonly Capability[] = [
   "roles.view",
   "reports.manage",
   "reports.delete",
-  "curation.manage",
-  "settings.manage",
+  "audit.view",
 ];
 
 // A Manager only reaches the clients and workspaces the API returns for them.

@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, ArrowLeft, ImagePlus, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, ImagePlus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { type FieldErrors, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -27,9 +27,11 @@ import type {
   AgencyProfile,
   AgencyRecord,
 } from "@/features/agencies/contracts";
+import { agencyLogoProblem } from "@/features/agencies/logo";
 import {
   useAgency,
   useCreateAgency,
+  useSaveAgencyLogo,
   useUpdateAgency,
 } from "@/features/agencies/queries";
 import { useCurrentUser } from "@/features/auth/queries";
@@ -144,7 +146,23 @@ export function AgencyForm({
   const updateMutation = useUpdateAgency();
   const [submitError, setSubmitError] = useState("");
   const [isDiscarding, setIsDiscarding] = useState(false);
-  const [logoName, setLogoName] = useState("");
+  const logoMutation = useSaveAgencyLogo();
+  // A chosen logo, or removal of the current one, is applied when the form saves.
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const logoFileUrl = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : null),
+    [logoFile],
+  );
+  useEffect(
+    () => () => {
+      if (logoFileUrl) URL.revokeObjectURL(logoFileUrl);
+    },
+    [logoFileUrl],
+  );
+  const logoUrl = logoFileUrl ?? (isRemovingLogo ? null : record?.logo_url);
+  const hasLogoChange = logoFile !== null || isRemovingLogo;
   const [activeTab, setActiveTab] = useState("overview");
   const [tabVersion, setTabVersion] = useState(0);
   const {
@@ -159,20 +177,24 @@ export function AgencyForm({
   });
   const values = useWatch({ control });
   const parentNavigation = getNavigationItem(routes.agencies.index, useScope());
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    logoMutation.isPending;
+  const hasChanges = isDirty || hasLogoChange;
   const backHref = record
     ? routes.agencies.detail(String(record.id))
     : routes.agencies.index;
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!hasChanges) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
+  }, [hasChanges]);
 
   async function submit(values: FormValues) {
     setSubmitError("");
@@ -182,6 +204,19 @@ export function AgencyForm({
         mode === "create"
           ? await createMutation.mutateAsync(payload)
           : await updateMutation.mutateAsync({ agencyId: record!.id, payload });
+      if (hasLogoChange) {
+        try {
+          await logoMutation.mutateAsync({
+            agencyId: saved.id,
+            file: logoFile,
+          });
+        } catch {
+          toast({
+            title: "The agency was saved, but the logo could not be updated.",
+            tone: "error",
+          });
+        }
+      }
       toast({
         title: mode === "create" ? "Agency created." : "Agency updated.",
         tone: "success",
@@ -462,7 +497,7 @@ export function AgencyForm({
     },
     {
       value: "brand",
-      label: "Brand preview",
+      label: "Brand",
       content: (
         <div className="grid gap-4 xl:grid-cols-2">
           <Card>
@@ -476,22 +511,54 @@ export function AgencyForm({
                   Choose a logo
                 </span>
                 <span className="text-muted-foreground mt-1 text-xs">
-                  Local preview only; logo upload is not available in the agency
-                  API.
+                  PNG, JPG or WEBP up to 2 MB. Saved with the agency.
                 </span>
                 <input
                   type="file"
-                  accept=".png,.jpg,.jpeg,.svg"
+                  accept="image/png,image/jpeg,image/webp"
                   className="sr-only"
-                  onChange={(event) =>
-                    setLogoName(event.target.files?.[0]?.name ?? "")
-                  }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    const problem = agencyLogoProblem(file);
+                    setLogoError(problem ?? "");
+                    if (problem) return;
+                    setLogoFile(file);
+                    setIsRemovingLogo(false);
+                  }}
                 />
               </label>
-              {logoName && (
-                <p className="text-muted-foreground mt-3 text-sm">
-                  Selected locally: {logoName}
+              {logoError && (
+                <p className="text-destructive mt-3 text-sm" role="alert">
+                  {logoError}
                 </p>
+              )}
+              {logoFile && (
+                <p className="text-muted-foreground mt-3 text-sm">
+                  {logoFile.name} will be uploaded when you save.
+                </p>
+              )}
+              {isRemovingLogo && (
+                <p className="text-muted-foreground mt-3 text-sm">
+                  The logo will be removed when you save.
+                </p>
+              )}
+              {(logoFile || record?.logo_url) && !isRemovingLogo && (
+                <Button
+                  className="mt-3"
+                  onClick={() => {
+                    setLogoFile(null);
+                    setLogoError("");
+                    setIsRemovingLogo(Boolean(record?.logo_url));
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Trash2 aria-hidden className="size-4" />
+                  {logoFile ? "Clear selection" : "Remove logo"}
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -507,6 +574,7 @@ export function AgencyForm({
                       className="size-12"
                       name={values.displayName || "New agency"}
                       tone="blue"
+                      url={logoUrl}
                     />
                     <p className="text-strong font-semibold">
                       {values.displayName || "Agency name"}
@@ -592,13 +660,12 @@ export function AgencyForm({
         </div>
         <div className="bg-card sticky bottom-0 z-10 mt-5 flex flex-col-reverse gap-3 rounded-lg border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-xs">
-            {isDirty
+            {hasChanges
               ? "Unsaved changes"
               : "Changes are saved to the agency after submission."}
-            {logoName ? " The selected logo stays local." : ""}
           </p>
           <div className="flex gap-2">
-            {isDirty ? (
+            {hasChanges ? (
               <Button
                 type="button"
                 variant="outline"

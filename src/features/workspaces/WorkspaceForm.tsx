@@ -4,20 +4,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { FormGrid, PageStack } from "@/components/shared/LayoutPatterns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatePanel } from "@/components/shared/StatePanel";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { type TabOption, Tabs } from "@/components/ui/Tabs";
 import {
   clientScope,
   routes,
@@ -43,30 +41,6 @@ import {
   useWorkspace,
 } from "./queries";
 
-function PreviewSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children?: ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <CardTitle>{title}</CardTitle>
-          <Badge tone="primary">UI preview</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-muted-foreground text-sm">{description}</p>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
 function suggestedWorkspaceName(clientName: string, channelName: string) {
   return `${clientName} – ${channelName}`;
 }
@@ -177,276 +151,156 @@ function WorkspaceForm({
       document.getElementById("workspace-form-error")?.focus();
     }
   }
-  const tabs: readonly TabOption[] = [
-    {
-      value: "overview",
-      label: "Overview",
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Workspace profile</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FormGrid>
-              {isChannelLocked ? (
-                <div className="md:col-span-2">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    Channel
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <ChannelBadge channel={record?.connector ?? null} />
-                    <span className="text-muted-foreground text-xs">
-                      A workspace&apos;s channel can&apos;t be changed.
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="md:col-span-2">
-                  <FormField
-                    description={
-                      mode === "edit"
-                        ? "This workspace was created before channels. Choose its channel once; it can't be changed later."
-                        : "Each workspace reports one channel for its client."
+  const profileCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Workspace profile</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FormGrid>
+          {isChannelLocked ? (
+            <div className="md:col-span-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                Channel
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <ChannelBadge channel={record?.connector ?? null} />
+                <span className="text-muted-foreground text-xs">
+                  A workspace&apos;s channel can&apos;t be changed.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="md:col-span-2">
+              <FormField
+                description={
+                  mode === "edit"
+                    ? "This workspace was created before channels. Choose its channel once; it can't be changed later."
+                    : "Each workspace reports one channel for its client."
+                }
+                error={
+                  errors.connector_id?.message ??
+                  (channels.isError
+                    ? "Channels could not be loaded. Reload the page to try again."
+                    : undefined)
+                }
+                id="connector_id"
+                label="Channel"
+                required
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select
+                    aria-describedby={
+                      errors.connector_id
+                        ? "connector_id-error"
+                        : "connector_id-description"
                     }
-                    error={
-                      errors.connector_id?.message ??
-                      (channels.isError
-                        ? "Channels could not be loaded. Reload the page to try again."
-                        : undefined)
-                    }
+                    aria-invalid={Boolean(errors.connector_id)}
+                    className="min-w-60"
+                    disabled={!channels.isSuccess}
                     id="connector_id"
-                    label="Channel"
-                    required
+                    {...register("connector_id", {
+                      setValueAs: (value: string | number | undefined) =>
+                        value === "" || value === undefined
+                          ? undefined
+                          : Number(value),
+                      onChange: (event) =>
+                        suggestName(Number(event.target.value)),
+                    })}
                   >
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Select
-                        aria-describedby={
-                          errors.connector_id
-                            ? "connector_id-error"
-                            : "connector_id-description"
-                        }
-                        aria-invalid={Boolean(errors.connector_id)}
-                        className="min-w-60"
-                        disabled={!channels.isSuccess}
-                        id="connector_id"
-                        {...register("connector_id", {
-                          setValueAs: (value: string | number | undefined) =>
-                            value === "" || value === undefined
-                              ? undefined
-                              : Number(value),
-                          onChange: (event) =>
-                            suggestName(Number(event.target.value)),
-                        })}
-                      >
-                        <option value="">
-                          {channels.isPending
-                            ? "Loading channels..."
-                            : activeChannels.length === 0
-                              ? "No active channels"
-                              : "Select a channel"}
-                        </option>
-                        {activeChannels.map((channel) => (
-                          <option key={channel.id} value={channel.id}>
-                            {channel.name}
-                          </option>
-                        ))}
-                      </Select>
-                      {selectedChannel && (
-                        <ChannelBadge channel={selectedChannel} />
-                      )}
-                    </div>
-                  </FormField>
-                  {channels.isSuccess && activeChannels.length === 0 && (
-                    <p className="text-muted-foreground mt-2 text-xs">
-                      A Super Admin must add an active channel before workspaces
-                      can be created.
-                    </p>
+                    <option value="">
+                      {channels.isPending
+                        ? "Loading channels..."
+                        : activeChannels.length === 0
+                          ? "No active channels"
+                          : "Select a channel"}
+                    </option>
+                    {activeChannels.map((channel) => (
+                      <option key={channel.id} value={channel.id}>
+                        {channel.name}
+                      </option>
+                    ))}
+                  </Select>
+                  {selectedChannel && (
+                    <ChannelBadge channel={selectedChannel} />
                   )}
                 </div>
+              </FormField>
+              {channels.isSuccess && activeChannels.length === 0 && (
+                <p className="text-muted-foreground mt-2 text-xs">
+                  A Super Admin must add an active channel before workspaces can
+                  be created.
+                </p>
               )}
-              <FormField
-                id="name"
-                label="Workspace name"
-                required
-                error={errors.name?.message}
-              >
-                <Input
-                  id="name"
-                  placeholder="Client reporting workspace"
-                  aria-invalid={Boolean(errors.name)}
-                  aria-describedby={errors.name ? "name-error" : undefined}
-                  {...register("name")}
-                />
-              </FormField>
-              <FormField
-                id="status"
-                label="Status"
-                error={errors.status?.message}
-              >
-                <Select id="status" {...register("status")}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </FormField>
-              <FormField
-                id="currency"
-                label="Default currency"
-                error={errors.currency?.message}
-              >
-                <Select id="currency" {...register("currency")}>
-                  {["AUD", "EUR", "GBP", "INR", "USD", record?.currency]
-                    .filter((value): value is string => Boolean(value))
-                    .filter((value, index, all) => all.indexOf(value) === index)
-                    .map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                </Select>
-              </FormField>
-              <FormField
-                id="timezone"
-                label="Time zone"
-                error={errors.timezone?.message}
-              >
-                <Select id="timezone" {...register("timezone")}>
-                  {[
-                    "Europe/London",
-                    "America/New_York",
-                    "Asia/Kolkata",
-                    "Australia/Sydney",
-                    record?.timezone,
-                  ]
-                    .filter((value): value is string => Boolean(value))
-                    .filter((value, index, all) => all.indexOf(value) === index)
-                    .map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                </Select>
-              </FormField>
-            </FormGrid>
-          </CardContent>
-        </Card>
-      ),
-    },
-    {
-      value: "market",
-      label: "Market Profile",
-      content: (
-        <PreviewSection
-          title="Market profile"
-          description="These fields show the planned profile. The workspace API currently saves only currency and time zone on Overview."
-        >
-          <FormGrid>
-            {[
-              "Country",
-              "Provinces",
-              "Target markets",
-              "Target languages",
-              "Cultural audience segments",
-              "Reporting period",
-            ].map((label) => (
-              <FormField
-                id={"preview-" + label.toLowerCase().replaceAll(" ", "-")}
-                label={label}
-                key={label}
-              >
-                <Input
-                  id={"preview-" + label.toLowerCase().replaceAll(" ", "-")}
-                  disabled
-                  placeholder="Awaiting API support"
-                />
-              </FormField>
-            ))}
-          </FormGrid>
-        </PreviewSection>
-      ),
-    },
-    {
-      value: "modules",
-      label: "Modules",
-      content: record ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Module access</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              KPI and module visibility for this workspace is managed on the
-              Curation screen, not this form.
-            </p>
-            <Button asChild variant="outline">
-              <Link
-                href={`${routes.curation}?agency=${agencyId}&workspace=${record.id}`}
-              >
-                Open curation
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Module access</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-sm">
-              Save the workspace first, then configure module and KPI visibility
-              from its details page.
-            </p>
-          </CardContent>
-        </Card>
-      ),
-    },
-    {
-      value: "team",
-      label: "Team and Access",
-      content: (
-        <PreviewSection
-          title="Team and access"
-          description="Workspace assignments and roles require a backend contract."
-        >
-          <FormGrid>
-            <FormField id="preview-internal" label="Assigned internal users">
-              <Input
-                id="preview-internal"
-                disabled
-                placeholder="No assignments available"
-              />
-            </FormField>
-            <FormField id="preview-client-users" label="Assigned client users">
-              <Input
-                id="preview-client-users"
-                disabled
-                placeholder="No assignments available"
-              />
-            </FormField>
-          </FormGrid>
-        </PreviewSection>
-      ),
-    },
-    {
-      value: "activity",
-      label: "Activity",
-      content: (
-        <PreviewSection
-          title="Activity"
-          description="Workspace changes will appear here when an activity endpoint is available."
-        >
-          <p className="text-muted-foreground rounded-lg border p-4 text-sm">
-            No activity feed available.
-          </p>
-        </PreviewSection>
-      ),
-    },
-  ];
+            </div>
+          )}
+          <FormField
+            id="name"
+            label="Workspace name"
+            required
+            error={errors.name?.message}
+          >
+            <Input
+              id="name"
+              placeholder="Client reporting workspace"
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? "name-error" : undefined}
+              {...register("name")}
+            />
+          </FormField>
+          <FormField id="status" label="Status" error={errors.status?.message}>
+            <Select id="status" {...register("status")}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </Select>
+          </FormField>
+          <FormField
+            id="currency"
+            label="Default currency"
+            error={errors.currency?.message}
+          >
+            <Select id="currency" {...register("currency")}>
+              {["AUD", "EUR", "GBP", "INR", "USD", record?.currency]
+                .filter((value): value is string => Boolean(value))
+                .filter((value, index, all) => all.indexOf(value) === index)
+                .map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+            </Select>
+          </FormField>
+          <FormField
+            id="timezone"
+            label="Time zone"
+            error={errors.timezone?.message}
+          >
+            <Select id="timezone" {...register("timezone")}>
+              {[
+                "Europe/London",
+                "America/New_York",
+                "Asia/Kolkata",
+                "Australia/Sydney",
+                record?.timezone,
+              ]
+                .filter((value): value is string => Boolean(value))
+                .filter((value, index, all) => all.indexOf(value) === index)
+                .map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+            </Select>
+          </FormField>
+        </FormGrid>
+      </CardContent>
+    </Card>
+  );
   return (
     <PageStack>
       <PageHeader
         title={mode === "create" ? "Create workspace" : "Edit " + record?.name}
-        description="Save the workspace profile and review planned management sections."
+        description="Save the workspace profile."
         breadcrumbs={<Link href={backHref}>Workspaces</Link>}
       />
       {submitError && (
@@ -462,18 +316,14 @@ function WorkspaceForm({
       <form
         noValidate
         onSubmit={handleSubmit(submit, () => {
-          setSubmitError("Review the highlighted fields on Overview.");
+          setSubmitError("Review the highlighted fields.");
           document.getElementById("workspace-form-error")?.focus();
         })}
       >
-        <div className="bg-card overflow-x-auto rounded-lg border p-4 sm:p-5">
-          <Tabs items={tabs} />
-        </div>
+        {profileCard}
         <div className="bg-card sticky bottom-0 z-10 mt-5 flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-xs">
-            {isDirty
-              ? "Unsaved changes"
-              : "Only fields on Overview are sent to the API."}
+            {isDirty ? "Unsaved changes" : "No unsaved changes"}
           </p>
           <div className="flex gap-2">
             {isDirty ? (

@@ -7,7 +7,6 @@ export default function AcceptInvitationPage() {
   return (
     <AuthCard
       description="Complete your profile to activate the access your administrator granted."
-      isPreview={false}
       title="Accept your invitation"
     >
       <Suspense

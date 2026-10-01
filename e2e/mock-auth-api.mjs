@@ -1185,6 +1185,47 @@ createServer(async (request, response) => {
         ),
       ),
     );
+  const workspaceTeam = url.pathname.match(
+    /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)\/workspaces\/(\d+)\/(users|activity)$/,
+  );
+  if (workspaceTeam && request.method === "GET") {
+    const workspace = workspaceRows.find(
+      (row) =>
+        row.agency_id === Number(workspaceTeam[1]) &&
+        row.client_id === Number(workspaceTeam[2]) &&
+        row.id === Number(workspaceTeam[3]),
+    );
+    if (!workspace)
+      return json(response, 404, { message: "Workspace not found" });
+    if (workspaceTeam[4] === "users")
+      return json(response, 200, {
+        data: [
+          {
+            user_id: 1,
+            name: "Avery Admin",
+            email: "admin@example.com",
+            role_code: "AGENCY_ADMIN",
+            access: "agency",
+            status: "active",
+            granted_at: "2026-09-01T09:00:00.000000Z",
+            invitation_expires_at: null,
+          },
+        ],
+      });
+    return json(response, 200, {
+      data: [
+        {
+          id: 1,
+          action: "workspace.created",
+          result: "success",
+          actor: { id: 1, name: "Avery Admin" },
+          metadata: {},
+          created_at: "2026-09-01T09:00:00.000000Z",
+        },
+      ],
+      meta: { current_page: 1, last_page: 1, total: 1 },
+    });
+  }
   const workspaceConnection = url.pathname.match(
     /^\/api\/v1\/agencies\/(\d+)\/clients\/(\d+)\/workspaces\/(\d+)\/(credentials|fetch|sample-data)$/,
   );

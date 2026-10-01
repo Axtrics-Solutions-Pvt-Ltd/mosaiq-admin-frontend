@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { type TabOption, Tabs } from "@/components/ui/Tabs";
 import { getNavigationItem } from "@/config/navigation";
-import { routes } from "@/config/routes";
+import { clientScope, routes } from "@/config/routes";
 import { AgencyLogo } from "@/features/agencies/AgencyLogo";
 import type { AgencyRecord } from "@/features/agencies/contracts";
 import { useAgency, useUpdateAgency } from "@/features/agencies/queries";
@@ -179,7 +179,9 @@ function Workspaces({ agency }: { agency: AgencyDetail }) {
       <StatePanel
         action={
           <Button asChild variant="outline">
-            <Link href={routes.workspaces.new}>Open workspace preview</Link>
+            <Link href={routes.workspaces.new + clientScope(Number(agency.id))}>
+              Create workspace
+            </Link>
           </Button>
         }
         description="This agency has no linked workspaces yet."
@@ -271,7 +273,7 @@ function BrandPreview({ agency }: { agency: AgencyDetail }) {
             </div>
             <div className="mt-5 h-2 rounded-full bg-[var(--brand-primary)]" />
             <p className="text-muted-foreground mt-3 text-xs">
-              Accent {agency.brandColor} - Basic preview
+              Accent colour {agency.brandColor}
             </p>
           </div>
         </div>

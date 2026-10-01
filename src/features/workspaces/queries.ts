@@ -19,7 +19,9 @@ import {
   listAllClients,
   listAllWorkspaces,
   listClients,
+  listWorkspaceActivity,
   listWorkspaces,
+  listWorkspaceUsers,
   saveWorkspaceCredentials,
   updateWorkspace,
   type WorkspaceListFilters,
@@ -45,6 +47,15 @@ export const workspaceKeys = {
     ["workspaces", "by-ids", agencyId, workspaceIds] as const,
   credentials: (agencyId: number, clientId: number, workspaceId: number) =>
     ["workspaces", "credentials", agencyId, clientId, workspaceId] as const,
+  users: (agencyId: number, clientId: number, workspaceId: number) =>
+    ["workspaces", "users", agencyId, clientId, workspaceId] as const,
+  activity: (
+    agencyId: number,
+    clientId: number,
+    workspaceId: number,
+    page: number,
+  ) =>
+    ["workspaces", "activity", agencyId, clientId, workspaceId, page] as const,
 };
 type WorkspaceScope = {
   agencyId: number;
@@ -311,8 +322,9 @@ export function useDeleteWorkspace() {
       // The deleted workspace's own detail and credentials would only 404, and
       // the screen showing them is about to navigate away.
       const isDeletedWorkspace = (key: readonly unknown[]) =>
-        (key[1] === "detail" || key[1] === "credentials") &&
-        key[4] === workspaceId;
+        ["detail", "credentials", "users", "activity"].includes(
+          key[1] as string,
+        ) && key[4] === workspaceId;
       // Client detail and selectors live under workspace keys; the client
       // directory's workspace counts under its own; reports list their
       // sources and preview their data.
@@ -341,6 +353,40 @@ export function useWorkspaceCredentials(
   });
 }
 // Variables defaults to void so argument-less actions call mutateAsync().
+/** Everyone who can reach the workspace. Super Admin and Agency Admin only. */
+export function useWorkspaceUsers(
+  { agencyId, clientId, workspaceId }: WorkspaceScope,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: workspaceKeys.users(agencyId, clientId, workspaceId),
+    queryFn: ({ signal }) =>
+      listWorkspaceUsers(agencyId, clientId, workspaceId, signal),
+    enabled:
+      (options?.enabled ?? true) &&
+      valid(agencyId) &&
+      valid(clientId) &&
+      valid(workspaceId),
+  });
+}
+export function useWorkspaceActivity(
+  { agencyId, clientId, workspaceId }: WorkspaceScope,
+  page: number,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.activity(agencyId, clientId, workspaceId, page),
+    queryFn: ({ signal }) =>
+      listWorkspaceActivity(
+        agencyId,
+        clientId,
+        workspaceId,
+        { page, per_page: 20 },
+        signal,
+      ),
+    placeholderData: keepPreviousData,
+    enabled: valid(agencyId) && valid(clientId) && valid(workspaceId),
+  });
+}
 function useConnectionMutation<Variables = void, Result = unknown>(
   mutationFn: (variables: Variables) => Promise<Result>,
   onResult?: (result: Result) => void,

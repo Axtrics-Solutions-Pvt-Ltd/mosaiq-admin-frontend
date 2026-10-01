@@ -12,6 +12,7 @@ exports[`WidgetRenderer > renders the bar_chart contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Carryover
       </h3>
@@ -19,6 +20,7 @@ exports[`WidgetRenderer > renders the bar_chart contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="space-y-3"
@@ -137,7 +139,7 @@ exports[`WidgetRenderer > renders the bar_chart contract fixture 1`] = `
             />
             <defs>
               <clippath
-                id="recharts10-clip"
+                id="recharts12-clip"
               >
                 <rect
                   height="62"
@@ -161,7 +163,7 @@ exports[`WidgetRenderer > renders the bar_chart contract fixture 1`] = `
             >
               <g
                 class="recharts-layer recharts-bar"
-                id="recharts-bar-_r_6_"
+                id="recharts-bar-_r_7_"
               >
                 <g
                   class="recharts-layer recharts-bar-rectangles"
@@ -536,6 +538,7 @@ exports[`WidgetRenderer > renders the bullet_list contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         What Worked
       </h3>
@@ -543,6 +546,7 @@ exports[`WidgetRenderer > renders the bullet_list contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <ul
       class="space-y-2.5"
@@ -551,25 +555,29 @@ exports[`WidgetRenderer > renders the bullet_list contract fixture 1`] = `
         class="flex gap-2.5"
       >
         <span
-          class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
+          class="flex h-lh shrink-0 items-center"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-3.5"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          <span
+            class="flex size-5 items-center justify-center rounded-full bg-success-soft text-success"
           >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </span>
           <span
             class="sr-only"
           >
@@ -587,25 +595,29 @@ exports[`WidgetRenderer > renders the bullet_list contract fixture 1`] = `
         class="flex gap-2.5"
       >
         <span
-          class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
+          class="flex h-lh shrink-0 items-center"
         >
-          <svg
-            aria-hidden="true"
-            class="lucide lucide-check size-3.5"
-            fill="none"
-            height="24"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            viewBox="0 0 24 24"
-            width="24"
-            xmlns="http://www.w3.org/2000/svg"
+          <span
+            class="flex size-5 items-center justify-center rounded-full bg-success-soft text-success"
           >
-            <path
-              d="M20 6 9 17l-5-5"
-            />
-          </svg>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-check size-3.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 6 9 17l-5-5"
+              />
+            </svg>
+          </span>
           <span
             class="sr-only"
           >
@@ -636,6 +648,7 @@ exports[`WidgetRenderer > renders the channel_list contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         ROAS by Channel
       </h3>
@@ -643,6 +656,7 @@ exports[`WidgetRenderer > renders the channel_list contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <ul
       class="space-y-4"
@@ -772,6 +786,7 @@ exports[`WidgetRenderer > renders the creative_grid contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Creative Performance
       </h3>
@@ -779,6 +794,7 @@ exports[`WidgetRenderer > renders the creative_grid contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <ul
       class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
@@ -959,6 +975,7 @@ exports[`WidgetRenderer > renders the data_table contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Channel Performance
       </h3>
@@ -966,6 +983,7 @@ exports[`WidgetRenderer > renders the data_table contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       aria-label="Channel Performance"
@@ -1079,6 +1097,7 @@ exports[`WidgetRenderer > renders the donut contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         ROAS by Channel
       </h3>
@@ -1086,12 +1105,13 @@ exports[`WidgetRenderer > renders the donut contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="grid items-center gap-4 sm:grid-cols-[minmax(0,12rem)_1fr]"
     >
       <div
-        class="relative mx-auto aspect-square w-full max-w-48"
+        class="@container relative mx-auto aspect-square w-full max-w-48"
       >
         <div
           aria-hidden="true"
@@ -1260,18 +1280,19 @@ exports[`WidgetRenderer > renders the donut contract fixture 1`] = `
           </div>
         </div>
         <div
-          class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"
+          class="pointer-events-none absolute inset-x-[23%] inset-y-[24%] flex flex-col items-center justify-center text-center"
         >
           <span
-            class="text-muted-foreground text-xs"
+            class="text-muted-foreground max-w-full truncate text-[length:clamp(0.625rem,6.25cqw,0.75rem)] leading-tight"
           >
             Blended ROAS
           </span>
           <span
-            class="pointer-events-auto flex items-center gap-1"
+            class="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-1"
           >
             <span
-              class="text-strong text-xl font-semibold tabular-nums"
+              class="text-strong max-w-full min-w-0 truncate font-semibold tabular-nums text-[length:min(12.5cqw,1.5rem)] leading-tight"
+              title="3.2x"
             >
               3.2x
             </span>
@@ -1381,6 +1402,7 @@ exports[`WidgetRenderer > renders the field_table contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Cultural Identity
       </h3>
@@ -1388,6 +1410,7 @@ exports[`WidgetRenderer > renders the field_table contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       aria-label="Cultural Identity"
@@ -1473,6 +1496,315 @@ exports[`WidgetRenderer > renders the field_table contract fixture 1`] = `
 </div>
 `;
 
+exports[`WidgetRenderer > renders the gauge contract fixture 1`] = `
+<div
+  class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
+>
+  <header
+    class="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2"
+  >
+    <div
+      class="min-w-0"
+    >
+      <h3
+        class="text-strong text-base font-semibold"
+        data-widget-part="title"
+      >
+        Budget Utilization
+      </h3>
+    </div>
+  </header>
+  <div
+    class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
+  >
+    <div
+      class="grid items-center gap-4 sm:grid-cols-[minmax(0,12rem)_1fr]"
+    >
+      <div
+        class="@container relative mx-auto aspect-square w-full max-w-48"
+      >
+        <div
+          aria-hidden="true"
+          class="absolute inset-0"
+        >
+          <div
+            class="recharts-wrapper"
+            height="100%"
+            style="position: relative; cursor: default; width: 100%; height: 100%;"
+            width="100%"
+          >
+            <svg
+              class="recharts-surface"
+              cx="50%"
+              cy="50%"
+              height="100"
+              style="width: 100%; height: 100%; display: block;"
+              viewBox="0 0 100 100"
+              width="100"
+            >
+              <title />
+              <desc />
+              <g
+                class="recharts-zIndex-layer_-100"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_-50"
+                tabindex="-1"
+              />
+              <defs>
+                <clippath
+                  id="recharts8-clip"
+                >
+                  <rect
+                    height="90"
+                    width="90"
+                    x="5"
+                    y="5"
+                  />
+                </clippath>
+              </defs>
+              <g
+                class="recharts-zIndex-layer_100"
+                tabindex="-1"
+              >
+                <g
+                  class="recharts-layer recharts-pie"
+                  tabindex="0"
+                >
+                  <g
+                    class="recharts-layer"
+                  >
+                    <g
+                      class="recharts-layer recharts-pie-sector"
+                      tabindex="-1"
+                    >
+                      <g
+                        class="recharts-layer recharts-shape"
+                      >
+                        <path
+                          class="recharts-sector"
+                          cx="50"
+                          cy="50"
+                          d="M 50,8.6
+    A 41.4,41.4,0,
+    1,1,
+    12.5402,32.3727
+  L 24.7553,38.1208
+            A 27.9,27.9,0,
+            1,0,
+            50,22.1 Z"
+                          data-recharts-item-id="recharts-pie-_r_5_"
+                          data-recharts-item-index="0"
+                          fill="var(--chart-blue)"
+                          name="0"
+                          stroke="none"
+                          tabindex="-1"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      class="recharts-layer recharts-pie-sector"
+                      tabindex="-1"
+                    >
+                      <g
+                        class="recharts-layer recharts-shape"
+                      >
+                        <path
+                          class="recharts-sector"
+                          cx="50"
+                          cy="50"
+                          d="M 12.5402,32.3727
+    A 41.4,41.4,0,
+    0,1,
+    50,8.6
+  L 50,22.1
+            A 27.9,27.9,0,
+            0,0,
+            24.7553,38.1208 Z"
+                          data-recharts-item-id="recharts-pie-_r_5_"
+                          data-recharts-item-index="1"
+                          fill="var(--border)"
+                          name="1"
+                          stroke="none"
+                          tabindex="-1"
+                        />
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+              <g
+                class="recharts-zIndex-layer_200"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_300"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_400"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_500"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_600"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1000"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1100"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_1200"
+                tabindex="-1"
+              />
+              <g
+                class="recharts-zIndex-layer_2000"
+                tabindex="-1"
+              />
+            </svg>
+          </div>
+        </div>
+        <div
+          class="pointer-events-none absolute inset-x-[23%] inset-y-[24%] flex flex-col items-center justify-center text-center"
+        >
+          <span
+            class="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-1"
+          >
+            <span
+              class="text-strong max-w-full min-w-0 truncate font-semibold tabular-nums text-[length:min(12.5cqw,1.5rem)] leading-tight"
+              title="82%"
+            >
+              82%
+            </span>
+          </span>
+        </div>
+      </div>
+      <div
+        class="space-y-2"
+      >
+        <div
+          class="flex flex-wrap items-center gap-2"
+        >
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-amber-200 bg-warning-soft text-warning"
+          >
+            Under pacing
+          </span>
+          <span
+            class="flex flex-wrap items-center gap-2 text-sm"
+          >
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium border-border bg-muted text-foreground"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-arrow-up-right size-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7 7h10v10"
+                />
+                <path
+                  d="M7 17 17 7"
+                />
+              </svg>
+              <span
+                class="sr-only"
+              >
+                Up
+                 
+              </span>
+              5%
+            </span>
+            <span
+              class="text-muted-foreground"
+            >
+              vs prev 30 days
+            </span>
+          </span>
+        </div>
+        <ul
+          class="divide-y text-sm"
+        >
+          <li
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
+          >
+            <span
+              class="text-muted-foreground"
+            >
+              Total budget
+            </span>
+            <span
+              class="flex items-center gap-2 tabular-nums"
+            >
+              <span
+                class="text-strong font-medium"
+              >
+                $350K
+              </span>
+            </span>
+          </li>
+          <li
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
+          >
+            <span
+              class="text-muted-foreground"
+            >
+              Spent
+            </span>
+            <span
+              class="flex items-center gap-2 tabular-nums"
+            >
+              <span
+                class="text-strong font-medium"
+              >
+                $287K
+              </span>
+            </span>
+          </li>
+          <li
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2"
+          >
+            <span
+              class="text-muted-foreground"
+            >
+              Remaining
+            </span>
+            <span
+              class="flex items-center gap-2 tabular-nums"
+            >
+              <span
+                class="text-strong font-medium"
+              >
+                $63K
+              </span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`WidgetRenderer > renders the heatmap contract fixture 1`] = `
 <div
   class="bg-card rounded-lg border shadow-sm flex h-full flex-col"
@@ -1485,6 +1817,7 @@ exports[`WidgetRenderer > renders the heatmap contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Cultural Values Index
       </h3>
@@ -1492,6 +1825,7 @@ exports[`WidgetRenderer > renders the heatmap contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       aria-label="Cultural Values Index"
@@ -1625,6 +1959,7 @@ exports[`WidgetRenderer > renders the kpi contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Blended ROAS
       </h3>
@@ -1632,6 +1967,7 @@ exports[`WidgetRenderer > renders the kpi contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="flex flex-col gap-3"
@@ -1803,6 +2139,7 @@ exports[`WidgetRenderer > renders the kpi_group contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Key Metrics
       </h3>
@@ -1810,6 +2147,7 @@ exports[`WidgetRenderer > renders the kpi_group contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <ul
       class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
@@ -1903,7 +2241,7 @@ exports[`WidgetRenderer > renders the kpi_group contract fixture 1`] = `
                 />
                 <defs>
                   <clippath
-                    id="recharts8-clip"
+                    id="recharts10-clip"
                   >
                     <rect
                       height="92"
@@ -1940,7 +2278,7 @@ exports[`WidgetRenderer > renders the kpi_group contract fixture 1`] = `
                         d="M0,96L100,4"
                         fill="none"
                         height="92"
-                        id="recharts-line-_r_5_"
+                        id="recharts-line-_r_6_"
                         stroke="var(--chart-blue)"
                         stroke-width="2"
                         width="100"
@@ -2056,11 +2394,13 @@ exports[`WidgetRenderer > renders the kpi_list contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Audience Overview
       </h3>
       <p
         class="text-muted-foreground mt-0.5 text-xs"
+        data-widget-part="as_of"
       >
         As of 
         1 Sept 2026
@@ -2069,6 +2409,7 @@ exports[`WidgetRenderer > renders the kpi_list contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <dl
       class="grid gap-3 sm:grid-cols-2"
@@ -2118,6 +2459,7 @@ exports[`WidgetRenderer > renders the line_chart contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Spend vs Conversions
       </h3>
@@ -2125,6 +2467,7 @@ exports[`WidgetRenderer > renders the line_chart contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="space-y-3"
@@ -2697,6 +3040,7 @@ exports[`WidgetRenderer > renders the metric_table contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Detailed Metrics
       </h3>
@@ -2704,6 +3048,7 @@ exports[`WidgetRenderer > renders the metric_table contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       aria-label="Detailed Metrics"
@@ -2878,6 +3223,7 @@ exports[`WidgetRenderer > renders the progress_list contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Language & Province Mix
       </h3>
@@ -2885,6 +3231,7 @@ exports[`WidgetRenderer > renders the progress_list contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="space-y-4"
@@ -3023,6 +3370,7 @@ exports[`WidgetRenderer > renders the recommendation_list contract fixture 1`] =
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         Recommendations
       </h3>
@@ -3030,6 +3378,7 @@ exports[`WidgetRenderer > renders the recommendation_list contract fixture 1`] =
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <ol
       class="grid gap-3 md:grid-cols-2"
@@ -3079,11 +3428,13 @@ exports[`WidgetRenderer > renders the text_hero contract fixture 1`] = `
     >
       <h3
         class="text-strong text-base font-semibold"
+        data-widget-part="title"
       >
         AI Summary
       </h3>
       <p
         class="text-muted-foreground mt-0.5 text-xs"
+        data-widget-part="as_of"
       >
         As of 
         20 Sept 2026
@@ -3092,6 +3443,7 @@ exports[`WidgetRenderer > renders the text_hero contract fixture 1`] = `
   </header>
   <div
     class="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+    data-widget-part="content"
   >
     <div
       class="space-y-2"

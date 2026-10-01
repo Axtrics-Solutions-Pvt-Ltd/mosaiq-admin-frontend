@@ -25,16 +25,25 @@ export function WidgetCard({
     <Card className={cn("flex h-full flex-col", className)}>
       <header className="flex items-start justify-between gap-3 p-4 pb-2 sm:p-5 sm:pb-2">
         <div className="min-w-0">
-          <h3 className="text-strong text-base font-semibold">
+          <h3
+            className="text-strong text-base font-semibold"
+            data-widget-part="title"
+          >
             {envelope.title ?? envelope.code}
           </h3>
           {envelope.subtitle && (
-            <p className="text-muted-foreground mt-0.5 text-sm">
+            <p
+              className="text-muted-foreground mt-0.5 text-sm"
+              data-widget-part="subtitle"
+            >
               {envelope.subtitle}
             </p>
           )}
           {envelope.as_of && (
-            <p className="text-muted-foreground mt-0.5 text-xs">
+            <p
+              className="text-muted-foreground mt-0.5 text-xs"
+              data-widget-part="as_of"
+            >
               As of {formatDate(envelope.as_of)}
             </p>
           )}
@@ -44,7 +53,12 @@ export function WidgetCard({
           <div className="flex shrink-0 items-center gap-1">{actions}</div>
         )}
       </header>
-      <div className="flex-1 p-4 pt-2 sm:p-5 sm:pt-3">{children}</div>
+      <div
+        className="flex-1 p-4 pt-2 sm:p-5 sm:pt-3"
+        data-widget-part="content"
+      >
+        {children}
+      </div>
     </Card>
   );
 }

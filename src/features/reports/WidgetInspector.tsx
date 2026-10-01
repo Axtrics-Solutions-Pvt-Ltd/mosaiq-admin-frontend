@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type FocusEvent, type Ref, useEffect, useRef, useState } from "react";
 import {
   useFieldArray,
   useForm,
@@ -23,6 +23,7 @@ import {
   BudgetMonthEditor,
   type BudgetWorkspace,
 } from "@/features/budgets/BudgetMonthEditor";
+import type { WidgetPart } from "@/features/report-widgets/contracts";
 import { ApiError } from "@/lib/api/errors";
 
 import type { ReportScope } from "./api";
@@ -33,6 +34,7 @@ import {
   reportMetricCodes,
   reportMetricLabel,
 } from "./contracts";
+import type { InspectorDraft } from "./draft-preview";
 import {
   activeCampaignsMaxLimit,
   breakdownMetricCodes,
@@ -56,6 +58,8 @@ import {
 import {
   AsOfField,
   FormShell,
+  InspectorFormContext,
+  type InspectorFormHandle,
   type InspectorFormProps,
   ListControls,
   type SaveHandler,
@@ -68,12 +72,40 @@ import { hasManualEditor } from "./manual-forms";
 import { ManualDataForm } from "./ManualDataForms";
 import { useResetLayoutItem, useUpdateLayoutItem } from "./queries";
 import { SectionForm } from "./SectionForm";
+import { MoveMenu } from "./Sortable";
 
 const kindLabels = {
   live: "Live data",
   text: "Written",
   manual_data: "Manual data",
 } as const;
+// How a widget looks, in words, in place of the API's render type code.
+const typeLabels: Record<string, string> = {
+  text_hero: "Headline and text",
+  kpi: "Single KPI",
+  kpi_group: "KPI cards",
+  kpi_list: "KPI list",
+  line_chart: "Line chart",
+  donut: "Donut chart",
+  gauge: "Gauge",
+  bar_chart: "Bar chart",
+  bullet_list: "Bullet list",
+  recommendation_list: "Recommendations",
+  progress_list: "Progress bars",
+  channel_list: "Channel list",
+  metric_table: "Metrics table",
+  field_table: "Field table",
+  data_table: "Table",
+  heatmap: "Heatmap",
+  creative_grid: "Creative grid",
+};
+
+// An unknown type from a newer API reads as words rather than a code.
+export function widgetTypeLabel(type: string) {
+  const words = type.replace(/_/g, " ");
+  return typeLabels[type] ?? words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 // Catalogue defaults, shown while a setting is left empty.
 const defaultKpiMetrics = ["spend", "impressions", "ctr", "conversions", "cpa"];
 const defaultTableRows = ["roas", "cpa", "ctr", "cpm", "conversion_rate"];
@@ -164,10 +196,11 @@ export type LiveEditing = {
   onRevealValues?: () => void;
 };
 
-// Widgets whose rows come straight from the channel data, with no pencils.
+// Widgets with one row per campaign or creative. Their values belong to one
+// workspace each, so they offer no channel picker.
 const rowWidgetNotes: Record<string, string> = {
   active_campaigns:
-    "Campaign rows come straight from the channel data, so their numbers can't be edited here.",
+    "Each campaign's numbers come from its channel's data. To change one, use the pencil beside the value in the preview. The correction also changes that channel's totals. CTR is calculated: use its lock to correct the campaign's clicks or impressions.",
   creative_performance:
     "Creative results come straight from the channel data, so their numbers can't be edited here.",
 };
@@ -249,7 +282,7 @@ function LiveWidgetForm({
     resolver: zodResolver(liveFormSchema),
     defaultValues: toLiveValues(item),
   });
-  const { formError, onSubmit } = useSubmit(
+  const { formError, onDiscard, onSubmit } = useSubmit(
     form,
     save,
     (values) => livePatch(item, values),
@@ -265,7 +298,13 @@ function LiveWidgetForm({
       isDirty={form.formState.isDirty}
       isSaving={isSaving}
       label={`${itemTitle(item)} settings`}
+      onDiscard={onDiscard}
       onSubmit={onSubmit}
+      // Budget pacing also has budgets with their own Save, so this one
+      // names what it saves.
+      saveLabel={item.code === budgetWidgetCode ? "Save settings" : undefined}
+      // Settings change the numbers, which the API works out on save.
+      previewNote="The canvas shows the new title now. Other settings show once saved."
     >
       <TitleFields form={form} item={item} />
       {item.code === "kpi_cards" && (
@@ -415,7 +454,7 @@ function TextWidgetForm({
     control: form.control,
     name: "recommendations",
   });
-  const { formError, onSubmit } = useSubmit(
+  const { formError, onDiscard, onSubmit } = useSubmit(
     form,
     save,
     (values) => textPatch(item, values),
@@ -429,6 +468,7 @@ function TextWidgetForm({
       isDirty={form.formState.isDirty}
       isSaving={isSaving}
       label={`${itemTitle(item)} content`}
+      onDiscard={onDiscard}
       onSubmit={onSubmit}
     >
       <TitleFields form={form} item={item} />
@@ -599,7 +639,7 @@ function TitleOnlyForm({
     resolver: zodResolver(titleFormSchema),
     defaultValues: toTitleValues(item),
   });
-  const { formError, onSubmit } = useSubmit(
+  const { formError, onDiscard, onSubmit } = useSubmit(
     form,
     save,
     (values) => titlePatch(item, values),
@@ -612,6 +652,7 @@ function TitleOnlyForm({
       isDirty={form.formState.isDirty}
       isSaving={isSaving}
       label={`${itemTitle(item)} settings`}
+      onDiscard={onDiscard}
       onSubmit={onSubmit}
     >
       <TitleFields form={form} item={item} />
@@ -620,6 +661,35 @@ function TitleOnlyForm({
       </p>
     </FormShell>
   );
+}
+
+// The inspector field behind each part of a widget card.
+const partFieldIds: Partial<Record<WidgetPart, string>> = {
+  title: "inspector-title",
+  subtitle: "inspector-subtitle",
+  as_of: "inspector-as-of",
+};
+
+function partOfField(form: Element, field: Element): WidgetPart | undefined {
+  const part = (Object.entries(partFieldIds) as [WidgetPart, string][]).find(
+    ([, id]) => id === field.id,
+  )?.[0];
+  if (part) return part;
+  return form.contains(field) ? "content" : undefined;
+}
+
+// A part's field, or for the content the first field after the titles.
+function fieldForPart(form: Element, part: WidgetPart) {
+  const id = partFieldIds[part];
+  const field = id ? form.querySelector<HTMLElement>(`#${id}`) : null;
+  if (field) return field;
+  const controls = Array.from(
+    form.querySelectorAll<HTMLElement>("input, select, textarea"),
+  );
+  const subtitle = controls.findIndex(
+    (control) => control.id === partFieldIds.subtitle,
+  );
+  return controls[subtitle + 1] ?? null;
 }
 
 // Budget pacing reads the client's monthly budgets, edited beside the widget.
@@ -637,16 +707,32 @@ export type InspectorBudgets = {
 export function WidgetInspector({
   accents = [],
   budgets,
+  focusPart,
+  formRef,
   item,
   liveEditing,
+  onActivePartChange,
+  onBudgetsDirtyChange,
   onDirtyChange,
+  onDraftChange,
   scope,
 }: {
   accents?: readonly Accent[];
   budgets?: InspectorBudgets;
+  // Moves focus to the field of a card part clicked on the canvas, each time
+  // `count` changes.
+  focusPart?: { part: WidgetPart; count: number };
+  // Saves the open form, for the builder's unsaved-changes dialog.
+  formRef?: Ref<InspectorFormHandle>;
   item: LayoutItem;
   liveEditing?: LiveEditing;
+  // The card part whose field has focus, so the canvas can outline it.
+  onActivePartChange?: (part: WidgetPart | undefined) => void;
+  // Budgets save on their own, so the builder can't save them for the user.
+  onBudgetsDirtyChange?: (isDirty: boolean) => void;
   onDirtyChange: (isDirty: boolean) => void;
+  // The form's unsaved edits, previewed on the canvas.
+  onDraftChange?: (draft: InspectorDraft | undefined) => void;
   scope: ReportScope;
 }) {
   const updateMutation = useUpdateLayoutItem(scope);
@@ -663,6 +749,10 @@ export function WidgetInspector({
   useEffect(
     () => onDirtyChange(isFormDirty || isBudgetDirty),
     [isFormDirty, isBudgetDirty, onDirtyChange],
+  );
+  useEffect(
+    () => onBudgetsDirtyChange?.(isBudgetDirty),
+    [isBudgetDirty, onBudgetsDirtyChange],
   );
 
   const save: SaveHandler = async (patch) => {
@@ -707,47 +797,95 @@ export function WidgetInspector({
     save,
   };
 
+  const formsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const forms = formsRef.current;
+    if (!focusPart || !forms) return;
+    // Focus scrolls the field into the inspector's view.
+    fieldForPart(forms, focusPart.part)?.focus();
+  }, [focusPart]);
+
+  function trackFocus(event: FocusEvent<HTMLDivElement>) {
+    onActivePartChange?.(partOfField(event.currentTarget, event.target));
+  }
+
+  function clearFocus(event: FocusEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget))
+      onActivePartChange?.(undefined);
+  }
+
+  const formContext = {
+    formRef,
+    onDraftChange: (patch: InspectorDraft["patch"] | undefined) =>
+      onDraftChange?.(patch ? { itemId: item.id, patch } : undefined),
+  };
+
   return (
     <section aria-label={`Inspector: ${title}`} className="space-y-4">
       <header className="space-y-1.5">
-        <p className="text-muted-foreground text-xs font-medium">
-          {isSection ? "Section" : "Widget"}
-        </p>
-        <h2 className="text-strong text-base font-semibold">{title}</h2>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-1.5">
+            <p className="text-muted-foreground text-xs font-medium">
+              {isSection ? "Section" : "Widget"}
+            </p>
+            <h2 className="text-strong text-base font-semibold">{title}</h2>
+          </div>
+          {/* Reset can't be undone, so it sits in a menu rather than beside
+              Save. */}
+          <MoveMenu
+            label={`More actions for ${title}`}
+            options={[
+              {
+                label: isSection ? "Reset section" : "Reset widget",
+                icon: RotateCcw,
+                onSelect: resetMutation.isPending
+                  ? undefined
+                  : () => setIsConfirmingReset(true),
+              },
+            ]}
+            title={title}
+          />
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {item.kind && <Badge tone="primary">{kindLabels[item.kind]}</Badge>}
-          {item.type && <Badge tone="neutral">{item.type}</Badge>}
+          {item.type && (
+            <Badge tone="neutral">{widgetTypeLabel(item.type)}</Badge>
+          )}
           {!item.is_available && <Badge tone="neutral">Coming soon</Badge>}
         </div>
       </header>
-      {isSection && (
-        <SectionForm accents={accents} key={formKey} {...formProps} />
-      )}
-      {item.kind === "live" && (
-        <LiveWidgetForm
-          key={formKey}
-          {...formProps}
-          liveEditing={liveEditing}
-        />
-      )}
-      {/* Written content in a table shape (AI Strategic Insights) uses the
+      <div onBlur={clearFocus} onFocus={trackFocus} ref={formsRef}>
+        <InspectorFormContext value={formContext}>
+          {isSection && (
+            <SectionForm accents={accents} key={formKey} {...formProps} />
+          )}
+          {item.kind === "live" && (
+            <LiveWidgetForm
+              key={formKey}
+              {...formProps}
+              liveEditing={liveEditing}
+            />
+          )}
+          {/* Written content in a table shape (AI Strategic Insights) uses the
           table editor; headlines and lists use the text editor. */}
-      {item.kind === "text" &&
-        (hasManualEditor(item.type) ? (
-          <ManualDataForm key={formKey} {...formProps} />
-        ) : (
-          <TextWidgetForm key={formKey} {...formProps} />
-        ))}
-      {item.kind === "manual_data" &&
-        (hasManualEditor(item.type) ? (
-          <ManualDataForm key={formKey} {...formProps} />
-        ) : (
-          <TitleOnlyForm
-            key={formKey}
-            {...formProps}
-            note="This widget's content can't be edited here yet. You can rename it and show or hide it."
-          />
-        ))}
+          {item.kind === "text" &&
+            (hasManualEditor(item.type) ? (
+              <ManualDataForm key={formKey} {...formProps} />
+            ) : (
+              <TextWidgetForm key={formKey} {...formProps} />
+            ))}
+          {item.kind === "manual_data" &&
+            (hasManualEditor(item.type) ? (
+              <ManualDataForm key={formKey} {...formProps} />
+            ) : (
+              <TitleOnlyForm
+                key={formKey}
+                {...formProps}
+                note="This widget's content can't be edited here yet. You can rename it and show or hide it."
+              />
+            ))}
+        </InspectorFormContext>
+      </div>
       {budgets && item.code === budgetWidgetCode && (
         <BudgetMonthEditor
           agencyId={scope.agencyId}
@@ -760,18 +898,6 @@ export function WidgetInspector({
           workspaces={budgets.workspaces}
         />
       )}
-      <div className="border-t pt-4">
-        <Button
-          disabled={resetMutation.isPending}
-          onClick={() => setIsConfirmingReset(true)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <RotateCcw aria-hidden className="size-4" />{" "}
-          {isSection ? "Reset section" : "Reset widget"}
-        </Button>
-      </div>
       <ConfirmationDialog
         body={
           <p>

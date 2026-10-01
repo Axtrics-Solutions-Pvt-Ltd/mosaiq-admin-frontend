@@ -7,11 +7,11 @@ export default function ApplicationError({ retry }: { retry: () => void }) {
     <main className="flex min-h-screen items-center justify-center p-4">
       <section className="bg-card w-full max-w-lg rounded-lg border p-6">
         <h1 className="text-strong text-xl font-semibold">
-          Application preview could not load
+          Something went wrong
         </h1>
         <p className="text-muted-foreground mt-2">
-          Retry the route. If the problem continues, return to the login
-          preview.
+          This page could not load. Try again, and if the problem continues,
+          sign in again.
         </p>
         <Button className="mt-5" onClick={retry} type="button">
           Try again

@@ -40,43 +40,44 @@ test("budget pacing asks for budgets, and manual content is entered in the build
     exact: true,
   });
   await expect(pacing.getByText("No data for this period.")).toBeVisible();
-  await pacing.getByRole("link", { name: "Add budgets" }).click();
-
-  const budgets = page.getByRole("heading", { name: "Budgets" });
+  // Budgets are edited beside the widget, in the inspector.
+  await pacing.getByRole("button", { name: "Add budgets" }).click();
+  const budgets = page.getByRole("region", { name: "Monthly budgets" });
   await expect(budgets).toBeVisible();
-  const year = page
-    .locator("[aria-live=polite]")
-    .filter({ hasText: /^\d{4}$/ });
-  const shownYear = Number(await year.textContent());
-  for (let step = shownYear; step > 2026; step -= 1)
-    await page.getByRole("button", { name: "Previous year" }).click();
-  for (let step = shownYear; step < 2026; step += 1)
-    await page.getByRole("button", { name: "Next year" }).click();
-  await expect(year).toHaveText("2026");
-  await page
-    .getByRole("textbox", { name: `${workspaceName} budget for August 2026` })
-    .fill("3,100");
-  await page
+  const month = budgets.locator("[aria-live=polite]");
+  const target = new Date(2026, 8, 1);
+  for (let step = 0; step < 36; step += 1) {
+    const shown = new Date(`1 ${await month.textContent()}`);
+    if (shown.getTime() === target.getTime()) break;
+    await budgets
+      .getByRole("button", {
+        name: shown > target ? "Previous month" : "Next month",
+      })
+      .click();
+  }
+  await expect(month).toHaveText("September 2026");
+  await budgets
     .getByRole("textbox", {
       name: `${workspaceName} budget for September 2026`,
     })
     .fill("3000");
-  await expect(page.getByText("2 unsaved changes")).toBeVisible();
-  await page.getByRole("button", { name: "Save budgets" }).click();
-  await expect(page.getByText("No unsaved changes")).toBeVisible();
+  await expect(budgets.getByText("1 unsaved budget")).toBeVisible();
+  await budgets.getByRole("button", { name: "Save budgets" }).click();
+  await expect(budgets.getByText("No unsaved budgets")).toBeVisible();
+  if (isMobile)
+    await page.getByRole("button", { name: "Close drawer" }).click();
 
-  // Back in the builder, pacing now has budgets to work against.
-  await page.goBack();
+  // Pacing now has budgets to work against.
   await expect(pacing.getByText("Pacing")).toBeVisible();
   await expect(pacing.getByText("Spent")).toBeVisible();
-  await expect(pacing.getByRole("link", { name: "Add budgets" })).toHaveCount(
+  await expect(pacing.getByRole("button", { name: "Add budgets" })).toHaveCount(
     0,
   );
 
   // Enter Marketing Intelligence content with the generic list editor.
   await page
     .getByRole("navigation", { name: "Report sections" })
-    .getByRole("button", { name: /^Marketing Intelligence/ })
+    .getByRole("button", { name: "Marketing Intelligence", exact: true })
     .click();
   await page.getByRole("button", { name: "Edit Audience Overview" }).click();
   const inspector = page.getByRole("region", {
@@ -98,6 +99,49 @@ test("budget pacing asks for budgets, and manual content is entered in the build
   });
   await expect(overview.getByText("1.8M")).toBeVisible();
   await expect(overview.getByRole("term").first()).toHaveText("Median age");
+
+  // Leaving the tab closes the open widget, so unsaved edits are asked about
+  // first. The phone drawer covers the tabs, so this is checked on desktop.
+  if (!isMobile) {
+    const reportingDashboard = page
+      .getByRole("navigation", { name: "Report sections" })
+      .getByRole("button", { name: "Reporting Dashboard", exact: true });
+    // The canvas previews the edit before it is saved.
+    await inspector.getByLabel("Subtitle").fill("Draft subtitle");
+    await expect(overview.getByText("Draft subtitle")).toBeVisible();
+    await expect(overview.getByText("Editing · unsaved preview")).toBeVisible();
+    await reportingDashboard.click();
+    const unsaved = page.getByRole("dialog", { name: "Save your changes?" });
+    await unsaved.getByRole("button", { name: "Keep editing" }).click();
+    await expect(inspector.getByLabel("Subtitle")).toHaveValue(
+      "Draft subtitle",
+    );
+    await inspector.getByRole("button", { name: "Discard" }).click();
+    await expect(inspector.getByLabel("Subtitle")).toHaveValue("");
+    await expect(inspector.getByText("No unsaved changes")).toBeVisible();
+    await expect(overview.getByText("Draft subtitle")).toHaveCount(0);
+
+    // Saving from the dialog keeps the edit and moves on.
+    await inspector.getByLabel("Subtitle").fill("Saved subtitle");
+    await reportingDashboard.click();
+    await unsaved.getByRole("button", { name: "Save and continue" }).click();
+    await expect(unsaved).toBeHidden();
+    await expect(inspector).toBeHidden();
+    await page
+      .getByRole("navigation", { name: "Report sections" })
+      .getByRole("button", { name: "Marketing Intelligence", exact: true })
+      .click();
+    await expect(overview.getByText("Saved subtitle")).toBeVisible();
+
+    // A click on the card itself opens it too, at the field for the part
+    // clicked.
+    await overview.getByText("Saved subtitle").click();
+    await expect(inspector.getByLabel("Subtitle")).toHaveValue(
+      "Saved subtitle",
+    );
+    await expect(inspector.getByLabel("Subtitle")).toBeFocused();
+    await expect(overview.getByText("Editing", { exact: true })).toBeVisible();
+  }
 
   const hasOverflow = await page.evaluate(
     () =>

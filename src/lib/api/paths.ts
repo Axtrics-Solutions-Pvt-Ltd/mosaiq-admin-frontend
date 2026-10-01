@@ -31,6 +31,7 @@ export const myInvitationPaths = {
 export const agencyPaths = {
   collection: "/api/v1/agencies",
   detail: (agencyId: number) => `/api/v1/agencies/${agencyId}`,
+  logo: (agencyId: number) => `/api/v1/agencies/${agencyId}/logo`,
 } as const;
 
 export const dashboardPaths = {
@@ -44,13 +45,12 @@ export const userPaths = {
   allCollection: "/api/v1/users",
 } as const;
 
-export const rolePaths = {
-  collection: "/api/v1/admin/roles",
+export const auditPaths = {
+  collection: "/api/v1/audit-logs",
 } as const;
 
-export const curationPaths = {
-  detail: (workspaceId: number) =>
-    `/api/v1/admin/workspaces/${workspaceId}/curation`,
+export const rolePaths = {
+  collection: "/api/v1/admin/roles",
 } as const;
 
 export const workspacePaths = {
@@ -75,6 +75,10 @@ export const workspacePaths = {
     `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/fetch`,
   sampleData: (agencyId: number, clientId: number, workspaceId: number) =>
     `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/sample-data`,
+  users: (agencyId: number, clientId: number, workspaceId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/users`,
+  activity: (agencyId: number, clientId: number, workspaceId: number) =>
+    `/api/v1/agencies/${agencyId}/clients/${clientId}/workspaces/${workspaceId}/activity`,
 } as const;
 
 export const channelPaths = {

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { apiRequest } from "@/lib/api/client";
 import { agencyPaths } from "@/lib/api/paths";
 
@@ -54,4 +56,23 @@ export async function updateAgency(agencyId: number, payload: AgencyProfile) {
     body: payload,
   });
   return agencyResponseSchema.parse(result).data;
+}
+
+const agencyLogoResponseSchema = z.object({
+  data: z.object({ logo_url: z.string() }),
+});
+
+/** Uploads the agency logo and returns its public URL. */
+export async function uploadAgencyLogo(agencyId: number, file: File) {
+  const body = new FormData();
+  body.append("logo", file, file.name);
+  const result = await apiRequest<unknown>(agencyPaths.logo(agencyId), {
+    method: "POST",
+    body,
+  });
+  return agencyLogoResponseSchema.parse(result).data.logo_url;
+}
+
+export async function removeAgencyLogo(agencyId: number) {
+  await apiRequest<unknown>(agencyPaths.logo(agencyId), { method: "DELETE" });
 }

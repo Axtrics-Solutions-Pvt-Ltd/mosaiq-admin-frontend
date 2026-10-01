@@ -77,7 +77,7 @@ describe("capability-based navigation filtering", () => {
       "Users",
       "Roles & permissions",
       "Channels",
-      "Audit & settings",
+      "Audit log",
     ]);
   });
   it("shows an Agency Admin My Agency in place of Agencies", () => {
@@ -89,7 +89,7 @@ describe("capability-based navigation filtering", () => {
       "Reports",
       "Users",
       "Roles & permissions",
-      "Audit & settings",
+      "Audit log",
     ]);
   });
   it("shows a Manager the Dashboard, Clients, Workspaces and Reports", () => {

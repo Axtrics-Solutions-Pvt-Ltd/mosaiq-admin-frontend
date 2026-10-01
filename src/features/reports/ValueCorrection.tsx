@@ -1,7 +1,21 @@
 "use client";
 
-import { Lock, Pencil } from "lucide-react";
-import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import {
+  Filter,
+  LocateFixed,
+  Lock,
+  type LucideIcon,
+  Pencil,
+} from "lucide-react";
+import {
+  type CSSProperties,
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 
 import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils/cn";
@@ -19,13 +33,6 @@ function calculatedFrom(value: EditingValue) {
     : "Calculated from other metrics.";
 }
 
-function calculatedHint(value: EditingValue) {
-  return `${calculatedFrom(value)} Edit those instead.`;
-}
-
-const combinedHint =
-  "Combines several workspaces. Filter by a channel to correct one.";
-
 // A base value that totals several workspaces, so it has no single source to
 // correct until the preview is narrowed to one channel.
 export function isCombinedValue(value: EditingValue) {
@@ -38,7 +45,7 @@ export const combinedValuesNote =
   "They combine several workspaces. Choose a channel under “Edit numbers for” in the inspector to correct one.";
 
 // A base-metric reference elsewhere on the tab that corrects one input of a
-// calculated value: same workspace and same dates.
+// calculated value: same workspace, same campaign and same dates.
 export function inputReferences(
   value: EditingValue,
   tabValues: readonly EditingValue[],
@@ -50,6 +57,7 @@ export function inputReferences(
         candidate.is_base &&
         candidate.metric === input &&
         candidate.workspace_id === value.workspace_id &&
+        (candidate.campaign_key ?? null) === (value.campaign_key ?? null) &&
         candidate.date_from === value.date_from &&
         candidate.date_to === value.date_to,
     );
@@ -57,22 +65,45 @@ export function inputReferences(
   });
 }
 
+export type ChannelOption = { code: string; name: string };
+
+// The report's other tabs, searched for inputs the current tab doesn't show.
+export type OtherTabValues = {
+  status: "idle" | "loading" | "ready" | "error";
+  values: readonly { value: EditingValue; tabName: string }[];
+  onSearch: () => void;
+};
+
 // The controls beside one report value: a pencil for a base metric, a lock
-// for a calculated one, and a marker when data corrections changed it.
+// for a calculated one, and a marker when data corrections changed it. A
+// value that can't be corrected as it stands opens a menu that says why and
+// offers the next step, rather than a hover-only tooltip that touch screens
+// never show.
 export function ValueCorrection({
+  channels = [],
   dateLabel,
   isCombinedExplained = false,
   onCorrect,
+  onPickChannel,
   onShowCorrections,
+  onShowValue,
+  otherTabs,
   tabValues,
   value,
 }: {
+  // The preview's channels, offered when a value combines several.
+  channels?: readonly ChannelOption[];
   dateLabel?: string;
   // A note over the values already explains combined totals, so the value
   // shows no control of its own.
   isCombinedExplained?: boolean;
   onCorrect: (value: EditingValue) => void;
+  // Narrows the preview to one channel so this value can be corrected.
+  onPickChannel?: (value: EditingValue, channelCode: string) => void;
   onShowCorrections: (value: EditingValue) => void;
+  // Scrolls to the widget that shows an input, so it's clear where it is.
+  onShowValue?: (value: EditingValue) => void;
+  otherTabs?: OtherTabValues;
   tabValues: readonly EditingValue[];
   value: EditingValue;
 }) {
@@ -80,6 +111,56 @@ export function ValueCorrection({
     reportMetricLabel(value.metric) + (dateLabel ? ` for ${dateLabel}` : "");
   const corrections = value.correction_ids.length;
   const inputs = inputReferences(value, tabValues);
+  const isCombined = value.workspace_id === undefined;
+  const canPickChannel =
+    isCombined && Boolean(onPickChannel) && channels.length > 1;
+
+  function channelChoices() {
+    return channels.map((channel) => (
+      <button
+        className={menuItem}
+        key={channel.code}
+        onClick={() => onPickChannel?.(value, channel.code)}
+        type="button"
+      >
+        <Filter aria-hidden className="text-muted-foreground size-4" />
+        {channel.name}
+      </button>
+    ));
+  }
+
+  // Inputs only shown on other tabs, once those tabs are loaded.
+  const canSearchOtherTabs =
+    inputs.length === 0 && !isCombined && Boolean(otherTabs);
+  const elsewhere =
+    canSearchOtherTabs && otherTabs?.status === "ready"
+      ? inputReferences(
+          value,
+          otherTabs.values.map((entry) => entry.value),
+        ).map((input) => ({
+          input,
+          tabName:
+            otherTabs.values.find((entry) => entry.value === input)?.tabName ??
+            "",
+        }))
+      : [];
+
+  let calculatedNote = "Edit an input to change it.";
+  if (inputs.length === 0)
+    calculatedNote = canPickChannel
+      ? "It adds up several channels. Choose one to edit its inputs:"
+      : isCombined
+        ? "It adds up several workspaces, so its inputs can't be corrected from this preview."
+        : !otherTabs
+          ? "Its inputs aren't shown on this tab, so they can't be corrected from here."
+          : otherTabs.status === "ready"
+            ? elsewhere.length > 0
+              ? "Its inputs are on other tabs. Edit one here:"
+              : "Its inputs aren't shown on any tab of this report, so they can't be corrected here."
+            : otherTabs.status === "error"
+              ? "Its inputs aren't on this tab, and the other tabs could not be checked. Please try again."
+              : "Its inputs aren't on this tab. Looking on the other tabs…";
+
   return (
     <span className="inline-flex items-center gap-0.5">
       {value.edited && (
@@ -97,7 +178,7 @@ export function ValueCorrection({
           </button>
         </Tooltip>
       )}
-      {value.is_base && value.workspace_id !== undefined && (
+      {value.is_base && !isCombined && (
         <button
           aria-label={`Correct ${label}`}
           className={iconButton}
@@ -107,71 +188,134 @@ export function ValueCorrection({
           <Pencil aria-hidden className="size-3.5" />
         </button>
       )}
-      {isCombinedValue(value) &&
-        (isCombinedExplained ? null : (
-          <Tooltip content={combinedHint}>
-            {/* aria-disabled keeps it focusable so the explanation is reachable. */}
-            <button
-              aria-disabled
-              aria-label={`${label}: ${combinedHint}`}
-              className={cn(iconButton, "cursor-not-allowed opacity-60")}
-              type="button"
-            >
-              <Pencil aria-hidden className="size-3.5" />
-            </button>
-          </Tooltip>
-        ))}
-      {!value.is_base && inputs.length === 0 && (
-        <Tooltip content={calculatedHint(value)}>
-          <button
-            aria-disabled
-            aria-label={`${label}: ${calculatedHint(value)}`}
-            className={cn(iconButton, "cursor-help")}
-            type="button"
-          >
-            <Lock aria-hidden className="size-3.5" />
-          </button>
-        </Tooltip>
+      {value.is_base && isCombined && !isCombinedExplained && (
+        <ValueMenu
+          icon={Pencil}
+          label={`${label} combines several workspaces. Choose how to correct it`}
+          // Faded until a channel is chosen, but still a working button.
+          triggerClassName="opacity-60"
+        >
+          <>
+            <MenuNote>
+              {canPickChannel
+                ? `${label} adds up several channels. Choose one to correct its value:`
+                : "This value adds up several workspaces, so it can't be corrected from this preview."}
+            </MenuNote>
+            {canPickChannel && channelChoices()}
+          </>
+        </ValueMenu>
       )}
-      {!value.is_base && inputs.length > 0 && (
-        <InputsMenu
-          dateLabel={dateLabel}
-          inputs={inputs}
-          label={label}
-          onCorrect={onCorrect}
-          value={value}
-        />
+      {!value.is_base && (
+        <ValueMenu
+          icon={Lock}
+          label={`${label} is calculated. Edit its inputs`}
+          onOpen={
+            canSearchOtherTabs && otherTabs?.status !== "ready"
+              ? otherTabs?.onSearch
+              : undefined
+          }
+        >
+          <>
+            <MenuNote>
+              {calculatedFrom(value)} {calculatedNote}
+            </MenuNote>
+            {inputs.map((input) => (
+              <Fragment key={input.path + input.metric}>
+                <button
+                  className={menuItem}
+                  onClick={() => onCorrect(input)}
+                  type="button"
+                >
+                  <Pencil
+                    aria-hidden
+                    className="text-muted-foreground size-4"
+                  />
+                  Edit {reportMetricLabel(input.metric)}
+                  {dateLabel && (
+                    <span className="sr-only"> for {dateLabel}</span>
+                  )}
+                </button>
+                {onShowValue && (
+                  <button
+                    className={menuItem}
+                    onClick={() => onShowValue(input)}
+                    type="button"
+                  >
+                    <LocateFixed
+                      aria-hidden
+                      className="text-muted-foreground size-4"
+                    />
+                    Show {reportMetricLabel(input.metric)} on canvas
+                    {dateLabel && (
+                      <span className="sr-only"> for {dateLabel}</span>
+                    )}
+                  </button>
+                )}
+              </Fragment>
+            ))}
+            {elsewhere.map(({ input, tabName }) => (
+              <button
+                className={menuItem}
+                key={input.path + input.metric + tabName}
+                onClick={() => onCorrect(input)}
+                type="button"
+              >
+                <Pencil aria-hidden className="text-muted-foreground size-4" />
+                <span>
+                  Edit {reportMetricLabel(input.metric)}
+                  <span className="text-muted-foreground block text-xs">
+                    On the {tabName} tab
+                  </span>
+                </span>
+              </button>
+            ))}
+            {inputs.length === 0 && canPickChannel && channelChoices()}
+          </>
+        </ValueMenu>
       )}
     </span>
   );
 }
 
+const menuItem =
+  "hover:bg-muted text-strong flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm";
+
+function MenuNote({ children }: { children: ReactNode }) {
+  return (
+    // Polite, as a lock's note changes while it looks on other tabs.
+    <p
+      aria-live="polite"
+      className="text-muted-foreground px-3 pt-1.5 pb-2 text-xs"
+    >
+      {children}
+    </p>
+  );
+}
+
 const menuWidth = 224;
 
-// The shortcuts to a calculated value's inputs. They sit in a popover behind
-// the lock rather than beside the number, so a value in a tight spot, such as
-// a donut's centre or a table cell, keeps one icon's width of controls. The
-// popover is in the top layer, so the widget card can't clip it.
-function InputsMenu({
-  dateLabel,
-  inputs,
+// A value's menu. It sits in a popover rather than beside the number, so a
+// value in a tight spot, such as a donut's centre or a table cell, keeps one
+// icon's width of controls. The popover is in the top layer, so the widget
+// card can't clip it.
+function ValueMenu({
+  children,
+  icon: Icon,
   label,
-  onCorrect,
-  value,
+  onOpen,
+  triggerClassName,
 }: {
-  dateLabel?: string;
-  inputs: readonly EditingValue[];
+  children: ReactNode;
+  icon: LucideIcon;
   label: string;
-  onCorrect: (value: EditingValue) => void;
-  value: EditingValue;
+  onOpen?: () => void;
+  triggerClassName?: string;
 }) {
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<CSSProperties>();
   const [isOpen, setIsOpen] = useState(false);
-  const menuLabel = `${label} is calculated. Edit its inputs`;
-
   // The menu is placed once when it opens, so it closes rather than drift
   // away from its button when the page scrolls.
   useEffect(() => {
@@ -207,46 +351,41 @@ function InputsMenu({
     <>
       <button
         aria-expanded={isOpen}
-        aria-label={menuLabel}
-        className={cn(iconButton, isOpen && "text-primary")}
+        aria-label={label}
+        className={cn(
+          iconButton,
+          triggerClassName,
+          isOpen && "text-primary opacity-100",
+        )}
         popoverTarget={menuId}
         ref={triggerRef}
         type="button"
       >
-        <Lock aria-hidden className="size-3.5" />
+        <Icon aria-hidden className="size-3.5" />
       </button>
       <div
-        aria-label={menuLabel}
+        aria-label={label}
         className="bg-card m-0 w-56 rounded-lg border p-1.5 text-left shadow-[var(--shadow-overlay)]"
         id={menuId}
         onBeforeToggle={(event) => {
           if (event.newState === "open") place();
         }}
-        onToggle={(event) => setIsOpen(event.newState === "open")}
+        onToggle={(event) => {
+          setIsOpen(event.newState === "open");
+          if (event.newState === "open") onOpen?.();
+        }}
         popover="auto"
         ref={menuRef}
+        // Choosing any action closes the menu. `hidePopover` is missing
+        // where the Popover API isn't (jsdom).
+        onClick={(event) => {
+          if ((event.target as Element).closest("button"))
+            menuRef.current?.hidePopover?.();
+        }}
         role="group"
         style={position}
       >
-        <p className="text-muted-foreground px-3 pt-1.5 pb-2 text-xs">
-          {calculatedFrom(value)} Edit an input to change it.
-        </p>
-        {inputs.map((input) => (
-          <button
-            className="hover:bg-muted text-strong flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm"
-            key={input.path + input.metric}
-            onClick={() => {
-              // `hidePopover` is missing where the Popover API isn't (jsdom).
-              menuRef.current?.hidePopover?.();
-              onCorrect(input);
-            }}
-            type="button"
-          >
-            <Pencil aria-hidden className="text-muted-foreground size-4" />
-            Edit {reportMetricLabel(input.metric)}
-            {dateLabel && <span className="sr-only"> for {dateLabel}</span>}
-          </button>
-        ))}
+        {children}
       </div>
     </>
   );

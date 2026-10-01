@@ -4,12 +4,14 @@ import { clientPaths, workspacePaths } from "@/lib/api/paths";
 import {
   clientListSchema,
   clientResponseSchema,
+  workspaceActivityListSchema,
   type WorkspaceCredentialsPayload,
   workspaceCredentialsResponseSchema,
   workspaceFetchResponseSchema,
   workspaceListSchema,
   type WorkspaceProfile,
   workspaceResponseSchema,
+  workspaceUserListSchema,
 } from "./contracts";
 
 function withQuery(
@@ -214,4 +216,32 @@ export async function generateWorkspaceSampleData(
     { method: "POST" },
   );
   return workspaceFetchResponseSchema.parse(result).data;
+}
+export async function listWorkspaceUsers(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    workspacePaths.users(agencyId, clientId, workspaceId),
+    { signal },
+  );
+  return workspaceUserListSchema.parse(result).data;
+}
+export async function listWorkspaceActivity(
+  agencyId: number,
+  clientId: number,
+  workspaceId: number,
+  filters: { page?: number; per_page?: number },
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    withQuery(
+      workspacePaths.activity(agencyId, clientId, workspaceId),
+      filters,
+    ),
+    { signal },
+  );
+  return workspaceActivityListSchema.parse(result);
 }

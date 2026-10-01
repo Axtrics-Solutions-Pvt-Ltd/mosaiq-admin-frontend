@@ -1,15 +1,17 @@
 "use client";
 
-import { Eye, EyeOff, Pencil, Plus } from "lucide-react";
-import type { ReactNode } from "react";
+import { Eye, EyeOff, Plus, Settings2 } from "lucide-react";
+import type { MouseEvent, ReactNode } from "react";
 
 import { StatePanel } from "@/components/shared/StatePanel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type {
-  ValueAdornment,
-  ValuesPanel,
+import {
+  type ValueAdornment,
+  type ValuesPanel,
+  type WidgetPart,
+  widgetPartOf,
 } from "@/features/report-widgets/contracts";
 import {
   WidgetCard,
@@ -22,14 +24,8 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { useMediaQuery } from "@/lib/utils/useMediaQuery";
 
-import type {
-  LayoutItem,
-  PreviewWidget,
-  ReorderItem,
-  ResolvedAccent,
-} from "./contracts";
+import type { LayoutItem, PreviewWidget, ReorderItem } from "./contracts";
 import {
-  accentStyle,
   findTab,
   holdsWidgets,
   itemTitle,
@@ -49,84 +45,39 @@ import { StructureTabs } from "./StructureTabs";
 
 const isShown = (item: LayoutItem) => item.is_enabled && item.is_available;
 
-// The portal's read-only section and tab rows, coloured like the portal:
-// sections with their own accent, tabs with their section's (`accent`).
-function Switcher({
-  accent,
-  items,
-  label,
-  onSelect,
-  selectedId,
-  size,
+// Clicks on these keep their own meaning instead of opening the widget. A
+// chart slice filters the preview by channel.
+const ownClickTargets =
+  "a, button, input, select, textarea, label, summary, [popover], [role=button], .recharts-sector";
+
+// The card's open state: a tag above the card that names it as the one in
+// the inspector, and a short flash whenever it is opened or asked for. The
+// flash replays when its key changes and stops after a few pulses (WCAG
+// 2.2.2); reduced motion turns it off.
+function EditingMarker({
+  hasDraft,
+  highlightKey,
+  isSelected,
 }: {
-  accent?: ResolvedAccent | null;
-  items: readonly LayoutItem[];
-  label: string;
-  onSelect: (item: LayoutItem) => void;
-  selectedId: number | undefined;
-  size: "section" | "tab";
+  hasDraft: boolean;
+  highlightKey: number | undefined;
+  isSelected: boolean;
 }) {
   return (
-    <nav
-      aria-label={label}
-      style={size === "tab" ? accentStyle(accent) : undefined}
-    >
-      <ul
-        className={cn(
-          "flex flex-wrap gap-1",
-          size === "section"
-            ? "bg-muted w-fit rounded-lg border p-1"
-            : "border-b",
-        )}
-      >
-        {items.map((item) => {
-          const isSelected = item.id === selectedId;
-          const hasAccent = Boolean(size === "section" ? item.accent : accent);
-          return (
-            <li
-              key={item.id}
-              style={size === "section" ? accentStyle(item.accent) : undefined}
-            >
-              <button
-                aria-current={isSelected ? "page" : undefined}
-                className={cn(
-                  "text-sm font-medium",
-                  size === "section"
-                    ? "rounded-md px-3 py-1.5"
-                    : "-mb-px border-b-2 border-transparent px-3 py-2",
-                  size === "section" &&
-                    isSelected &&
-                    (hasAccent
-                      ? "bg-[color:var(--section-accent)] text-white shadow-sm"
-                      : "bg-card text-strong shadow-sm"),
-                  size === "tab" &&
-                    isSelected &&
-                    (hasAccent
-                      ? "border-[color:var(--section-accent-strong)] text-[color:var(--section-accent-strong)]"
-                      : "border-primary text-primary"),
-                  !isSelected && "text-muted-foreground hover:text-strong",
-                  !isSelected &&
-                    size === "tab" &&
-                    hasAccent &&
-                    "hover:bg-[color:var(--section-accent-soft)]",
-                  !isShown(item) && "italic",
-                )}
-                onClick={() => onSelect(item)}
-                type="button"
-              >
-                {itemTitle(item)}
-                {!isShown(item) && (
-                  <>
-                    {" "}
-                    <span className="sr-only">(hidden)</span>
-                  </>
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <>
+      {isSelected && (
+        <span className="bg-primary text-primary-foreground absolute -top-2.5 left-3 z-10 rounded-sm px-1.5 text-xs leading-5 font-medium shadow-sm">
+          {hasDraft ? "Editing · unsaved preview" : "Editing"}
+        </span>
+      )}
+      {highlightKey !== undefined && (
+        <span
+          aria-hidden
+          className="animate-editing-highlight pointer-events-none absolute inset-0 rounded-lg"
+          key={highlightKey}
+        />
+      )}
+    </>
   );
 }
 
@@ -139,30 +90,49 @@ function SortableWidget({
   className,
   item,
   label,
+  activePart,
+  marker,
+  onPick,
 }: {
   canDrag: boolean;
   children: (handle: ReactNode) => ReactNode;
   className?: string;
   item: LayoutItem;
   label?: string;
+  // The part whose inspector field has focus, outlined on the card.
+  activePart?: WidgetPart;
+  marker?: ReactNode;
+  // A click on the card itself opens it, at the field for the part clicked.
+  // The toolbar's Edit button stays the keyboard way in.
+  onPick?: (part: WidgetPart | undefined) => void;
 }) {
   const { handle, isDragging, setNodeRef, style } = useSortableItem(
     item.id,
     !canDrag,
   );
+  function pick(event: MouseEvent) {
+    if (!onPick || (event.target as Element).closest(ownClickTargets)) return;
+    // Selecting text to copy it isn't a pick.
+    if (window.getSelection()?.toString()) return;
+    onPick(widgetPartOf(event.target as Element));
+  }
   return (
     <section
       aria-label={label}
+      data-active-part={activePart}
       className={cn(
         // Keeps a revealed widget clear of the sticky top bar.
-        "scroll-mt-[calc(4rem+var(--page-padding))]",
+        "relative scroll-mt-[calc(4rem+var(--page-padding))]",
+
         className,
-        isDragging && "relative z-10 rounded-lg shadow-lg",
+        isDragging && "z-10 rounded-lg shadow-lg",
       )}
       id={layoutItemElementId(item.id)}
+      onClick={pick}
       ref={setNodeRef}
       style={style}
     >
+      {marker}
       {children(
         canDrag ? <DragHandle {...handle} title={itemTitle(item)} /> : null,
       )}
@@ -178,12 +148,15 @@ export type CanvasPreview = {
 };
 
 export function ReportCanvas({
+  activePart,
   currency,
-  isPortalView,
+  draftItemId,
+  highlight,
   onAddBudgets,
   onChannelSelect,
   onEditSection,
   onEditWidget,
+  onPickWidget,
   onReorder,
   onSelectTab,
   onToggleWidget,
@@ -194,14 +167,20 @@ export function ReportCanvas({
   valueAdornment,
   valuesPanel,
 }: {
+  // The selected widget's part whose inspector field has focus.
+  activePart?: WidgetPart;
   currency: string;
-  isPortalView: boolean;
+  // The item whose unsaved edits the canvas shows.
+  draftItemId?: number;
+  // Flashes a widget each time `count` changes.
+  highlight?: { itemId: number; count: number };
   // Opens budget pacing's monthly budgets in the inspector.
   onAddBudgets: (itemId: number) => void;
   onChannelSelect: (channelCode: string) => void;
   // Opens a section's colour and title in the inspector.
   onEditSection: (itemId: number) => void;
   onEditWidget: (itemId: number) => void;
+  onPickWidget?: (itemId: number, part: WidgetPart | undefined) => void;
   // Saves a new order or show/hide flags of one set of siblings.
   onReorder: (order: ReorderItem[]) => void;
   onSelectTab: (tabCode: string) => void;
@@ -214,23 +193,48 @@ export function ReportCanvas({
   valuesPanel?: (widget: PreviewWidget) => ValuesPanel | undefined;
 }) {
   const canDragWidgets = useMediaQuery("(min-width: 48rem)");
-  const visibleSections = isPortalView ? sections.filter(isShown) : sections;
   const selection = selectedTabCode
     ? findTab(sections, selectedTabCode)
     : undefined;
-  const sectionTabs = selection
-    ? tabsOf(selection.section).filter((tab) => !isPortalView || isShown(tab))
-    : [];
+  const sectionTabs = selection ? tabsOf(selection.section) : [];
   const tab = selection?.tab;
   const isTabHidden =
     Boolean(selection) &&
     (!isShown(selection!.section) || !isShown(selection!.tab));
   const widgets = (tab?.children ?? []).filter(
-    (item) => item.level === "widget" && (!isPortalView || isShown(item)),
+    (item) => item.level === "widget",
   );
   const previewById = new Map(
     (preview.widgets ?? []).map((widget) => [widget.editing.item_id, widget]),
   );
+
+  const hasSelectedWidget = widgets.some((item) => item.id === selectedItemId);
+  const marker = (item: LayoutItem) => (
+    <EditingMarker
+      hasDraft={draftItemId === item.id}
+      highlightKey={highlight?.itemId === item.id ? highlight.count : undefined}
+      isSelected={selectedItemId === item.id}
+    />
+  );
+  // While a widget is open the others step back, and come forward again on
+  // hover or focus so they stay easy to reach.
+  const cardTone = (item: LayoutItem) =>
+    cn(
+      hasSelectedWidget &&
+        selectedItemId !== item.id &&
+        "opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100",
+      !isShown(item) && "opacity-60",
+      selectedItemId === item.id && "ring-primary rounded-lg ring-2",
+      onPickWidget && selectedItemId !== item.id && "cursor-pointer",
+    );
+  // The open widget stays pickable, so a click on a part of it still jumps
+  // to that part's field.
+  const pickFor = (item: LayoutItem) =>
+    onPickWidget
+      ? (part: WidgetPart | undefined) => onPickWidget(item.id, part)
+      : undefined;
+  const activePartFor = (item: LayoutItem) =>
+    selectedItemId === item.id ? activePart : undefined;
 
   const moveWidget = (item: LayoutItem, offset: -1 | 1) => {
     const order = tab && moveInOrder(tab.children, item.id, offset);
@@ -276,16 +280,18 @@ export function ReportCanvas({
           ]}
           title={title}
         />
+        {/* Settings, not a pencil: the pencil beside a value corrects the
+            data, and the two looked the same. */}
         <Button
           aria-label={`Edit ${title}`}
           aria-pressed={selectedItemId === item.id}
-          className="size-8"
+          className="h-8 min-h-8 px-2.5"
           onClick={() => onEditWidget(item.id)}
-          size="icon"
+          size="sm"
           type="button"
-          variant={selectedItemId === item.id ? "secondary" : "ghost"}
+          variant={selectedItemId === item.id ? "secondary" : "outline"}
         >
-          <Pencil aria-hidden className="size-4" />
+          <Settings2 aria-hidden className="size-4" /> Edit
         </Button>
       </>
     );
@@ -293,18 +299,8 @@ export function ReportCanvas({
 
   return (
     <div className="space-y-4">
-      {isPortalView ? (
-        <Switcher
-          items={visibleSections}
-          label="Report sections"
-          onSelect={(section) => {
-            const first = tabsOf(section).find(isShown);
-            if (first) onSelectTab(first.code);
-          }}
-          selectedId={selection?.section.id}
-          size="section"
-        />
-      ) : (
+      {/* One group, so the tab panel hangs straight off its section. */}
+      <div>
         <StructureTabs
           items={sections}
           label="Report sections"
@@ -317,53 +313,33 @@ export function ReportCanvas({
           selectedId={selection?.section.id}
           size="section"
         />
-      )}
-      {selection &&
-        sectionTabs.length > 0 &&
-        !holdsWidgets(selection.section) &&
-        (isPortalView ? (
-          <Switcher
-            accent={selection.section.accent}
-            items={sectionTabs}
-            label={`${itemTitle(selection.section)} tabs`}
-            onSelect={(item) => onSelectTab(item.code)}
-            selectedId={tab?.id}
-            size="tab"
-          />
-        ) : (
-          <StructureTabs
-            accent={selection.section.accent}
-            items={sectionTabs}
-            label={`${itemTitle(selection.section)} tabs`}
-            onReorder={(order) =>
-              onReorder(withPausedTabs(selection.section, order))
-            }
-            onSelect={(item) => onSelectTab(item.code)}
-            selectedId={tab?.id}
-            size="tab"
-          />
-        ))}
-      {!isPortalView && isTabHidden && (
+        {selection &&
+          sectionTabs.length > 0 &&
+          !holdsWidgets(selection.section) && (
+            <StructureTabs
+              accent={selection.section.accent}
+              items={sectionTabs}
+              label={`${itemTitle(selection.section)} tabs`}
+              onReorder={(order) =>
+                onReorder(withPausedTabs(selection.section, order))
+              }
+              onSelect={(item) => onSelectTab(item.code)}
+              selectedId={tab?.id}
+              size="tab"
+            />
+          )}
+      </div>
+      {isTabHidden && (
         <p className="bg-muted text-muted-foreground rounded-lg border p-3 text-sm">
           This tab is hidden from the portal. Tick its checkbox above to show
           it.
         </p>
       )}
-      {isPortalView && (!selection || isTabHidden) ? (
-        <StatePanel
-          description="Choose a tab the portal shows, or turn this one on in the design view."
-          kind="empty"
-          title="Not shown in the portal"
-        />
-      ) : preview.error ? (
+      {preview.error ? (
         preview.error
       ) : widgets.length === 0 ? (
         <StatePanel
-          description={
-            isPortalView
-              ? "No widget on this tab is shown in the portal."
-              : "This tab has no widgets."
-          }
+          description="This tab has no widgets."
           kind="empty"
           title="Nothing to show"
         />
@@ -385,25 +361,23 @@ export function ReportCanvas({
             {widgets.map((item, index) => {
               const widget = previewById.get(item.id);
               const span = isFullWidthWidget(item.type) && "lg:col-span-2";
-              const canDrag = !isPortalView && canDragWidgets;
               if (!widget)
                 return (
                   <SortableWidget
-                    canDrag={canDrag}
-                    className={cn(span || undefined)}
+                    canDrag={canDragWidgets}
+                    className={cn(span || undefined, cardTone(item))}
                     item={item}
                     key={item.id}
+                    activePart={activePartFor(item)}
+                    marker={marker(item)}
+                    onPick={pickFor(item)}
                   >
                     {(handle) =>
                       preview.isPending || preview.isFetching ? (
                         <Skeleton className="h-48 w-full" />
                       ) : (
                         <WidgetCard
-                          actions={
-                            isPortalView
-                              ? undefined
-                              : toolbar(item, index, handle)
-                          }
+                          actions={toolbar(item, index, handle)}
                           envelope={{
                             code: item.code,
                             type: item.type,
@@ -420,7 +394,7 @@ export function ReportCanvas({
                     }
                   </SortableWidget>
                 );
-              const notice = isPortalView ? undefined : !item.is_available ? (
+              const notice = !item.is_available ? (
                 <Badge className="mt-1.5" tone="neutral">
                   Coming soon
                 </Badge>
@@ -433,27 +407,21 @@ export function ReportCanvas({
               );
               return (
                 <SortableWidget
-                  canDrag={canDrag}
-                  className={cn(
-                    span || undefined,
-                    !isPortalView && !isShown(item) && "opacity-60",
-                    selectedItemId === item.id &&
-                      "ring-primary rounded-lg ring-2",
-                  )}
+                  canDrag={canDragWidgets}
+                  className={cn(span || undefined, cardTone(item))}
                   item={item}
                   key={item.id}
                   label={itemTitle(item)}
+                  activePart={activePartFor(item)}
+                  marker={marker(item)}
+                  onPick={pickFor(item)}
                 >
                   {(handle) => (
                     <WidgetRenderer
-                      actions={
-                        isPortalView ? undefined : toolbar(item, index, handle)
-                      }
+                      actions={toolbar(item, index, handle)}
                       currency={currency}
                       emptyAction={
-                        !isPortalView &&
-                        widget.empty &&
-                        widget.reason === "no_budget" ? (
+                        widget.empty && widget.reason === "no_budget" ? (
                           <Button
                             onClick={() => onAddBudgets(item.id)}
                             size="sm"
@@ -466,12 +434,8 @@ export function ReportCanvas({
                       }
                       notice={notice}
                       onChannelSelect={onChannelSelect}
-                      valueAdornment={
-                        isPortalView ? undefined : valueAdornment(widget)
-                      }
-                      valuesPanel={
-                        isPortalView ? undefined : valuesPanel?.(widget)
-                      }
+                      valueAdornment={valueAdornment(widget)}
+                      valuesPanel={valuesPanel?.(widget)}
                       widget={{ ...widget, title: itemTitle(item) }}
                     />
                   )}

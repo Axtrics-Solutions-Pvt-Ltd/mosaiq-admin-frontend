@@ -10,6 +10,7 @@ export async function csrfBootstrap() {
 export async function login(credentials: {
   email: string;
   password: string;
+  remember?: boolean;
 }): Promise<CurrentUser> {
   await csrfBootstrap();
   const result = await apiRequest<unknown>(authPaths.login, {

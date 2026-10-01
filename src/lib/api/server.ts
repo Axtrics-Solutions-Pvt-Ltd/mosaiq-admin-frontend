@@ -1,6 +1,7 @@
 ﻿import "server-only";
 
 import { getServerApiConfig } from "@/config/env";
+import { forwardedAuthCookies, relayAuthCookies } from "@/lib/api/cookies";
 import { authPaths } from "@/lib/api/paths";
 
 export type AuthOperation = keyof typeof authPaths;
@@ -16,30 +17,6 @@ function xsrfFromCookie(cookieHeader: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-function rewriteCookie(cookie: string, adminOrigin: string): string {
-  const isSecure = new URL(adminOrigin).protocol === "https:";
-  const parts = cookie.split(";").map((part) => part.trim());
-  const sameSite = parts.slice(1).find((part) => /^samesite=/i.test(part));
-  const attributes = parts
-    .slice(1)
-    .filter(
-      (part) =>
-        !/^domain=/i.test(part) &&
-        !/^path=/i.test(part) &&
-        !/^samesite=/i.test(part) &&
-        (isSecure || !/^secure$/i.test(part)),
-    );
-  if (isSecure && !attributes.some((part) => /^secure$/i.test(part)))
-    attributes.push("Secure");
-  attributes.push(
-    "Path=/",
-    !isSecure && /^samesite=none$/i.test(sameSite ?? "")
-      ? "SameSite=Lax"
-      : (sameSite ?? "SameSite=Lax"),
-  );
-  return [parts[0], ...attributes].join("; ");
 }
 
 export async function forwardAuthRequest(
@@ -59,16 +36,7 @@ export async function forwardAuthRequest(
       { status: 403, headers: { "Cache-Control": "no-store" } },
     );
   }
-  const rawCookie = incoming.headers.get("cookie") ?? "";
-  const cookie = rawCookie
-    .split(";")
-    .map((part) => part.trim())
-    .filter(
-      (part) =>
-        part.startsWith("XSRF-TOKEN=") ||
-        part.startsWith(`${config.sessionCookieName}=`),
-    )
-    .join("; ");
+  const cookie = forwardedAuthCookies(incoming, config.sessionCookieName);
   const headers = new Headers({
     Accept: "application/json",
     Origin: config.adminOrigin,
@@ -97,17 +65,7 @@ export async function forwardAuthRequest(
     responseHeaders.set("Content-Type", "application/json");
   const requestId = upstream.headers.get("X-Request-ID");
   if (requestId) responseHeaders.set("X-Request-ID", requestId);
-  for (const cookieValue of upstream.headers.getSetCookie()) {
-    if (
-      cookieValue.startsWith("XSRF-TOKEN=") ||
-      cookieValue.startsWith(`${config.sessionCookieName}=`)
-    ) {
-      responseHeaders.append(
-        "Set-Cookie",
-        rewriteCookie(cookieValue, config.adminOrigin),
-      );
-    }
-  }
+  relayAuthCookies(upstream, responseHeaders, config);
   if (upstream.status >= 300 && !contentType.includes("application/json")) {
     return Response.json(
       { message: "The authentication service could not complete the request." },

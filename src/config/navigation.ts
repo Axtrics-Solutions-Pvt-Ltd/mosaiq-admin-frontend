@@ -114,8 +114,8 @@ export const navigationGroups: readonly NavigationGroup[] = [
       {
         href: routes.governance,
         icon: DatabaseZap,
-        label: "Audit & settings",
-        capability: "settings.manage",
+        label: "Audit log",
+        capability: "audit.view",
       },
     ],
   },

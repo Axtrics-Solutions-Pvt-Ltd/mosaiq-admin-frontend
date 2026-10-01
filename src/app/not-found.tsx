@@ -9,10 +9,10 @@ export default function NotFoundPage() {
       <p className="text-primary font-medium">404</p>
       <h1 className="text-strong text-2xl font-semibold">Page not found</h1>
       <p className="text-muted-foreground">
-        The requested MOSAIQ Admin page does not exist.
+        The page you are looking for does not exist or has moved.
       </p>
       <Button asChild>
-        <Link href={routes.login}>Return to login preview</Link>
+        <Link href={routes.dashboard}>Go to dashboard</Link>
       </Button>
     </main>
   );

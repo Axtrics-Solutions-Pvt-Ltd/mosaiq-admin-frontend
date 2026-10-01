@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, EyeOff, Palette } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -25,8 +26,27 @@ export type TabRowSize = "section" | "tab";
 
 const isShown = (item: LayoutItem) => item.is_enabled && item.is_available;
 
+// A section without its own colour, or a tab row whose section has none,
+// falls back to the primary blue.
+const primaryAccent = {
+  "--section-accent": "var(--color-primary)",
+  "--section-accent-strong": "var(--color-primary)",
+  "--section-accent-soft": "var(--color-primary-soft)",
+} as CSSProperties;
+
+const accentVars = (accent: ResolvedAccent | null | undefined) =>
+  accentStyle(accent) ?? primaryAccent;
+
+// The grip and ⋯ menu stay out of the way until the item is hovered or
+// focused, so the row reads as navigation. Touch screens have no hover, so
+// they always show them.
+const accentCheckbox =
+  "[&_input:checked]:border-[color:var(--section-accent-strong)] [&_input:checked]:bg-[color:var(--section-accent-strong)] [&_input:enabled:hover]:border-[color:var(--section-accent-strong)]";
+
+const revealOnHover =
+  "flex opacity-0 transition-opacity group-focus-within/tab:opacity-100 group-hover/tab:opacity-100 pointer-coarse:opacity-100 motion-reduce:transition-none";
+
 function StructureTab({
-  hasAccent,
   index,
   isSelected,
   item,
@@ -36,8 +56,6 @@ function StructureTab({
   siblings,
   size,
 }: {
-  // Whether the row's `--section-accent*` variables are set.
-  hasAccent: boolean;
   index: number;
   isSelected: boolean;
   item: LayoutItem;
@@ -53,50 +71,44 @@ function StructureTab({
     const order = moveInOrder(siblings, item.id, offset);
     return order ? () => onReorder(order) : undefined;
   };
+  const reveal = cn(revealOnHover, isSelected && "opacity-100");
   return (
     <li
       className={cn(
         // `relative` keeps the sr-only text inside the scrolling row;
         // otherwise it widens the page on phones.
-        "relative flex shrink-0 items-center gap-0.5",
+        "group/tab relative flex shrink-0 items-center gap-0.5",
         size === "section"
-          ? "border-b-2 py-0.5 pr-0.5 pl-0.5"
-          : "border-b-2 border-transparent py-1 md:-mb-px",
-        // Every section is underlined in its colour, selected or not, so the
-        // sections stay distinct from each other at rest.
-        size === "section" &&
-          (hasAccent
-            ? "border-[color:var(--section-accent-strong)]"
-            : "border-primary"),
-        // Sections are filled in their colour, light at rest and strong when
-        // selected, so they read as a level above the underlined tabs. Their
-        // checkboxes take the section colour instead of the primary blue.
+          ? "px-1 py-1"
+          : "border-b-2 border-transparent px-0.5 py-1 md:-mb-px",
+        // Every item is in its section's colour: checkboxes ticked in it, and
+        // sections tinted with their own at rest so they stay distinct.
+        accentCheckbox,
         size === "section" &&
           !isSelected &&
-          hasAccent &&
-          "bg-[color:var(--section-accent-soft)] [&_input:checked]:border-[color:var(--section-accent-strong)] [&_input:checked]:bg-[color:var(--section-accent-strong)] [&_input:enabled:hover]:border-[color:var(--section-accent-strong)]",
+          "bg-[color:var(--section-accent-soft)] hover:brightness-95",
+        // The selected section is filled in the strong colour, with white
+        // text, controls and checkbox, as the header of the light tab panel
+        // below.
         size === "section" &&
-          isSelected && [
-            "[&>button]:text-primary-foreground [&>button:hover]:text-primary-foreground shadow-sm [&_input]:border-white [&_input:checked]:border-white [&_input:checked]:bg-white/25 [&_input:enabled:hover]:border-white [&>button:hover]:bg-white/15",
-            hasAccent
-              ? "bg-[color:var(--section-accent-strong)]"
-              : "bg-primary",
-          ],
-        // The selected tab is underlined in the section colour.
+          isSelected &&
+          "[&>button]:text-primary-foreground [&>div>button]:text-primary-foreground [&>span>button]:text-primary-foreground bg-[color:var(--section-accent-strong)] shadow-sm [&_input]:border-white [&_input:checked]:border-white [&_input:checked]:bg-white/25 [&_input:enabled:hover]:border-white [&>div>button:hover]:bg-white/15 [&>span>button:hover]:bg-white/15",
+        // The active tab is underlined in the strong colour, on the panel's
+        // own bottom line.
         size === "tab" &&
           isSelected &&
-          hasAccent &&
           "border-[color:var(--section-accent-strong)]",
-        size === "tab" && isSelected && !hasAccent && "border-primary",
-        isDragging && "bg-card z-10 shadow-md",
-        isDragging && size === "tab" && "rounded-md",
+        isDragging && "z-20 shadow-md",
+        isDragging && !isSelected && "bg-card",
       )}
       ref={setNodeRef}
       style={
-        size === "section" ? { ...accentStyle(item.accent), ...style } : style
+        size === "section" ? { ...accentVars(item.accent), ...style } : style
       }
     >
-      <DragHandle {...handle} title={title} />
+      <span className={reveal}>
+        <DragHandle {...handle} title={title} />
+      </span>
       <Checkbox
         aria-label={`Show ${title} in the portal`}
         checked={item.is_enabled}
@@ -108,20 +120,12 @@ function StructureTab({
       <button
         aria-current={isSelected ? "page" : undefined}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium whitespace-nowrap",
-          isSelected
-            ? size === "section"
-              ? "text-primary-foreground"
-              : hasAccent
-                ? "text-[color:var(--section-accent-strong)]"
-                : "text-primary"
-            : size === "section" && hasAccent
-              ? "text-[color:var(--section-accent-strong)]"
-              : "text-muted-foreground hover:text-strong",
-          !isSelected &&
-            size === "tab" &&
-            hasAccent &&
-            "hover:bg-[color:var(--section-accent-soft)]",
+          "inline-flex items-center gap-1.5 px-2 py-1 whitespace-nowrap",
+          size === "section" ? "font-semibold" : "text-sm font-medium",
+          size === "tab" && !isSelected
+            ? "text-muted-foreground hover:text-strong"
+            : !(size === "section" && isSelected) &&
+                "text-[color:var(--section-accent-strong)]",
           !isShown(item) && "italic",
         )}
         onClick={onSelect}
@@ -139,25 +143,27 @@ function StructureTab({
           )
         )}
       </button>
-      <MoveMenu
-        label={onEdit ? `${title} options` : undefined}
-        options={[
-          {
-            label: "Move left",
-            icon: ArrowLeft,
-            onSelect: index > 0 ? move(-1) : undefined,
-          },
-          {
-            label: "Move right",
-            icon: ArrowRight,
-            onSelect: index < siblings.length - 1 ? move(1) : undefined,
-          },
-          ...(onEdit
-            ? [{ label: "Colour and title", icon: Palette, onSelect: onEdit }]
-            : []),
-        ]}
-        title={title}
-      />
+      <div className={reveal}>
+        <MoveMenu
+          label={onEdit ? `${title} options` : undefined}
+          options={[
+            {
+              label: "Move left",
+              icon: ArrowLeft,
+              onSelect: index > 0 ? move(-1) : undefined,
+            },
+            {
+              label: "Move right",
+              icon: ArrowRight,
+              onSelect: index < siblings.length - 1 ? move(1) : undefined,
+            },
+            ...(onEdit
+              ? [{ label: "Colour and title", icon: Palette, onSelect: onEdit }]
+              : []),
+          ]}
+          title={title}
+        />
+      </div>
     </li>
   );
 }
@@ -165,8 +171,9 @@ function StructureTab({
 // Sections or the tabs of one section in the design view: each has a
 // checkbox for whether the portal shows it and is dragged (or moved from its
 // menu) into order. Each change sends every sibling (PUT layout/order).
-// Sections are coloured with their own accent and tabs with their section's
-// (`accent`); a section's menu also opens its colour and title (`onEdit`).
+// The selected section and its tabs read as one header and panel in the
+// section's colour (`accent` for the tab row); a section's menu also opens its
+// colour and title (`onEdit`).
 export function StructureTabs({
   accent,
   items,
@@ -189,7 +196,7 @@ export function StructureTabs({
   return (
     <nav
       aria-label={label}
-      style={size === "tab" ? accentStyle(accent) : undefined}
+      style={size === "tab" ? accentVars(accent) : undefined}
     >
       <SortableItems
         items={items}
@@ -200,16 +207,17 @@ export function StructureTabs({
       >
         <ul
           className={cn(
-            // Phones scroll the row sideways instead of wrapping it.
-            "flex gap-1 overflow-x-auto md:flex-wrap md:overflow-visible",
+            "flex gap-1 overflow-x-auto",
+            // Sections stay on one line, scrolling sideways when they don't
+            // fit, so the selected one always sits on its tab panel: the
+            // light version of its colour, underlined.
             size === "section"
-              ? "bg-muted w-fit max-w-full rounded-lg border p-1"
-              : "border-b",
+              ? ""
+              : "border-b border-[color:var(--section-accent)]/30 bg-[color:var(--section-accent-soft)] px-1 md:flex-wrap md:overflow-visible",
           )}
         >
           {items.map((item, index) => (
             <StructureTab
-              hasAccent={Boolean(size === "section" ? item.accent : accent)}
               index={index}
               isSelected={item.id === selectedId}
               item={item}

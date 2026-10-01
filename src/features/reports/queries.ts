@@ -1,6 +1,7 @@
 import {
   keepPreviousData,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -111,6 +112,24 @@ export function usePreviewTab(
     enabled: validScope(scope) && Boolean(tabCode),
     // Keep the current widgets on screen while another range loads.
     placeholderData: keepPreviousData,
+  });
+}
+
+// Several tabs' previews for the same range, e.g. to find a value shown on
+// another tab. Shares the cache with `usePreviewTab`.
+export function usePreviewTabs(
+  scope: ReportScope,
+  tabCodes: readonly string[],
+  range: PreviewRange,
+  isEnabled: boolean,
+) {
+  return useQueries({
+    queries: tabCodes.map((tabCode) => ({
+      queryKey: reportKeys.previewTab(scope, tabCode, range),
+      queryFn: ({ signal }: { signal: AbortSignal }) =>
+        getPreviewTab(scope, tabCode, range, signal),
+      enabled: isEnabled && validScope(scope),
+    })),
   });
 }
 

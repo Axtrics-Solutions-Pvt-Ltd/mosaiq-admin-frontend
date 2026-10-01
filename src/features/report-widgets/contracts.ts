@@ -7,6 +7,18 @@ import { valueFormats } from "@/lib/formatters";
 // `value` or `items.0.value`. The builder uses it for correction controls.
 export type ValueAdornment = (path: string) => ReactNode;
 
+// The parts of a widget card the builder links to inspector fields, marked
+// on the card with `data-widget-part`.
+export const widgetParts = ["title", "subtitle", "as_of", "content"] as const;
+export type WidgetPart = (typeof widgetParts)[number];
+
+export function widgetPartOf(element: Element): WidgetPart | undefined {
+  const part = element
+    .closest("[data-widget-part]")
+    ?.getAttribute("data-widget-part");
+  return widgetParts.find((candidate) => candidate === part);
+}
+
 // The builder's hold on a chart's values table: one note for all its values,
 // and a counter that opens the table each time it changes.
 export type ValuesPanel = { note?: string; revealRequest?: number };

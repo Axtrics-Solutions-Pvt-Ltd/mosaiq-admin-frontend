@@ -82,7 +82,7 @@ function scaledCurrency(value: number, currency: string) {
 }
 
 // Report widget values arrive raw with a display format (public report
-// contract §3). Large values are compact: $127.9K, 4.8M.
+// contract §3). Large values are compact: $127.9K, 4.8M, 325.6K%.
 export function formatValue(
   value: number | string | null | undefined,
   format: string,
@@ -95,9 +95,9 @@ export function formatValue(
     case "currency":
       return scaledCurrency(value, currency);
     case "percent":
-      return `${plainNumber.format(value)}%`;
+      return `${scaledNumber(value)}%`;
     case "multiplier":
-      return `${plainNumber.format(value)}x`;
+      return `${scaledNumber(value)}x`;
     default:
       return scaledNumber(value);
   }

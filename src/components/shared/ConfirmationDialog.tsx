@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 
 export function ConfirmationDialog({
+  alternative,
   body,
+  cancelLabel = "Cancel",
   confirmLabel = "Confirm action",
   description,
   isConfirmDisabled = false,
@@ -16,7 +18,11 @@ export function ConfirmationDialog({
   onConfirm,
   title,
 }: {
-  body?: ReactNode;
+  // A safer way through than the destructive action, e.g. "Save and
+  // continue" beside "Discard changes". It is the primary button.
+  alternative?: { label: string; onSelect: () => void };
+  body: ReactNode;
+  cancelLabel?: string;
   confirmLabel?: string;
   description: string;
   // For confirmations that need extra input first, such as typing a name.
@@ -33,7 +39,7 @@ export function ConfirmationDialog({
       footer={
         <>
           <Button disabled={isPending} onClick={onCancel} variant="outline">
-            Cancel
+            {cancelLabel}
           </Button>
           <Button
             disabled={isPending || isConfirmDisabled}
@@ -42,18 +48,18 @@ export function ConfirmationDialog({
           >
             {confirmLabel}
           </Button>
+          {alternative && (
+            <Button disabled={isPending} onClick={alternative.onSelect}>
+              {alternative.label}
+            </Button>
+          )}
         </>
       }
       isOpen={isOpen}
       onClose={isPending ? () => undefined : onCancel}
       title={title}
     >
-      {body ?? (
-        <p>
-          This UI preview demonstrates the shared confirmation pattern. No data
-          will be changed.
-        </p>
-      )}
+      {body}
     </Dialog>
   );
 }

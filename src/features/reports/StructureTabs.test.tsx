@@ -19,10 +19,8 @@ vi.mock("next/navigation", () => ({
 const scope = { agencyId: 1, clientId: 20, reportId: 7 };
 
 function Harness({
-  isPortalView = false,
   onEditSection = vi.fn(),
 }: {
-  isPortalView?: boolean;
   onEditSection?: (itemId: number) => void;
 }) {
   const layout = useReportLayout(scope);
@@ -31,7 +29,6 @@ function Harness({
   return (
     <ReportCanvas
       currency="USD"
-      isPortalView={isPortalView}
       onAddBudgets={vi.fn()}
       onChannelSelect={vi.fn()}
       onEditSection={onEditSection}
@@ -188,30 +185,17 @@ describe("Structure tabs", () => {
     expect(screen.getByText("Coming soon")).toBeVisible();
   });
 
-  it("leaves hidden sections and all editing out of the portal view", async () => {
-    useLayoutApi(() => HttpResponse.json({ data: layoutFixture() }));
-    renderWithScope(<Harness isPortalView />);
-    const sectionsNav = await screen.findByRole("navigation", {
-      name: "Report sections",
-    });
-    expect(
-      within(sectionsNav).queryByRole("button", { name: /Media Mix Model/ }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /to reorder$/ }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("fills each section in its colour, strong when selected, and shades its tabs", async () => {
+  it("fills the selected section in its colour and tints the others and its tab panel", async () => {
     useLayoutApi(() => HttpResponse.json({ data: layoutFixture() }));
     renderWithScope(<Harness />);
     const section = await screen.findByRole("button", {
       name: "Reporting Dashboard",
     });
-    expect(section).toHaveClass("text-primary-foreground");
     const item = section.closest("li")!;
     expect(item).toHaveClass("bg-[color:var(--section-accent-strong)]");
+    expect(item.style.getPropertyValue("--section-accent-strong")).toBe(
+      "#1D4ED8",
+    );
     const other = screen.getByRole("button", {
       name: /^Media Mix Model(?! options)/,
     });
@@ -219,8 +203,14 @@ describe("Structure tabs", () => {
     expect(other.closest("li")).toHaveClass(
       "bg-[color:var(--section-accent-soft)]",
     );
-    expect(item.style.getPropertyValue("--section-accent-strong")).toBe(
-      "#1D4ED8",
+    // The active tab is underlined in the strong colour, not filled.
+    const activeTab = screen.getByRole("button", { name: "Executive Summary" });
+    expect(activeTab).toHaveClass("text-[color:var(--section-accent-strong)]");
+    expect(activeTab.closest("li")).toHaveClass(
+      "border-[color:var(--section-accent-strong)]",
+    );
+    expect(activeTab.closest("li")).not.toHaveClass(
+      "bg-[color:var(--section-accent-strong)]",
     );
     const tabs = screen.getByRole("navigation", {
       name: "Reporting Dashboard tabs",
@@ -233,7 +223,7 @@ describe("Structure tabs", () => {
     );
   });
 
-  it("keeps the default styling when a section has no colour", async () => {
+  it("falls back to the primary blue when a section has no colour", async () => {
     server.use(
       http.get(reportPaths.layout(1, 20, 7), () => {
         const layout = layoutFixture();
@@ -245,10 +235,14 @@ describe("Structure tabs", () => {
     const section = await screen.findByRole("button", {
       name: "Reporting Dashboard",
     });
-    expect(section).toHaveClass("text-primary-foreground");
-    expect(section.closest("li")).toHaveClass("bg-primary");
-    expect(section.closest("li")).not.toHaveClass(
-      "bg-[color:var(--section-accent-strong)]",
+    expect(
+      section.closest("li")!.style.getPropertyValue("--section-accent-strong"),
+    ).toBe("var(--color-primary)");
+    const tabs = screen.getByRole("navigation", {
+      name: "Reporting Dashboard tabs",
+    });
+    expect(tabs.style.getPropertyValue("--section-accent-soft")).toBe(
+      "var(--color-primary-soft)",
     );
   });
 
@@ -262,17 +256,5 @@ describe("Structure tabs", () => {
     expect(onEditSection).toHaveBeenCalledWith(4);
     const tabMenu = await moveMenu("Move Executive Summary");
     expect(within(tabMenu).queryByText("Colour and title")).toBeNull();
-  });
-
-  it("colours the portal view like the portal", async () => {
-    useLayoutApi(() => HttpResponse.json({ data: layoutFixture() }));
-    renderWithScope(<Harness isPortalView />);
-    const section = await screen.findByRole("button", {
-      name: "Reporting Dashboard",
-    });
-    expect(section).toHaveClass("text-white");
-    expect(
-      screen.queryByRole("button", { name: /options$/ }),
-    ).not.toBeInTheDocument();
   });
 });

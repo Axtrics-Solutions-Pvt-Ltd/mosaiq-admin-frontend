@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerApiConfig } from "@/config/env";
+import { forwardedAuthCookies, relayAuthCookies } from "@/lib/api/cookies";
 
 function csrfToken(cookie: string) {
   const part = cookie
@@ -32,15 +33,7 @@ export async function forwardAgencyRequest(
         { status: 403 },
       );
     }
-    const cookie = (request.headers.get("cookie") ?? "")
-      .split(";")
-      .map((part) => part.trim())
-      .filter(
-        (part) =>
-          part.startsWith("XSRF-TOKEN=") ||
-          part.startsWith(`${config.sessionCookieName}=`),
-      )
-      .join("; ");
+    const cookie = forwardedAuthCookies(request, config.sessionCookieName);
     const headers = new Headers({
       Accept: "application/json",
       Origin: config.adminOrigin,
@@ -65,6 +58,7 @@ export async function forwardAgencyRequest(
       responseHeaders.set("Content-Type", "application/json");
     const requestId = upstream.headers.get("X-Request-ID");
     if (requestId) responseHeaders.set("X-Request-ID", requestId);
+    relayAuthCookies(upstream, responseHeaders, config);
     if (upstream.status >= 300 && !contentType.includes("application/json")) {
       return Response.json(
         { message: "The agency service could not complete the request." },

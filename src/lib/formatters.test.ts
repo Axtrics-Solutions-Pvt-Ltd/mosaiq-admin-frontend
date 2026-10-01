@@ -23,6 +23,8 @@ describe("formatValue", () => {
     expect(formatValue(1.44, "percent", "USD")).toBe("1.44%");
     expect(formatValue(3.2, "multiplier", "USD")).toBe("3.2x");
     expect(formatValue(2.1845, "multiplier", "USD")).toBe("2.18x");
+    expect(formatValue(325571.7, "percent", "USD")).toBe("325.6K%");
+    expect(formatValue(1250, "multiplier", "USD")).toBe("1.3Kx");
   });
 
   it("shows text as typed and a missing value as a dash", () => {

@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  PencilRuler,
-  Share2,
-  X,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, LocateFixed, Share2, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useDeferredValue, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { PageStack } from "@/components/shared/LayoutPatterns";
@@ -34,6 +27,7 @@ import {
 } from "@/features/corrections/CorrectionDialog";
 import { correctionFilterParams } from "@/features/corrections/filters";
 import { metricFormat } from "@/features/corrections/format";
+import type { WidgetPart } from "@/features/report-widgets/contracts";
 import { ApiError } from "@/lib/api/errors";
 import { formatDateRange } from "@/lib/formatters";
 import { useMediaQuery } from "@/lib/utils/useMediaQuery";
@@ -48,16 +42,24 @@ import {
   reportMetricLabel,
 } from "./contracts";
 import {
+  draftPreviewWidget,
+  type InspectorDraft,
+  withDraftLayout,
+} from "./draft-preview";
+import type { InspectorFormHandle } from "./inspector-parts";
+import {
   defaultTabCode,
   findLayoutItem,
   findTab,
   itemTitle,
   layoutItemElementId,
+  tabsOf,
 } from "./layout";
 import { type DateRange, PreviewRangeControls } from "./PreviewRangeControls";
 import {
   usePreviewMeta,
   usePreviewTab,
+  usePreviewTabs,
   useReorderLayout,
   useReport,
   useReportLayout,
@@ -130,17 +132,44 @@ function revealLayoutItem(itemId: number) {
   });
 }
 
+// Until the inspector reaches its sticky place it starts lower on the page,
+// and a viewport-tall panel would run off the bottom, taking its Save bar
+// with it. This keeps the panel within the part of the viewport below its
+// top edge, so the bar stays on screen at every scroll position.
+function fitToViewport(element: HTMLElement | null) {
+  if (!element) return;
+  let frame = 0;
+  const fit = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => {
+      const top = Math.max(0, element.getBoundingClientRect().top);
+      element.style.maxHeight = `min(calc(100dvh - 4rem - 2 * var(--page-padding)), max(20rem, calc(100dvh - ${top}px - var(--page-padding))))`;
+    });
+  };
+  fit();
+  window.addEventListener("scroll", fit, { passive: true });
+  window.addEventListener("resize", fit);
+  return () => {
+    cancelAnimationFrame(frame);
+    window.removeEventListener("scroll", fit);
+    window.removeEventListener("resize", fit);
+  };
+}
+
 // Desktop inspector header: where the open widget sits in the tab, stepping
 // to its neighbours and closing. The drawer has its own close button.
 function InspectorNav({
   item,
   onClose,
   onSelect,
+  onShow,
   siblings,
 }: {
   item: LayoutItem;
   onClose: () => void;
   onSelect: (itemId: number) => void;
+  // Scrolls to the open widget and flashes it.
+  onShow: () => void;
   siblings: readonly LayoutItem[];
 }) {
   const index = siblings.findIndex((sibling) => sibling.id === item.id);
@@ -149,7 +178,9 @@ function InspectorNav({
   return (
     // -top-4 cancels the aside's padding: sticky offsets are measured from
     // the padding edge, so top-0 would leave a gap that content scrolls into.
-    <div className="bg-card sticky -top-4 z-10 -mx-4 -mt-4 mb-4 flex items-center gap-1 border-b px-4 py-2">
+    // Above the form's sticky Save bar, which scrolls up past it when the
+    // budgets below the form are in view.
+    <div className="bg-card sticky -top-4 z-20 -mx-4 -mt-4 mb-4 flex items-center gap-1 border-b px-4 py-2">
       <p className="text-muted-foreground mr-auto text-xs font-medium">
         {index >= 0
           ? `Widget ${index + 1} of ${siblings.length}`
@@ -157,6 +188,19 @@ function InspectorNav({
             ? "Editing section"
             : "Editing widget"}
       </p>
+      {item.level === "widget" && (
+        <Button
+          aria-label={`Show ${itemTitle(item)} on the canvas`}
+          className="size-8"
+          onClick={onShow}
+          size="icon"
+          title="Show on canvas"
+          type="button"
+          variant="ghost"
+        >
+          <LocateFixed aria-hidden className="size-4" />
+        </Button>
+      )}
       {index >= 0 && (
         <>
           <Button
@@ -222,11 +266,31 @@ function Builder({
   const reorder = useReorderLayout(scope);
   const updateItem = useUpdateLayoutItem(scope);
   const isWide = useMediaQuery("(min-width: 80rem)");
-  const [isPortalView, setIsPortalView] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<number>();
   // Bumped by "Add budgets" so the inspector scrolls to the budgets.
   const [budgetFocusRequest, setBudgetFocusRequest] = useState(0);
   const [isInspectorDirty, setIsInspectorDirty] = useState(false);
+  const [isBudgetDirty, setIsBudgetDirty] = useState(false);
+  // The open form's unsaved edits. Deferred, so typing stays quick while the
+  // canvas redraws.
+  const [draft, setDraft] = useState<InspectorDraft>();
+  const previewDraft = useDeferredValue(draft);
+  const inspectorForm = useRef<InspectorFormHandle>(null);
+  const [isSavingToContinue, setIsSavingToContinue] = useState(false);
+  // Bumped to flash a widget on the canvas: when it opens in the inspector,
+  // or from "Show on canvas".
+  const [highlight, setHighlight] = useState<{
+    itemId: number;
+    count: number;
+  }>();
+  // A card part clicked on the canvas, whose field the inspector focuses,
+  // and the part whose field has focus, outlined on the card.
+  const [focusPart, setFocusPart] = useState<{
+    itemId: number;
+    part: WidgetPart;
+    count: number;
+  }>();
+  const [activePart, setActivePart] = useState<WidgetPart>();
   // Bumped by the inspector's "Edit numbers for" so the widget's values
   // table opens where the pencils are.
   const [valuesReveal, setValuesReveal] = useState<{
@@ -236,8 +300,18 @@ function Builder({
   const [pendingSelection, setPendingSelection] = useState<{
     itemId: number | undefined;
     shouldReveal: boolean;
+    // Runs once the selection changes, e.g. the tab switch that closed it.
+    then?: () => void;
   }>();
   const [correction, setCorrection] = useState<CorrectionContext | null>(null);
+  // A combined value whose channel was just chosen from its menu: its
+  // correction opens once the preview for that channel arrives.
+  const [pendingCorrection, setPendingCorrection] = useState<{
+    itemId: number;
+    path: string;
+    metric: string;
+    channel: string;
+  }>();
   const [appliedCorrections, setAppliedCorrections] =
     useState<AppliedCorrectionsContext | null>(null);
   useUnsavedChangesWarning(isInspectorDirty);
@@ -272,6 +346,52 @@ function Builder({
   const tabValues = (preview.data?.widgets ?? []).flatMap(
     (widget) => widget.editing.values,
   );
+  // A calculated value's inputs may only be shown on another tab. Those tabs'
+  // previews load the first time a lock asks for them, for the same range
+  // and channel, so their values carry the totals a correction starts from.
+  const [isSearchingOtherTabs, setIsSearchingOtherTabs] = useState(false);
+  const otherTabs = sections
+    .flatMap((section) => tabsOf(section))
+    .filter((tab) => tab.code !== tabCode);
+  const otherPreviews = usePreviewTabs(
+    scope,
+    otherTabs.map((tab) => tab.code),
+    { from: view.from, to: view.to, channel: view.channel },
+    isSearchingOtherTabs,
+  );
+  const otherTabValues = otherPreviews.flatMap((query, index) =>
+    (query.data?.widgets ?? []).flatMap((widget) =>
+      widget.editing.values.map((value) => ({
+        value,
+        tabName: itemTitle(otherTabs[index]!),
+      })),
+    ),
+  );
+  const otherTabsStatus = !isSearchingOtherTabs
+    ? "idle"
+    : otherPreviews.some((query) => query.isPending)
+      ? "loading"
+      : otherPreviews.some((query) => query.isError)
+        ? "error"
+        : "ready";
+  if (
+    pendingCorrection &&
+    view.channel === pendingCorrection.channel &&
+    preview.data &&
+    !preview.isPlaceholderData
+  ) {
+    const match = preview.data.widgets
+      .find((widget) => widget.editing.item_id === pendingCorrection.itemId)
+      ?.editing.values.find(
+        (value) =>
+          value.path === pendingCorrection.path &&
+          value.metric === pendingCorrection.metric,
+      );
+    setPendingCorrection(undefined);
+    // Still combined (a channel with several workspaces): the value's menu
+    // explains that, so nothing opens.
+    if (match) openCorrection(match);
+  }
 
   function replaceView(
     next: Partial<Record<keyof BuilderView, string | undefined>>,
@@ -284,14 +404,70 @@ function Builder({
     router.replace(`${pathname}?${params}`, { scroll: false });
   }
 
-  function requestSelect(itemId: number | undefined, shouldReveal = false) {
-    if (itemId === selectedItemId) return;
+  function highlightItem(itemId: number, shouldReveal: boolean) {
+    if (shouldReveal) revealLayoutItem(itemId);
+    setHighlight((current) => ({ itemId, count: (current?.count ?? 0) + 1 }));
+  }
+
+  function select(itemId: number | undefined, shouldReveal: boolean) {
+    setSelectedItemId(itemId);
+    // The inspector it was in is gone, and with it the focus.
+    setActivePart(undefined);
+    if (itemId !== undefined) highlightItem(itemId, shouldReveal);
+  }
+
+  function requestSelect(
+    itemId: number | undefined,
+    shouldReveal = false,
+    then?: () => void,
+  ) {
+    if (itemId === selectedItemId) {
+      if (itemId !== undefined) highlightItem(itemId, shouldReveal);
+      return then?.();
+    }
     if (isInspectorDirty) {
-      setPendingSelection({ itemId, shouldReveal });
+      setPendingSelection({ itemId, shouldReveal, then });
       return;
     }
-    setSelectedItemId(itemId);
-    if (shouldReveal && itemId !== undefined) revealLayoutItem(itemId);
+    select(itemId, shouldReveal);
+    then?.();
+  }
+
+  function continuePendingSelection() {
+    if (!pendingSelection) return;
+    setIsInspectorDirty(false);
+    setIsBudgetDirty(false);
+    select(pendingSelection.itemId, pendingSelection.shouldReveal);
+    pendingSelection.then?.();
+    setPendingSelection(undefined);
+  }
+
+  async function saveAndContinue() {
+    setIsSavingToContinue(true);
+    const isSaved = (await inspectorForm.current?.submit()) ?? false;
+    setIsSavingToContinue(false);
+    // Not saved: the form shows why, so the dialog steps aside.
+    if (isSaved) continuePendingSelection();
+    else setPendingSelection(undefined);
+  }
+
+  // A widget stays open only on its own tab. Leaving the tab closes it, and
+  // asks first when it has unsaved edits. A section stays open on any tab.
+  function selectTab(code: string) {
+    const isKept =
+      selectedItem?.level !== "widget" ||
+      Boolean(
+        findTab(sections, code)?.tab.children.some(
+          (child) => child.id === selectedItem.id,
+        ),
+      );
+    if (isKept) replaceView({ tab: code });
+    else requestSelect(undefined, false, () => replaceView({ tab: code }));
+  }
+
+  function changeChannel(channel: string | undefined) {
+    setPendingCorrection(undefined);
+    replaceView({ channel });
   }
 
   function saveOrder(order: ReorderItem[]) {
@@ -336,6 +512,8 @@ function Builder({
       channelName: workspace?.channel?.name ?? "this channel",
       metricCode: value.metric,
       metricLabel: metricLabel(value.metric),
+      campaignKey: value.campaign_key ?? undefined,
+      campaignName: value.campaign_name ?? undefined,
       from: value.date_from,
       to: value.date_to,
       currentTotal: value.total ?? 0,
@@ -366,6 +544,22 @@ function Builder({
 
   const period = preview.data?.period;
 
+  // Scrolls to the widget that shows a calculated value's input, and opens
+  // its values table when the input is listed there.
+  function showValue(value: EditingValue) {
+    const holder = preview.data?.widgets.find((widget) =>
+      widget.editing.values.includes(value),
+    );
+    if (!holder) return;
+    const itemId = holder.editing.item_id;
+    if (holder.type === "line_chart")
+      setValuesReveal((current) => ({
+        itemId,
+        count: (current?.count ?? 0) + 1,
+      }));
+    highlightItem(itemId, true);
+  }
+
   function valueAdornment(widget: PreviewWidget) {
     if (widget.editing.values.length === 0) return undefined;
     const byPath = new Map(
@@ -385,8 +579,27 @@ function Builder({
               ? formatDateRange(value.date_from, value.date_to)
               : undefined
           }
+          channels={meta.data?.channels}
           onCorrect={openCorrection}
+          onPickChannel={(picked, channel) => {
+            changeChannel(channel);
+            // A calculated value has no correction of its own; narrowing
+            // the preview brings back its inputs.
+            if (picked.is_base)
+              setPendingCorrection({
+                itemId: widget.editing.item_id,
+                path: picked.path,
+                metric: picked.metric,
+                channel,
+              });
+          }}
           onShowCorrections={showCorrections}
+          onShowValue={showValue}
+          otherTabs={{
+            status: otherTabsStatus,
+            values: otherTabValues,
+            onSearch: () => setIsSearchingOtherTabs(true),
+          }}
           tabValues={tabValues}
           value={value}
         />
@@ -451,17 +664,42 @@ function Builder({
           )?.editing.values ?? [],
         channel: view.channel,
         channels: meta.data?.channels ?? [],
-        onChannelChange: (channel) => replaceView({ channel }),
+        onChannelChange: changeChannel,
         onRevealValues: () =>
           setValuesReveal((current) => ({
             itemId: selectedItem.id,
             count: (current?.count ?? 0) + 1,
           })),
       }}
+      focusPart={focusPart?.itemId === selectedItem.id ? focusPart : undefined}
+      formRef={inspectorForm}
+      onActivePartChange={setActivePart}
+      onBudgetsDirtyChange={setIsBudgetDirty}
       onDirtyChange={setIsInspectorDirty}
+      onDraftChange={setDraft}
       scope={scope}
     />
   ) : null;
+  // The canvas shows the open item as it would be saved.
+  const shownDraft =
+    selectedItem && previewDraft?.itemId === selectedItem.id
+      ? previewDraft
+      : undefined;
+  const canvasSections = withDraftLayout(
+    sections,
+    selectedItem,
+    shownDraft,
+    layout.data?.accents ?? [],
+  );
+  const canvasWidgets =
+    selectedItem && shownDraft
+      ? preview.data?.widgets.map((widget) =>
+          widget.editing.item_id === shownDraft.itemId
+            ? draftPreviewWidget(widget, selectedItem, shownDraft.patch)
+            : widget,
+        )
+      : preview.data?.widgets;
+  const pendingTitle = selectedItem ? itemTitle(selectedItem) : "This item";
 
   if (layout.isPending) return <p aria-busy="true">Loading report layout...</p>;
   if (layout.isError)
@@ -477,26 +715,7 @@ function Builder({
   return (
     <PageStack>
       <ReportPageHeader
-        actions={
-          <>
-            <ShareButton report={report} />
-            <Button
-              aria-pressed={isPortalView}
-              onClick={() => setIsPortalView((current) => !current)}
-              variant={isPortalView ? "default" : "outline"}
-            >
-              {isPortalView ? (
-                <>
-                  <PencilRuler aria-hidden className="size-4" /> Back to design
-                </>
-              ) : (
-                <>
-                  <Eye aria-hidden className="size-4" /> Preview as portal
-                </>
-              )}
-            </Button>
-          </>
-        }
+        actions={<ShareButton report={report} />}
         current="design"
         description="Choose what the client portal shows, in which order, and write its text. This preview uses the same data as the portal."
         report={report}
@@ -507,7 +726,7 @@ function Builder({
             channel={view.channel}
             key={`${range.from}-${range.to}`}
             meta={meta.data}
-            onChannelChange={(channel) => replaceView({ channel })}
+            onChannelChange={changeChannel}
             onRangeChange={(next) =>
               replaceView({ from: next.from, to: next.to })
             }
@@ -533,62 +752,68 @@ function Builder({
           </p>
         )}
       </Card>
-      {isPortalView && (
-        <p className="bg-primary-soft text-primary rounded-lg border border-blue-200 p-3 text-sm">
-          Portal preview: hidden sections, tabs and widgets are left out and
-          editing controls are off.
-        </p>
-      )}
-      <div
-        className={
-          isPortalView
-            ? "grid gap-4"
-            : "grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]"
-        }
-      >
+      {/* Wider on large screens, where forms with several columns of
+          fields (tables, rows of values) were cramped. */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="min-w-0">
           <ReportCanvas
             currency={meta.data?.currency ?? report.currency}
-            isPortalView={isPortalView}
             onAddBudgets={(itemId) => {
               setBudgetFocusRequest((request) => request + 1);
               requestSelect(itemId);
             }}
-            onChannelSelect={(channel) => replaceView({ channel })}
+            onChannelSelect={changeChannel}
             onEditSection={(itemId) => requestSelect(itemId)}
             onEditWidget={(itemId) => {
               setBudgetFocusRequest(0);
               requestSelect(itemId);
             }}
+            onPickWidget={(itemId, part) => {
+              if (part)
+                setFocusPart((current) => ({
+                  itemId,
+                  part,
+                  count: (current?.count ?? 0) + 1,
+                }));
+              // Already open: only its field is focused, without a flash.
+              if (itemId === selectedItemId) return;
+              setBudgetFocusRequest(0);
+              requestSelect(itemId);
+            }}
             onReorder={saveOrder}
-            onSelectTab={(code) => replaceView({ tab: code })}
+            onSelectTab={selectTab}
             onToggleWidget={toggleWidget}
+            activePart={activePart}
+            draftItemId={shownDraft?.itemId}
+            highlight={highlight}
             preview={{
-              widgets: preview.data?.widgets,
+              widgets: canvasWidgets,
               isPending: preview.isPending,
               isFetching: preview.isFetching,
               error: previewError,
             }}
-            sections={sections}
-            selectedItemId={isPortalView ? undefined : selectedItemId}
+            sections={canvasSections}
+            selectedItemId={selectedItemId}
             selectedTabCode={tabCode}
             valueAdornment={valueAdornment}
             valuesPanel={valuesPanel}
           />
         </div>
-        {!isPortalView && isWide && (
+        {isWide && (
           // Sticky below the top bar with its own scroll, so the inspector
           // stays beside a widget edited far down the canvas. The key starts
           // each item's settings from the top.
           <aside
             className="bg-card sticky top-[calc(4rem+var(--page-padding))] max-h-[calc(100dvh-4rem-2*var(--page-padding))] self-start overflow-y-auto overscroll-contain rounded-lg border p-4"
             key={selectedItem?.id ?? "empty"}
+            ref={fitToViewport}
           >
             {selectedItem && (
               <InspectorNav
                 item={selectedItem}
                 onClose={() => requestSelect(undefined)}
                 onSelect={(itemId) => requestSelect(itemId, true)}
+                onShow={() => highlightItem(selectedItem.id, true)}
                 siblings={tabWidgets}
               />
             )}
@@ -596,8 +821,8 @@ function Builder({
               <div className="space-y-2 text-sm">
                 <h2 className="text-strong font-semibold">Inspector</h2>
                 <p className="text-muted-foreground">
-                  Choose the pencil on a widget to edit its title, settings or
-                  text, or a section&apos;s ⋯ menu to change its colour.
+                  Choose Edit on a widget to change its title, settings or text,
+                  or a section&apos;s ⋯ menu to change its colour.
                 </p>
                 <p className="text-muted-foreground">
                   To change a live number, use the pencil beside the value in
@@ -610,7 +835,7 @@ function Builder({
         )}
       </div>
       <Drawer
-        isOpen={!isPortalView && !isWide && Boolean(inspector)}
+        isOpen={!isWide && Boolean(inspector)}
         onClose={() => requestSelect(undefined)}
         size="wide"
         title={
@@ -620,22 +845,28 @@ function Builder({
         {!isWide && inspector}
       </Drawer>
       <ConfirmationDialog
-        body={<p>The widget you are editing has unsaved changes.</p>}
+        // Budgets save on their own, so with unsaved budgets the choice is
+        // to discard them or go back and save them.
+        alternative={
+          isBudgetDirty
+            ? undefined
+            : { label: "Save and continue", onSelect: saveAndContinue }
+        }
+        body={
+          <p>
+            {isBudgetDirty
+              ? `${pendingTitle} has unsaved budgets. Save them with Save budgets in the inspector, or discard them.`
+              : `${pendingTitle} has unsaved changes. Save them before you move on, or discard them.`}
+          </p>
+        }
+        cancelLabel="Keep editing"
         confirmLabel="Discard changes"
-        description="Your edits will be lost."
+        description="Unsaved changes are lost when you leave this item."
         isOpen={Boolean(pendingSelection)}
+        isPending={isSavingToContinue}
         onCancel={() => setPendingSelection(undefined)}
-        onConfirm={() => {
-          setIsInspectorDirty(false);
-          setSelectedItemId(pendingSelection?.itemId);
-          if (
-            pendingSelection?.shouldReveal &&
-            pendingSelection.itemId !== undefined
-          )
-            revealLayoutItem(pendingSelection.itemId);
-          setPendingSelection(undefined);
-        }}
-        title="Discard widget changes?"
+        onConfirm={continuePendingSelection}
+        title="Save your changes?"
       />
       <CorrectionDialog
         context={correction}

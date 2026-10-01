@@ -1,13 +1,11 @@
 "use client";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Bell,
   ChevronsLeft,
   ChevronsRight,
   KeyRound,
   LogOut,
   Menu,
-  Search,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,7 +24,6 @@ import { useAgencies } from "@/features/agencies/queries";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import { PendingInvitationsDialog } from "@/features/invitations/PendingInvitationsDialog";
 import { currentUserRoleLabel } from "@/features/users/role-labels";
-import { useAgencyWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 import { ScopeProvider, useScope } from "@/providers/ScopeProvider";
@@ -44,10 +41,6 @@ function AppShellContent({ children }: { children: ReactNode }) {
     { status: "active", per_page: 100 },
     { enabled: isSuperAdmin },
   );
-  const workspacesQuery = useAgencyWorkspaces(scope.agencyId ?? 0, {
-    status: "active",
-    per_page: 100,
-  });
   const didHandleSessionLoss = useRef(false);
   useEffect(() => {
     if (
@@ -194,53 +187,6 @@ function AppShellContent({ children }: { children: ReactNode }) {
                 </Select>
               </div>
             )}
-            <div className="hidden w-40 2xl:block">
-              <Select
-                aria-label="Workspace scope"
-                disabled={!scope.agencyId || workspacesQuery.isPending}
-                onChange={(event) =>
-                  scope.setWorkspaceId(
-                    event.target.value === "all"
-                      ? undefined
-                      : Number(event.target.value),
-                  )
-                }
-                title={
-                  scope.agencyId
-                    ? undefined
-                    : "Select an agency to filter by workspace"
-                }
-                value={scope.workspaceId ? String(scope.workspaceId) : "all"}
-              >
-                <option value="all">All workspaces</option>
-                {workspacesQuery.data?.data.map((workspace) => (
-                  <option key={workspace.id} value={String(workspace.id)}>
-                    {workspace.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <Button
-              aria-label="Search (UI preview)"
-              disabled
-              size="icon"
-              title="Search preview"
-              variant="ghost"
-            >
-              <Search className="size-4" />
-            </Button>
-            <Button
-              aria-label="Notifications, 3 unread (UI preview)"
-              disabled
-              className="relative"
-              size="icon"
-              variant="ghost"
-            >
-              <Bell className="size-4" />
-              <span className="bg-destructive absolute top-1.5 right-1.5 size-2 rounded-full">
-                <span className="sr-only">3 unread</span>
-              </span>
-            </Button>
             <details className="relative">
               <summary
                 aria-label="Open profile menu"

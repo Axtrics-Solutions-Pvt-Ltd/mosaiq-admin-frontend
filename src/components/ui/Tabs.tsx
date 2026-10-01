@@ -14,11 +14,7 @@ export function Tabs({
   const [active, setActive] = useState(defaultValue ?? items[0]?.value ?? "");
   return (
     <div>
-      <div
-        aria-label="Preview sections"
-        className="flex gap-1 border-b"
-        role="tablist"
-      >
+      <div aria-label="Sections" className="flex gap-1 border-b" role="tablist">
         {items.map((item) => (
           <button
             aria-controls={`${baseId}-panel-${item.value}`}

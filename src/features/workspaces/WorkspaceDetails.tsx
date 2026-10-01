@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Pencil, Power, Trash2, UsersRound } from "lucide-react";
+import { Pencil, Power, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +10,6 @@ import { PageStack } from "@/components/shared/LayoutPatterns";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatePanel } from "@/components/shared/StatePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
@@ -32,31 +31,9 @@ import {
   useUpdateWorkspace,
   useWorkspace,
 } from "./queries";
+import { WorkspaceActivityCard } from "./WorkspaceActivityCard";
+import { WorkspaceTeamCard } from "./WorkspaceTeamCard";
 
-function Preview({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <CardTitle>{title}</CardTitle>
-          <Badge tone="primary">UI preview</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-muted-foreground text-sm">{description}</p>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
 function DetailList({
   values,
 }: {
@@ -198,6 +175,9 @@ export function WorkspaceDetails({
   const canDelete = Boolean(
     user.data && hasCapability(user.data, "workspaces.delete"),
   );
+  const canManageUsers = Boolean(
+    user.data && hasCapability(user.data, "users.manage"),
+  );
   const connectorId = record.connector_id;
   async function changeStatus() {
     setError("");
@@ -247,10 +227,6 @@ export function WorkspaceDetails({
                     label: "Agency",
                     value: agency.data?.display_name ?? "Loading agency",
                   },
-                  { label: "Description", value: "Not available" },
-                  { label: "Industry or category", value: "Not available" },
-                  { label: "Primary client contact", value: "Not available" },
-                  { label: "Account manager", value: "Not available" },
                   { label: "Currency", value: record.currency },
                   { label: "Time zone", value: record.timezone },
                   {
@@ -282,84 +258,30 @@ export function WorkspaceDetails({
       label: "Connection",
       content: <ConnectionCard canManage={canManage} workspace={record} />,
     },
-    {
-      value: "market",
-      label: "Market Profile",
-      content: (
-        <Preview
-          title="Market profile"
-          description="Country, provinces, target markets, languages, audience segments, and reporting period are not in the workspace API yet."
-        >
-          <DetailList
-            values={[
-              { label: "Default currency", value: record.currency },
-              { label: "Time zone", value: record.timezone },
-              { label: "Target markets", value: "Not available" },
-              { label: "Target languages", value: "Not available" },
-            ]}
-          />
-        </Preview>
-      ),
-    },
-    {
-      value: "modules",
-      label: "Modules",
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Module access</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              KPI and module visibility for this workspace is managed on the
-              Curation screen.
-            </p>
-            <Button asChild variant="outline">
-              <Link
-                href={`${routes.curation}?agency=${agencyId}&workspace=${workspaceId}`}
-              >
-                Open curation
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ),
-    },
-    {
-      value: "team",
-      label: "Team and Access",
-      content: (
-        <Preview
-          title="Team and access"
-          description="Workspace assignments and roles are not returned by this API. Manage agency users in Users and access."
-        >
-          <div className="flex items-center gap-3">
-            <UsersRound aria-hidden className="text-primary size-5" />
-            <span className="text-muted-foreground">
-              No assignment information available.
-            </span>
-          </div>
-          <Button asChild variant="outline">
-            <Link href={routes.users.index}>Open users</Link>
-          </Button>
-        </Preview>
-      ),
-    },
+    ...(canManageUsers
+      ? [
+          {
+            value: "team",
+            label: "Team and Access",
+            content: (
+              <WorkspaceTeamCard
+                agencyId={agencyId}
+                clientId={clientId}
+                workspaceId={workspaceId}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       value: "activity",
       label: "Activity",
       content: (
-        <Preview
-          title="Recent activity"
-          description="The workspace API has no activity feed yet."
-        >
-          <div className="flex items-center gap-3">
-            <Activity aria-hidden className="text-primary size-5" />
-            <span className="text-muted-foreground">
-              No workspace events available.
-            </span>
-          </div>
-        </Preview>
+        <WorkspaceActivityCard
+          agencyId={agencyId}
+          clientId={clientId}
+          workspaceId={workspaceId}
+        />
       ),
     },
   ];
