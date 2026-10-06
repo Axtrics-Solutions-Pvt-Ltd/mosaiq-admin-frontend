@@ -140,7 +140,7 @@ export function BudgetMonthEditor({
     if (workspaces.length === 0)
       return (
         <p className="text-muted-foreground text-sm">
-          This report has no channel workspaces to budget.
+          This report has no channels to budget.
         </p>
       );
     if (query.isPending) return <Skeleton className="h-32 w-full" />;
@@ -217,7 +217,7 @@ export function BudgetMonthEditor({
                     {workspace.name}
                   </span>
                   <span className="text-muted-foreground">
-                    {workspace.channel?.name ?? "No channel"} ·{" "}
+                    {workspace.channel?.name ?? "No platform"} ·{" "}
                     {workspace.currency}
                   </span>
                 </label>

@@ -68,7 +68,7 @@ function CredentialFieldsEditor({
         Credential fields
       </legend>
       <p className="text-muted-foreground text-xs">
-        The fields a workspace fills in to connect this channel. Secret values
+        The fields a channel fills in to connect this platform. Secret values
         are stored encrypted and never shown again.
       </p>
       {fields.length === 0 && (
@@ -221,8 +221,8 @@ export function ChannelFormDrawer({
         payload: values,
       });
       toast({
-        title: channel ? "Channel updated" : "Channel created",
-        description: `${saved.name} was saved to the channel catalogue.`,
+        title: channel ? "Platform updated" : "Platform created",
+        description: `${saved.name} was saved to the platform catalogue.`,
         tone: "success",
       });
       onClose();
@@ -235,7 +235,7 @@ export function ChannelFormDrawer({
           });
         setSubmitError(error.message);
       } else
-        setSubmitError("The channel could not be saved. Please try again.");
+        setSubmitError("The platform could not be saved. Please try again.");
     }
   }
 
@@ -245,7 +245,7 @@ export function ChannelFormDrawer({
         isOpen
         onClose={requestClose}
         size="wide"
-        title={channel ? `Edit ${channel.name}` : "Add channel"}
+        title={channel ? `Edit ${channel.name}` : "Add platform"}
       >
         <form
           className="flex min-h-full flex-col"
@@ -279,7 +279,7 @@ export function ChannelFormDrawer({
             <FormField
               description={
                 isCodeLocked
-                  ? "Locked because a workspace uses this channel."
+                  ? "Locked because a channel uses this platform."
                   : "Used by the API and integrations."
               }
               error={errors.code?.message}
@@ -326,8 +326,8 @@ export function ChannelFormDrawer({
               <div>
                 <Label htmlFor="channel-active">Active</Label>
                 <p className="text-muted-foreground text-xs">
-                  Inactive channels stay on existing workspaces but can&apos;t
-                  be picked for new ones.
+                  Inactive platforms stay on existing channels but can&apos;t be
+                  picked for new ones.
                 </p>
               </div>
             </div>
@@ -345,7 +345,7 @@ export function ChannelFormDrawer({
                 Metrics
               </legend>
               <p className="text-muted-foreground mt-1 text-xs">
-                The base metrics this channel reports.
+                The base metrics this platform reports.
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {baseMetricCodes.map((code) => (
@@ -380,14 +380,14 @@ export function ChannelFormDrawer({
               {mutation.isPending
                 ? "Saving..."
                 : channel
-                  ? "Save channel"
-                  : "Create channel"}
+                  ? "Save platform"
+                  : "Create platform"}
             </Button>
           </div>
         </form>
       </Drawer>
       <ConfirmationDialog
-        body={<p>Your unsaved channel changes will be discarded.</p>}
+        body={<p>Your unsaved platform changes will be discarded.</p>}
         confirmLabel="Discard changes"
         description="Your edits have not been saved."
         isOpen={isDiscarding}

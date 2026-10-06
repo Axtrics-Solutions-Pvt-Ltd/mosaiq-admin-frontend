@@ -70,10 +70,10 @@ function InvitationSummary({
   if (invitation.client_name)
     items.push({ label: "Client", value: invitation.client_name });
   if (invitation.workspace_name)
-    items.push({ label: "Workspace", value: invitation.workspace_name });
+    items.push({ label: "Channel", value: invitation.workspace_name });
   else if (getInvitationAccessScope(invitation) === "client")
     items.push({
-      label: "Workspaces",
+      label: "Channels",
       value: wholeClientLabel(null, invitation.workspace_count),
     });
   items.push({

@@ -41,7 +41,7 @@ export function WorkspaceActivityCard({
           <StatePanel
             kind="error"
             title="Activity unavailable"
-            description="The workspace activity could not be loaded."
+            description="The channel activity could not be loaded."
             action={
               <Button onClick={() => activity.refetch()} variant="outline">
                 Try again
@@ -52,11 +52,11 @@ export function WorkspaceActivityCard({
           <StatePanel
             kind="empty"
             title="No activity yet"
-            description="Changes to this workspace, its connection, data fetches, budgets and corrections appear here."
+            description="Changes to this channel, its connection, data fetches, budgets and corrections appear here."
           />
         ) : (
           <>
-            <ol aria-label="Workspace activity" className="divide-y">
+            <ol aria-label="Channel activity" className="divide-y">
               {activity.data.data.map((event) => {
                 const detail = auditActionDetail(event);
                 return (

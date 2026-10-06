@@ -18,7 +18,7 @@ export async function GET(request: Request, context: Context) {
   const ids = await scope(context);
   if (!ids)
     return Response.json(
-      { message: "Invalid workspace scope." },
+      { message: "Invalid channel scope." },
       { status: 400 },
     );
   const incoming = new URL(request.url).searchParams;
@@ -46,7 +46,7 @@ export async function POST(request: Request, context: Context) {
   const ids = await scope(context);
   if (!ids)
     return Response.json(
-      { message: "Invalid workspace scope." },
+      { message: "Invalid channel scope." },
       { status: 400 },
     );
   let body: unknown;
@@ -58,7 +58,7 @@ export async function POST(request: Request, context: Context) {
   const parsed = workspaceProfileSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
-      { message: "Invalid workspace details." },
+      { message: "Invalid channel details." },
       { status: 422 },
     );
   return forwardAgencyRequest(

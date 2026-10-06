@@ -85,6 +85,6 @@ describe("client access selection", () => {
         4: { allWorkspaces: true, workspaceIds: [] },
         7: { allWorkspaces: false, workspaceIds: [10, 11] },
       }),
-    ).toBe("2 clients · 1 with all workspaces · 2 workspaces");
+    ).toBe("2 clients · 1 with all channels · 2 channels");
   });
 });

@@ -13,7 +13,7 @@ async function credentialsPath(context: Context) {
   return workspacePaths.credentials(agencyId, clientId, workspaceId);
 }
 const invalidScope = () =>
-  Response.json({ message: "Invalid workspace scope." }, { status: 400 });
+  Response.json({ message: "Invalid channel scope." }, { status: 400 });
 
 export async function GET(request: Request, context: Context) {
   const path = await credentialsPath(context);

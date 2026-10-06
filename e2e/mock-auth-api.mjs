@@ -1673,16 +1673,15 @@ createServer(async (request, response) => {
         return itemResource();
       }
     }
-    const channelsOf = (rows) => [
-      ...new Map(
-        rows
-          .filter((row) => row.connector)
-          .map((row) => [
-            row.connector.code,
-            { code: row.connector.code, name: row.connector.name },
-          ]),
-      ).values(),
-    ];
+    // A channel is one source workspace; its code is the workspace id.
+    const channelsOf = (rows) =>
+      rows.map((row) => ({
+        code: String(row.id),
+        name: row.name,
+        platform: row.connector
+          ? { code: row.connector.code, name: row.connector.name }
+          : null,
+      }));
     const defaultFrom = shiftDay(
       reportRange.to,
       -(presetDays[report.default_range_preset] - 1),
@@ -1739,7 +1738,7 @@ createServer(async (request, response) => {
           },
         });
       const sources = sourceRows(report.workspace_ids).filter(
-        (row) => !channel || row.connector?.code === channel,
+        (row) => !channel || String(row.id) === channel,
       );
       const sourceIds = sources.map((row) => row.id);
       const spend = sources.reduce(
@@ -1803,8 +1802,9 @@ createServer(async (request, response) => {
               format: "multiplier",
             },
             items: sources.map((row) => ({
-              key: row.connector?.code ?? String(row.id),
-              label: row.connector?.name ?? row.name,
+              key: String(row.id),
+              label: row.name,
+              platform: row.connector?.code ?? null,
               value: correctedSpend(row.id),
               format: "currency",
               share:

@@ -53,7 +53,7 @@ function ClientAccessBadge({
   return (
     <Badge tone={isPending ? "warning" : "success"}>
       #{clientId} {name}
-      {isPending && <> &middot; Invite not accepted (all workspaces)</>}
+      {isPending && <> &middot; Invite not accepted (all channels)</>}
     </Badge>
   );
 }
@@ -198,7 +198,7 @@ export function UserDetail({
           )}
           <div>
             <p className="text-muted-foreground text-xs font-medium">
-              Workspace access
+              Channel access
             </p>
             {confirmedWorkspaceIds.length === 0 &&
             pendingWorkspaceIds.length === 0 ? (
@@ -208,19 +208,19 @@ export function UserDetail({
                   : "Agency-wide access"}
               </p>
             ) : (
-              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Workspaces">
+              <ul className="mt-2 flex flex-wrap gap-2" aria-label="Channels">
                 {confirmedWorkspaceIds.map((id) => (
                   <li key={id}>
                     <Badge tone="success">
-                      #{id} {workspacesById.get(id)?.name ?? "Workspace"}
+                      #{id} {workspacesById.get(id)?.name ?? "Channel"}
                     </Badge>
                   </li>
                 ))}
                 {pendingWorkspaceIds.map((id) => (
                   <li key={id}>
                     <Badge tone="warning">
-                      #{id} {workspacesById.get(id)?.name ?? "Workspace"}{" "}
-                      &middot; Invite not accepted
+                      #{id} {workspacesById.get(id)?.name ?? "Channel"} &middot;
+                      Invite not accepted
                     </Badge>
                   </li>
                 ))}

@@ -293,7 +293,7 @@ export function InviteUserForm() {
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Agency Admins invite Managers, who can access only the clients
-                  and workspaces chosen below.
+                  and channels chosen below.
                 </p>
                 {errors.roleCode?.message && (
                   <p className="text-destructive mt-1 text-sm" role="alert">
@@ -341,7 +341,7 @@ export function InviteUserForm() {
             )}
             {roleCode === "MANAGER" ? (
               <FormField
-                description="Tick a client for all its workspaces, including ones added later, or open it to choose workspaces. The Manager gets one email listing everything."
+                description="Tick a client for all its channels, including ones added later, or open it to choose channels. The Manager gets one email listing everything."
                 error={clientsError}
                 id="invite-clients"
                 label="Clients"

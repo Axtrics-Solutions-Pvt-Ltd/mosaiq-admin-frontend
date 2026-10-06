@@ -4,12 +4,12 @@ test.beforeEach(async ({ page }) => {
   await signIn(page);
 });
 
-test("workspace directory opens every detail section without overflow", async ({
+test("channel directory opens every detail section without overflow", async ({
   page,
 }) => {
   await page.goto("/workspaces?agency=1&client=20");
   await expect(
-    page.getByRole("heading", { name: "Client Workspaces" }),
+    page.getByRole("heading", { name: "Client Channels" }),
   ).toBeVisible();
   await expect(
     page
@@ -41,40 +41,40 @@ test("workspace directory opens every detail section without overflow", async ({
   expect(hasOverflow).toBe(false);
 });
 
-test("workspace create form requires a channel and a name", async ({
+test("channel create form requires a platform and a name", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium");
   await page.goto("/workspaces/new?agency=1&client=20");
   await expect(
-    page.getByRole("heading", { name: "Create workspace" }),
+    page.getByRole("heading", { name: "Create channel" }),
   ).toBeVisible();
   await expect(page.getByRole("option", { name: "Meta Ads" })).toBeAttached();
-  await page.getByRole("button", { name: "Create workspace" }).click();
-  await expect(page.getByText("Choose a channel.")).toBeVisible();
-  await expect(page.getByText("Enter a workspace name.")).toBeVisible();
+  await page.getByRole("button", { name: "Create channel" }).click();
+  await expect(page.getByText("Choose a platform.")).toBeVisible();
+  await expect(page.getByText("Enter a channel name.")).toBeVisible();
 });
 
-test("create and edit workspace persists the API profile", async ({
+test("create and edit channel persists the API profile", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium");
   await page.goto("/workspaces/new?agency=1&client=20");
   await page
-    .getByLabel("Channel")
+    .getByLabel("Platform")
     .selectOption({ label: "Google Analytics 4" });
-  await page.getByLabel("Workspace name").fill("New Reporting Space");
-  await page.getByRole("button", { name: "Create workspace" }).click();
+  await page.getByLabel("Channel name").fill("New Reporting Space");
+  await page.getByRole("button", { name: "Create channel" }).click();
   await expect(page).toHaveURL(/workspaces\/\d+\?agency=1&client=20/);
   await expect(
     page.getByRole("heading", { name: "New Reporting Space", level: 1 }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Edit", exact: true }).click();
   await expect(
-    page.getByText("A workspace's channel can't be changed."),
+    page.getByText("A channel's platform can't be changed."),
   ).toBeVisible();
-  await page.getByLabel("Workspace name").fill("Updated Reporting Space");
-  await page.getByRole("button", { name: "Save workspace" }).click();
+  await page.getByLabel("Channel name").fill("Updated Reporting Space");
+  await page.getByRole("button", { name: "Save channel" }).click();
   await expect(
     page.getByRole("heading", { name: "Updated Reporting Space", level: 1 }),
   ).toBeVisible();

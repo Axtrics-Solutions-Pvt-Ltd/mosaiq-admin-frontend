@@ -20,7 +20,7 @@ export default function AuthLayout({
             Operations, clearly connected
           </p>
           <h2 className="mt-4 text-4xl font-semibold tracking-tight">
-            Run every agency workspace from one focused admin portal.
+            Run every agency channel from one focused admin portal.
           </h2>
           <p className="mt-5 text-base leading-7 text-blue-100">
             Review access, data health, and configuration across your MOSAIQ

@@ -23,7 +23,7 @@ const permissionLabels: Record<string, string> = {
   agency_create: "Create agencies",
   agency_edit: "Edit agencies",
   client_create: "Create clients",
-  workspace_edit: "Edit workspaces",
+  workspace_edit: "Edit channels",
   user_manage: "Manage users",
   dashboard_view: "View dashboards",
 };

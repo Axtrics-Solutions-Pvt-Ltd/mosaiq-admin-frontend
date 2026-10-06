@@ -102,11 +102,11 @@ async function chooseReportingOnly(user: ReturnType<typeof userEvent.setup>) {
     await screen.findByRole("checkbox", { name: "Acme Client" }),
   );
   // Unticking All workspaces keeps every listed workspace, so one can be removed.
-  await user.click(screen.getByRole("checkbox", { name: /^All workspaces/ }));
+  await user.click(screen.getByRole("checkbox", { name: /^All channels/ }));
   await user.click(screen.getByRole("checkbox", { name: "Marketing" }));
 }
 
-it("lets an Agency Admin invite a Manager to chosen workspaces of a client", async () => {
+it("lets an Agency Admin invite a Manager to chosen channels of a client", async () => {
   const user = userEvent.setup();
   let received: unknown;
   mockAgencyScope();
@@ -137,7 +137,7 @@ it("lets an Agency Admin invite a Manager to chosen workspaces of a client", asy
   await chooseReportingOnly(user);
   expect(
     document.querySelector("#invite-clients [aria-live=polite]"),
-  ).toHaveTextContent("1 client · 1 workspace");
+  ).toHaveTextContent("1 client · 1 channel");
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
   expect(await screen.findByRole("status")).toHaveTextContent(
     "Invitation emailed to manager@example.test.",
@@ -150,7 +150,7 @@ it("lets an Agency Admin invite a Manager to chosen workspaces of a client", asy
   expect(push).toHaveBeenCalledWith("/users/invitations?agency=12");
 });
 
-it("invites a Manager to all workspaces of a client by ticking the client", async () => {
+it("invites a Manager to all channels of a client by ticking the client", async () => {
   const user = userEvent.setup();
   let received: unknown;
   mockAgencyScope();
@@ -200,7 +200,7 @@ it("offers a Super Admin only the Agency Admin and Manager roles", () => {
   expect(roleSelect).toHaveValue("MANAGER");
 });
 
-it("shows already-pending workspaces on conflict and resubmits only the creatable ones", async () => {
+it("shows already-pending channels on conflict and resubmits only the creatable ones", async () => {
   const user = userEvent.setup();
   const receivedBodies: unknown[] = [];
   let requestCount = 0;
@@ -212,7 +212,7 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
       if (requestCount === 1) {
         return HttpResponse.json(
           {
-            message: "Some workspaces already have a pending invitation.",
+            message: "Some channels already have a pending invitation.",
             error_code: "INVITATION_ALREADY_PENDING",
             request_id: "req-1",
             already_pending: [
@@ -243,20 +243,18 @@ it("shows already-pending workspaces on conflict and resubmits only the creatabl
   await user.click(
     await screen.findByRole("checkbox", { name: "Acme Client" }),
   );
-  await user.click(screen.getByRole("checkbox", { name: /^All workspaces/ }));
+  await user.click(screen.getByRole("checkbox", { name: /^All channels/ }));
   await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
   expect(
-    await screen.findByText(
-      "Some workspaces already have a pending invitation",
-    ),
+    await screen.findByText("Some channels already have a pending invitation"),
   ).toBeVisible();
   const dialog = screen.getByRole("dialog");
   expect(within(dialog).getByText("Reporting")).toBeVisible();
   expect(within(dialog).getByText("Marketing")).toBeVisible();
 
   await user.click(
-    screen.getByRole("button", { name: "Send to the remaining 1 workspace" }),
+    screen.getByRole("button", { name: "Send to the remaining 1 channel" }),
   );
 
   await vi.waitFor(() =>

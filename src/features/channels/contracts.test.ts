@@ -35,8 +35,8 @@ const formValues: ChannelFormValues = {
   position: "",
 };
 
-describe("channel form", () => {
-  it("converts editor values to the channel request body", () => {
+describe("platform form", () => {
+  it("converts editor values to the platform request body", () => {
     expect(channelFormSchema.parse(formValues)).toEqual({
       code: "meta_ads",
       name: "Meta Ads",
@@ -88,7 +88,7 @@ describe("channel form", () => {
     );
   });
 
-  it("round-trips a stored channel into editor values", () => {
+  it("round-trips a stored platform into editor values", () => {
     const [channel] = channelListSchema.parse({
       data: [
         {

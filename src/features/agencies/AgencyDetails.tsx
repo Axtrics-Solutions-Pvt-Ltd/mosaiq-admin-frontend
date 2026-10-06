@@ -85,7 +85,7 @@ function Overview({ agency }: { agency: AgencyDetail }) {
         <CardContent className="space-y-4">
           <StatusBadge status={agency.status} />
           <p className="text-muted-foreground text-sm">
-            Status controls access for the agency and its workspaces.
+            Status controls access for the agency and its channels.
           </p>
         </CardContent>
       </Card>
@@ -156,7 +156,7 @@ function Defaults({ agency }: { agency: AgencyDetail }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Workspace defaults</CardTitle>
+        <CardTitle>Channel defaults</CardTitle>
       </CardHeader>
       <CardContent>
         <DetailList
@@ -180,13 +180,13 @@ function Workspaces({ agency }: { agency: AgencyDetail }) {
         action={
           <Button asChild variant="outline">
             <Link href={routes.workspaces.new + clientScope(Number(agency.id))}>
-              Create workspace
+              Create channel
             </Link>
           </Button>
         }
-        description="This agency has no linked workspaces yet."
+        description="This agency has no linked channels yet."
         kind="empty"
-        title="No workspaces"
+        title="No channels"
       />
     );
   }
@@ -350,7 +350,7 @@ export function AgencyDetails({
     },
     {
       content: <Workspaces agency={agency} />,
-      label: `Workspaces (${agency.workspaces})`,
+      label: `Channels (${agency.workspaces})`,
       value: "workspaces",
     },
     {
@@ -403,7 +403,7 @@ export function AgencyDetails({
           </>
         }
         context={agency.primaryContact.name}
-        description="Review agency identity, defaults, people, workspaces, branding, and administrative activity."
+        description="Review agency identity, defaults, people, channels, branding, and administrative activity."
         title={agency.name}
       />
       <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5">
@@ -427,7 +427,7 @@ export function AgencyDetails({
             </span>
             <span className="flex items-center gap-1.5">
               <Building2 aria-hidden className="size-4" />
-              {agency.workspaces} workspaces
+              {agency.workspaces} channels
             </span>
             <span className="flex items-center gap-1.5">
               <MapPin aria-hidden className="size-4" />

@@ -79,7 +79,7 @@ const credentialFieldInputSchema = z
 export const channelRequestSchema = z
   .object({
     code: z.string().trim().min(1, "Enter a code.").max(50),
-    name: z.string().trim().min(1, "Enter a channel name.").max(255),
+    name: z.string().trim().min(1, "Enter a platform name.").max(255),
     category: z.enum(channelCategories),
     is_active: z.boolean(),
     credential_fields: z.array(credentialFieldInputSchema),

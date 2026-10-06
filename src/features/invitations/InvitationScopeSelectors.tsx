@@ -31,21 +31,21 @@ const scopeCopy: Record<
   "manager-invite": {
     clientLabel: "Client",
     client:
-      "Required. The Manager can see this client and create workspaces under it.",
+      "Required. The Manager can see this client and create channels under it.",
     workspaces:
-      "Optional. Leave empty to give access to all current workspaces of this client.",
+      "Optional. Leave empty to give access to all current channels of this client.",
   },
   "manager-edit": {
-    clientLabel: "Workspace client",
-    client: "Choose an active client to browse its workspaces.",
-    workspaces: "Choose the workspaces this Manager can access.",
+    clientLabel: "Channel client",
+    client: "Choose an active client to browse its channels.",
+    workspaces: "Choose the channels this Manager can access.",
   },
   restriction: {
-    clientLabel: "Workspace client",
+    clientLabel: "Channel client",
     client:
-      "Optional. Choose an active client to browse workspace restrictions. The client is not submitted for this role.",
+      "Optional. Choose an active client to browse channel restrictions. The client is not submitted for this role.",
     workspaces:
-      "Optional. Agency Admins have agency-wide access; selected workspaces restrict it.",
+      "Optional. Agency Admins have agency-wide access; selected channels restrict it.",
   },
 };
 
@@ -150,7 +150,7 @@ export function InvitationScopeSelectors({
         description={scopeCopy[mode].workspaces}
         error={workspaceError}
         id="invite-workspaces"
-        label="Workspace access"
+        label="Channel access"
         required={isWorkspaceRequired}
       >
         <PaginatedCombobox
@@ -162,7 +162,7 @@ export function InvitationScopeSelectors({
           disabled={!client}
           errorMessage={
             workspacesQuery.isError
-              ? "Workspaces could not be loaded."
+              ? "Channels could not be loaded."
               : undefined
           }
           getKey={(option) => String(option.id)}
@@ -182,7 +182,7 @@ export function InvitationScopeSelectors({
           onRetry={() => void workspacesQuery.refetch()}
           onSearchChange={changeWorkspaceSearch}
           options={workspaceOptions}
-          placeholder={client ? "Select workspaces" : "Select a client first"}
+          placeholder={client ? "Select channels" : "Select a client first"}
           renderOption={(option) => {
             const statusLabel =
               option.invite_status === "added"
@@ -211,12 +211,12 @@ export function InvitationScopeSelectors({
               </span>
             );
           }}
-          searchPlaceholder="Search workspace name"
+          searchPlaceholder="Search channel name"
           value={workspaces}
         />
         {workspaces.length > 0 && (
           <ul
-            aria-label="Selected workspaces"
+            aria-label="Selected channels"
             className="mt-2 flex flex-wrap gap-2"
           >
             {workspaces.map((workspace) => (

@@ -179,7 +179,7 @@ export function ClientDetailsScreen({
           </>
         }
         context={agencyName}
-        description="Review the client profile and its workspaces."
+        description="Review the client profile and its channels."
         title={client.name}
       />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -190,7 +190,7 @@ export function ClientDetailsScreen({
         />
         <MetricCard
           icon={Gauge}
-          label="Workspaces"
+          label="Channels"
           value={String(client.workspace_count ?? workspaces.length)}
         />
       </div>
@@ -209,7 +209,7 @@ export function ClientDetailsScreen({
       <Card>
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle>Channel workspaces</CardTitle>
+            <CardTitle>Channels</CardTitle>
             {canManageWorkspaces && (
               <Button asChild size="sm" variant="outline">
                 <Link
@@ -217,7 +217,7 @@ export function ClientDetailsScreen({
                     routes.workspaces.new + workspaceScope(agencyId, client.id)
                   }
                 >
-                  <Plus aria-hidden className="size-4" /> Add channel workspace
+                  <Plus aria-hidden className="size-4" /> Add channel
                 </Link>
               </Button>
             )}
@@ -227,8 +227,8 @@ export function ClientDetailsScreen({
           {workspaces.length === 0 ? (
             <StatePanel
               kind="empty"
-              title="No channel workspaces"
-              description="Add a workspace for each channel this client reports on."
+              title="No channels"
+              description="Add a channel for each platform this client reports on."
             />
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -281,7 +281,7 @@ export function ClientDetailsScreen({
         </CardContent>
       </Card>
       <ConfirmationDialog
-        body="This status change will be saved immediately. An inactive client retains its workspaces and assignments for recovery."
+        body="This status change will be saved immediately. An inactive client retains its channels and assignments for recovery."
         confirmLabel={
           client.status === "active" ? "Deactivate client" : "Activate client"
         }

@@ -36,7 +36,7 @@ const record = {
 };
 
 describe("client API", () => {
-  it("creates a client and reads the auto-created default workspace from the response", async () => {
+  it("creates a client and reads the auto-created default channel from the response", async () => {
     const calls: { method: string; url: string; body: unknown }[] = [];
     server.use(
       http.post(workspacePaths.clients(1), async ({ request }) => {

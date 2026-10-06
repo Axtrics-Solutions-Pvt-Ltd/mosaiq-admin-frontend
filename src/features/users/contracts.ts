@@ -70,7 +70,7 @@ export const updateAgencyUserSchema = z
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Send workspaces inside clients.",
+        message: "Send channels inside clients.",
       });
     }
     checkDistinctClients(value.clients, context);
@@ -81,7 +81,7 @@ export const updateAgencyUserSchema = z
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Choose each workspace only once.",
+        message: "Choose each channel only once.",
       });
     }
   });

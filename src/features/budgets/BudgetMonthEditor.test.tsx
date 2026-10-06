@@ -66,7 +66,7 @@ function renderEditor(onDirtyChange = vi.fn()) {
 }
 
 describe("BudgetMonthEditor", () => {
-  it("edits one month per workspace and keeps edits across months", async () => {
+  it("edits one month per channel and keeps edits across months", async () => {
     const sent = useBudgetApi();
     const onDirtyChange = renderEditor();
     await waitFor(() =>
@@ -90,7 +90,9 @@ describe("BudgetMonthEditor", () => {
     useBudgetApi();
     renderEditor();
     expect(
-      screen.getByRole("link", { name: "Edit the whole year on the client page" }),
+      screen.getByRole("link", {
+        name: "Edit the whole year on the client page",
+      }),
     ).toHaveAttribute("href", "/clients/4?agency=2#budgets");
   });
 });

@@ -85,7 +85,7 @@ function ClientActions({
           className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
           href={`${routes.workspaces.index}?agency=${client.agencyId}&client=${client.id}`}
         >
-          <Gauge aria-hidden className="size-4" /> Open workspaces
+          <Gauge aria-hidden className="size-4" /> Open channels
         </Link>
         {permissions.canAddWorkspace && (
           <Link
@@ -95,7 +95,7 @@ function ClientActions({
               workspaceScope(client.agencyId, Number(client.id))
             }
           >
-            <Plus aria-hidden className="size-4" /> Add workspace
+            <Plus aria-hidden className="size-4" /> Add channel
           </Link>
         )}
       </div>
@@ -145,7 +145,7 @@ function ClientCard({
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-xs">Workspaces</dt>
+            <dt className="text-muted-foreground text-xs">Channels</dt>
             <dd className="text-strong mt-0.5 tabular-nums">
               {client.workspaceCount}
             </dd>
@@ -234,7 +234,7 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
       : []),
     {
       id: "workspaces",
-      header: "Workspaces",
+      header: "Channels",
       align: "right",
       render: (client) => client.workspaceCount,
     },
@@ -268,7 +268,7 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
     <PageStack>
       <PageHeader
         title="Clients"
-        description="Manage clients between agencies and their workspaces."
+        description="Manage clients between agencies and their channels."
         actions={
           canCreate ? (
             <Button asChild>
@@ -300,7 +300,7 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
         />
         <MetricCard
           icon={FolderKanban}
-          label="Workspaces on this page"
+          label="Channels on this page"
           value={formatNumber(
             clients.reduce((total, client) => total + client.workspaceCount, 0),
           )}
@@ -424,7 +424,7 @@ export function ClientDirectory({ filters }: { filters: Filters }) {
           description={
             hasFilters
               ? "Try another name or remove a filter."
-              : "Create a client to organize its workspaces."
+              : "Create a client to organize its channels."
           }
           kind={hasFilters ? "no-results" : "empty"}
           title={

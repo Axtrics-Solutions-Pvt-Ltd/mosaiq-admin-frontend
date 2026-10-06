@@ -208,12 +208,12 @@ function SourcesCard({
         scope,
         workspaceIds: sources.map((source) => source.id),
       });
-      toast({ title: "Source workspaces saved", tone: "success" });
+      toast({ title: "Source channels saved", tone: "success" });
     } catch (caught) {
       setError(
         caught instanceof ApiError
           ? (workspaceIdsError(caught.fieldErrors) ?? caught.message)
-          : "The source workspaces could not be saved. Please try again.",
+          : "The source channels could not be saved. Please try again.",
       );
     }
   }
@@ -221,9 +221,9 @@ function SourcesCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Source workspaces</CardTitle>
+        <CardTitle>Source channels</CardTitle>
         <p className="text-muted-foreground text-sm">
-          The report combines these workspaces, in this order. Each must use the
+          The report combines these channels, in this order. Each must use the
           report currency ({report.currency}).
         </p>
       </CardHeader>
@@ -238,7 +238,7 @@ function SourcesCard({
         )}
         {sources.length === 0 ? (
           <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-            No source workspaces. Live widgets show no data until you add one.
+            No source channels. Live widgets show no data until you add one.
           </p>
         ) : (
           <ol className="space-y-2">
@@ -302,7 +302,7 @@ function SourcesCard({
         )}
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-60 flex-1">
-            <FormField id="report-add-source" label="Add a workspace">
+            <FormField id="report-add-source" label="Add a channel">
               <Select
                 disabled={!available.isSuccess || candidates.length === 0}
                 id="report-add-source"
@@ -311,12 +311,12 @@ function SourcesCard({
               >
                 <option value="">
                   {available.isPending
-                    ? "Loading workspaces..."
+                    ? "Loading channels..."
                     : available.isError
-                      ? "Workspaces could not be loaded"
+                      ? "Channels could not be loaded"
                       : candidates.length === 0
-                        ? "No other workspaces"
-                        : "Select a workspace"}
+                        ? "No other channels"
+                        : "Select a channel"}
                 </option>
                 {candidates.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
@@ -409,7 +409,7 @@ export function ReportSettingsScreen({
     <PageStack>
       <ReportPageHeader
         current="settings"
-        description="The report's name, status, default range, currency and time zone, and the workspaces it combines."
+        description="The report's name, status, default range, currency and time zone, and the channels it combines."
         report={report.data}
       />
       <ProfileCard key={report.data.id} report={report.data} scope={scope} />

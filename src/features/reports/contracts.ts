@@ -93,7 +93,7 @@ const workspaceIdsSchema = z
   .array(idSchema)
   .max(50)
   .refine((ids) => new Set(ids).size === ids.length, {
-    message: "Each source workspace can be added once.",
+    message: "Each source channel can be added once.",
   });
 
 // Request bodies, matching the API's ReportRequest rules.
@@ -239,7 +239,18 @@ export const previewMetaSchema = z.object({
       presets: z.array(z.string()),
       max_span_days: z.number().int().positive(),
     }),
-    channels: z.array(z.object({ code: z.string(), name: z.string() })),
+    // One per source channel (workspace); `code` is its id as a string and is
+    // the value of the `channel` filter. `platform` is its connector.
+    channels: z.array(
+      z.object({
+        code: z.string(),
+        name: z.string(),
+        platform: z
+          .object({ code: z.string(), name: z.string() })
+          .nullable()
+          .optional(),
+      }),
+    ),
     sections: z.array(
       z.object({
         code: z.string(),

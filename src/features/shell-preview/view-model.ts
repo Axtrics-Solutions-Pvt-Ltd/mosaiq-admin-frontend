@@ -10,7 +10,7 @@ export const shellPreview = {
     {
       change: "Across 3 agencies",
       icon: Workflow,
-      label: "Workspaces",
+      label: "Channels",
       value: "38",
     },
     {
@@ -35,7 +35,7 @@ export const shellPreview = {
     },
     {
       agency: "Kinetic Growth",
-      name: "Workspace access review",
+      name: "Channel access review",
       status: "warning" as const,
       time: "2 hours ago",
     },

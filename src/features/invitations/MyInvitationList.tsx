@@ -37,7 +37,7 @@ function invitationScopeLabel(invitation: MyInvitation) {
   const scope = getInvitationAccessScope(invitation);
   if (scope === "client")
     return wholeClientLabel(invitation.client_name, invitation.workspace_count);
-  if (scope === "workspace") return invitation.workspace_name ?? "Workspace";
+  if (scope === "workspace") return invitation.workspace_name ?? "Channel";
   return "Agency-wide access";
 }
 

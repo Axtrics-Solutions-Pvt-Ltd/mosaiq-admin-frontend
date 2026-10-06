@@ -37,7 +37,7 @@ describe("connection fields", () => {
       },
     ]);
   });
-  it("falls back to the channel definitions, all unset, when none are stored", () => {
+  it("falls back to the platform definitions, all unset, when none are stored", () => {
     const fields = toConnectionFields([], definitions);
     expect(fields.map((field) => [field.key, field.isSet])).toEqual([
       ["access_token", false],

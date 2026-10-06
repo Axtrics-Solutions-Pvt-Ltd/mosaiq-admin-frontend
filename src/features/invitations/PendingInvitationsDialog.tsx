@@ -49,7 +49,7 @@ export function PendingInvitationsDialog({ user }: { user: CurrentUser }) {
 
   return (
     <Dialog
-      description="Accept to add these workspaces to your account, or decline them."
+      description="Accept to add these channels to your account, or decline them."
       footer={
         <Button onClick={dismiss} type="button" variant="outline">
           Later

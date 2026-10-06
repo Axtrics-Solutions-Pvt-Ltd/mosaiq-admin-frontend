@@ -114,9 +114,9 @@ export function BudgetsCard({
     if (workspaces.length === 0)
       return (
         <StatePanel
-          description="Add a channel workspace to enter its budgets."
+          description="Add a channel to enter its budgets."
           kind="empty"
-          title="No channel workspaces"
+          title="No channels"
         />
       );
     if (query.isPending) return <Skeleton className="h-64 w-full" />;
@@ -184,7 +184,7 @@ export function BudgetsCard({
         >
           <table className="w-full text-left text-sm">
             <caption className="sr-only">
-              Monthly budget per channel workspace for {year}
+              Monthly budget per channel for {year}
             </caption>
             <thead className="bg-muted">
               <tr>
@@ -201,7 +201,7 @@ export function BudgetsCard({
                     scope="col"
                   >
                     <span className="text-strong block">{workspace.name}</span>
-                    {workspace.connector?.name ?? "No channel"} ·{" "}
+                    {workspace.connector?.name ?? "No platform"} ·{" "}
                     {workspace.currency}
                   </th>
                 ))}
@@ -297,8 +297,7 @@ export function BudgetsCard({
       <CardHeader>
         <CardTitle>Budgets</CardTitle>
         <p className="text-muted-foreground text-sm">
-          Monthly budget per channel workspace. Reports use it for budget
-          pacing.
+          Monthly budget per channel. Reports use it for budget pacing.
         </p>
       </CardHeader>
       <CardContent>{body()}</CardContent>

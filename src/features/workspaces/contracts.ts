@@ -79,10 +79,10 @@ export const clientListSchema = z.object({
 export const clientResponseSchema = z.object({ data: clientSchema });
 export const workspaceProfileSchema = z.object({
   connector_id: z
-    .number({ error: "Choose a channel." })
+    .number({ error: "Choose a platform." })
     .int()
-    .positive("Choose a channel."),
-  name: z.string().trim().min(1, "Enter a workspace name.").max(255),
+    .positive("Choose a platform."),
+  name: z.string().trim().min(1, "Enter a channel name.").max(255),
   timezone: z.string().min(1, "Choose a time zone.").max(64),
   currency: z.string().regex(/^[A-Z]{3}$/, "Choose a currency."),
   status: statusSchema,

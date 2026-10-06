@@ -119,7 +119,7 @@ describe("post-login destination", () => {
 });
 
 describe("capability-based access", () => {
-  it("grants Manager client viewing, workspace and full report work but no organization management", () => {
+  it("grants Manager client viewing, channel and full report work but no organization management", () => {
     const manager = parseCurrentUser(response(null, "MANAGER"));
     for (const capability of [
       "dashboard.view",
@@ -147,7 +147,7 @@ describe("capability-based access", () => {
     expect(hasCapability(agencyAdmin, "reports.delete")).toBe(true);
   });
 
-  it("reserves the channel catalogue for Super Admin only", () => {
+  it("reserves the platform catalogue for Super Admin only", () => {
     const superAdmin = parseCurrentUser(response("SUPER_ADMIN", null));
     const agencyAdmin = parseCurrentUser(response(null, "AGENCY_ADMIN"));
     expect(hasCapability(superAdmin, "channels.manage")).toBe(true);

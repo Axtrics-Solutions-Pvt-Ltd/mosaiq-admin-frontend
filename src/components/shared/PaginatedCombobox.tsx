@@ -72,7 +72,7 @@ export function PaginatedCombobox<Option>(props: Props<Option>) {
         ? props.getLabel(props.value)
         : props.placeholder
       : props.value.length
-        ? `${props.value.length} workspace${props.value.length === 1 ? "" : "s"} selected`
+        ? `${props.value.length} channel${props.value.length === 1 ? "" : "s"} selected`
         : props.placeholder;
 
   useEffect(() => {

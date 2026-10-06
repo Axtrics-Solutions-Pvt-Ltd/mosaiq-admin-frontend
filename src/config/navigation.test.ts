@@ -72,11 +72,11 @@ describe("capability-based navigation filtering", () => {
       "Dashboard",
       "Agencies",
       "Clients",
-      "Workspaces",
+      "Channels",
       "Reports",
       "Users",
       "Roles & permissions",
-      "Channels",
+      "Platforms",
       "Audit log",
     ]);
   });
@@ -85,18 +85,18 @@ describe("capability-based navigation filtering", () => {
       "Dashboard",
       "My Agency",
       "Clients",
-      "Workspaces",
+      "Channels",
       "Reports",
       "Users",
       "Roles & permissions",
       "Audit log",
     ]);
   });
-  it("shows a Manager the Dashboard, Clients, Workspaces and Reports", () => {
+  it("shows a Manager the Dashboard, Clients, Channels and Reports", () => {
     expect(visibleLabels("MANAGER", agencyScope)).toEqual([
       "Dashboard",
       "Clients",
-      "Workspaces",
+      "Channels",
       "Reports",
     ]);
   });

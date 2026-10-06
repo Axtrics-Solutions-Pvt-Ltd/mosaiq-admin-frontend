@@ -220,7 +220,7 @@ export function AuditLogScreen({
     <PageStack>
       <PageHeader
         context={scope.agencyId ? undefined : "All agencies"}
-        description="Who changed what across agencies, clients, workspaces, users and reports."
+        description="Who changed what across agencies, clients, channels, users and reports."
         title="Audit log"
       />
       {currentUser.isPending && <LoadingEntries />}
@@ -235,7 +235,7 @@ export function AuditLogScreen({
         <>
           <FilterBar className="lg:grid lg:grid-cols-5">
             <div>
-              <Label htmlFor="audit-workspace">Workspace</Label>
+              <Label htmlFor="audit-workspace">Channel</Label>
               <Select
                 className="mt-1.5"
                 disabled={!scope.agencyId || workspacesQuery.isPending}
@@ -249,11 +249,11 @@ export function AuditLogScreen({
                 title={
                   scope.agencyId
                     ? undefined
-                    : "Choose an agency to filter by workspace"
+                    : "Choose an agency to filter by channel"
                 }
                 value={scope.workspaceId ? String(scope.workspaceId) : ""}
               >
-                <option value="">All workspaces</option>
+                <option value="">All channels</option>
                 {workspacesQuery.data?.data.map((workspace) => (
                   <option key={workspace.id} value={workspace.id}>
                     {workspace.name}

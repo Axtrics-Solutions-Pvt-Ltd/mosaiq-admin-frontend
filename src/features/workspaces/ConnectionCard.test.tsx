@@ -139,7 +139,7 @@ describe("ConnectionCard", () => {
     expect(saved).toEqual([]);
   });
 
-  it("keeps Fetch live data disabled until the workspace is connected", async () => {
+  it("keeps Fetch live data disabled until the channel is connected", async () => {
     useConnectionApi("not_connected");
     renderWithScope(<ConnectionCard canManage workspace={workspace} />, {
       platformRoleCode: "SUPER_ADMIN",
@@ -231,7 +231,7 @@ describe("ConnectionCard", () => {
     expect(requests).toBe(1);
   });
 
-  it("hides sample data once the workspace is live", async () => {
+  it("hides sample data once the channel is live", async () => {
     useConnectionApi();
     renderWithScope(
       <ConnectionCard

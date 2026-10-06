@@ -42,7 +42,7 @@ export function isCombinedValue(value: EditingValue) {
 // One note for a values table whose totals combine workspaces, in place of
 // the same tooltip on every value.
 export const combinedValuesNote =
-  "They combine several workspaces. Choose a channel under “Edit numbers for” in the inspector to correct one.";
+  "They combine several channels. Choose a channel under “Edit numbers for” in the inspector to correct one.";
 
 // A base-metric reference elsewhere on the tab that corrects one input of a
 // calculated value: same workspace, same campaign and same dates.
@@ -150,7 +150,7 @@ export function ValueCorrection({
     calculatedNote = canPickChannel
       ? "It adds up several channels. Choose one to edit its inputs:"
       : isCombined
-        ? "It adds up several workspaces, so its inputs can't be corrected from this preview."
+        ? "It adds up several channels, so its inputs can't be corrected from this preview."
         : !otherTabs
           ? "Its inputs aren't shown on this tab, so they can't be corrected from here."
           : otherTabs.status === "ready"
@@ -191,7 +191,7 @@ export function ValueCorrection({
       {value.is_base && isCombined && !isCombinedExplained && (
         <ValueMenu
           icon={Pencil}
-          label={`${label} combines several workspaces. Choose how to correct it`}
+          label={`${label} combines several channels. Choose how to correct it`}
           // Faded until a channel is chosen, but still a working button.
           triggerClassName="opacity-60"
         >
@@ -199,7 +199,7 @@ export function ValueCorrection({
             <MenuNote>
               {canPickChannel
                 ? `${label} adds up several channels. Choose one to correct its value:`
-                : "This value adds up several workspaces, so it can't be corrected from this preview."}
+                : "This value adds up several channels, so it can't be corrected from this preview."}
             </MenuNote>
             {canPickChannel && channelChoices()}
           </>

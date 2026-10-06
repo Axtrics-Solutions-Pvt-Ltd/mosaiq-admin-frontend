@@ -182,13 +182,13 @@ export function ClientWorkspaceTree({
           />
           <Input
             aria-controls={listId}
-            aria-label="Search clients and workspaces"
+            aria-label="Search clients and channels"
             className="pl-9"
             disabled={isDisabled}
             onChange={(event) => setSearchInput(event.target.value)}
             placeholder={
               agencyId
-                ? "Search clients and workspaces..."
+                ? "Search clients and channels..."
                 : "Select an agency first"
             }
             type="search"
@@ -239,7 +239,7 @@ export function ClientWorkspaceTree({
         )}
         {agencyId > 0 && query.isSuccess && clients.length === 0 && (
           <p className="text-muted-foreground px-2 py-4 text-sm">
-            {search ? "No clients or workspaces match." : "No active clients."}
+            {search ? "No clients or channels match." : "No active clients."}
           </p>
         )}
 
@@ -301,7 +301,7 @@ export function ClientWorkspaceTree({
                 )}
                 {isPendingAll && <Badge tone="warning">Invite pending</Badge>}
                 <span className="text-muted-foreground shrink-0 text-xs">
-                  {workspaces.length} workspace
+                  {workspaces.length} channel
                   {workspaces.length === 1 ? "" : "s"}
                 </span>
               </div>
@@ -314,14 +314,14 @@ export function ClientWorkspaceTree({
                       disabled={isDisabled || (clientTaken && !isSelected)}
                       onChange={() => toggleAllWorkspaces(client)}
                     />
-                    <span className="text-sm font-medium">All workspaces</span>
+                    <span className="text-sm font-medium">All channels</span>
                     <span className="text-muted-foreground text-xs">
-                      Includes workspaces added later
+                      Includes channels added later
                     </span>
                   </label>
                   {workspaces.length === 0 && (
                     <p className="text-muted-foreground py-1.5 pl-7 text-xs">
-                      No workspaces yet.
+                      No channels yet.
                     </p>
                   )}
                   <ul className="border-l pl-4">
@@ -406,8 +406,8 @@ export function ClientWorkspaceTree({
                   <Badge className="gap-1 pr-1" tone="primary">
                     {name} ·{" "}
                     {access?.allWorkspaces
-                      ? "All workspaces"
-                      : `${access?.workspaceIds.length ?? 0} workspace${
+                      ? "All channels"
+                      : `${access?.workspaceIds.length ?? 0} channel${
                           access?.workspaceIds.length === 1 ? "" : "s"
                         }`}
                     <Button

@@ -58,7 +58,7 @@ export function ClientReportsCard({
         {query.isSuccess && reports.length === 0 && (
           <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
             No reports yet. Create one to combine this client&apos;s channel
-            workspaces for the client portal.
+            channels for the client portal.
           </p>
         )}
         {reports.length > 0 && (

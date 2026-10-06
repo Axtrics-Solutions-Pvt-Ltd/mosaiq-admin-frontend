@@ -49,7 +49,7 @@ export const inviteSchema = z
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Send workspaces inside clients.",
+        message: "Send channels inside clients.",
       });
     }
     checkDistinctClients(value.clients, context);
@@ -58,7 +58,7 @@ export const inviteSchema = z
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Choose each workspace only once.",
+        message: "Choose each channel only once.",
       });
     }
   });
@@ -232,7 +232,7 @@ export type InvitationConflict = z.infer<typeof invitationConflictSchema>;
 
 export class InvitationAlreadyPendingError extends Error {
   constructor(public readonly conflict: InvitationConflict) {
-    super("Some workspaces already have a pending invitation.");
+    super("Some channels already have a pending invitation.");
     this.name = "InvitationAlreadyPendingError";
   }
 }

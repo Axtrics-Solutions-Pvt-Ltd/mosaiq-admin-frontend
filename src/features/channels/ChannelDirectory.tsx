@@ -71,7 +71,7 @@ function ChannelCard({
             <dd>{categoryLabel(channel.category)}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-xs">Workspaces</dt>
+            <dt className="text-muted-foreground text-xs">Channels</dt>
             <dd className="tabular-nums">
               {formatNumber(channel.workspace_count ?? 0)}
             </dd>
@@ -105,7 +105,7 @@ export function ChannelDirectory() {
   const columns: readonly DataTableColumn<Channel>[] = [
     {
       id: "name",
-      header: "Channel",
+      header: "Platform",
       render: (channel) => (
         <div className="flex flex-col items-start gap-1">
           <ChannelBadge channel={channel} />
@@ -131,7 +131,7 @@ export function ChannelDirectory() {
     },
     {
       id: "workspaces",
-      header: "Workspaces using it",
+      header: "Channels using it",
       align: "right",
       render: (channel) => formatNumber(channel.workspace_count ?? 0),
     },
@@ -154,24 +154,24 @@ export function ChannelDirectory() {
         actions={
           canManage && query.isSuccess ? (
             <Button onClick={() => setEditing({ mode: "create" })}>
-              <Plus aria-hidden className="size-4" /> Add channel
+              <Plus aria-hidden className="size-4" /> Add platform
             </Button>
           ) : undefined
         }
-        description="The data channels a workspace can connect to, the credentials each one needs, and the metrics it reports."
-        title="Channels"
+        description="The data platforms a channel can connect to, the credentials each one needs, and the metrics it reports."
+        title="Platforms"
       />
       {isForbidden && (
         <StatePanel
-          description="Only Super Admins can manage the channel catalogue."
+          description="Only Super Admins can manage the platform catalogue."
           kind="permission"
-          title="Channels unavailable"
+          title="Platforms unavailable"
         />
       )}
       {(currentUser.isPending || (canManage && query.isPending)) && (
         <div
           aria-busy="true"
-          aria-label="Loading channels"
+          aria-label="Loading platforms"
           className="space-y-3"
         >
           <Skeleton className="h-12 w-full" />
@@ -182,26 +182,26 @@ export function ChannelDirectory() {
       {!isForbidden && query.isError && (
         <StatePanel
           action={<Button onClick={() => query.refetch()}>Try again</Button>}
-          description="The channel catalogue could not be loaded."
+          description="The platform catalogue could not be loaded."
           kind="error"
-          title="Channels unavailable"
+          title="Platforms unavailable"
         />
       )}
       {query.isSuccess && channels.length === 0 && (
         <StatePanel
           action={
             <Button onClick={() => setEditing({ mode: "create" })}>
-              <Plug aria-hidden className="size-4" /> Add the first channel
+              <Plug aria-hidden className="size-4" /> Add the first platform
             </Button>
           }
-          description="Add a channel so workspaces can be created for it."
+          description="Add a platform so channels can be created for it."
           kind="empty"
-          title="No channels yet"
+          title="No platforms yet"
         />
       )}
       {query.isSuccess && channels.length > 0 && (
         <DataTable
-          caption="Channel catalogue"
+          caption="Platform catalogue"
           columns={columns}
           getRowKey={(channel) => String(channel.id)}
           mobileCard={(channel) => (

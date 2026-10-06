@@ -16,9 +16,9 @@ import type { WorkspaceUser } from "./contracts";
 import { useWorkspaceUsers } from "./queries";
 
 const accessLabels: Record<WorkspaceUser["access"], string> = {
-  agency: "Every workspace (Agency Admin)",
-  all_workspaces: "All workspaces of this client",
-  workspace: "This workspace",
+  agency: "Every channel (Agency Admin)",
+  all_workspaces: "All channels of this client",
+  workspace: "This channel",
 };
 
 function roleLabel(roleCode: string) {
@@ -98,7 +98,7 @@ export function WorkspaceTeamCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          Everyone who can open this workspace. Change access from each
+          Everyone who can open this channel. Change access from each
           user&apos;s profile.
         </p>
         {users.isPending ? (
@@ -110,7 +110,7 @@ export function WorkspaceTeamCard({
           <StatePanel
             kind="error"
             title="Team unavailable"
-            description="The workspace users could not be loaded."
+            description="The channel users could not be loaded."
             action={
               <Button onClick={() => users.refetch()} variant="outline">
                 Try again
@@ -121,11 +121,11 @@ export function WorkspaceTeamCard({
           <StatePanel
             kind="empty"
             title="No users yet"
-            description="No one is assigned to this workspace. Invite a Manager or give an existing user access."
+            description="No one is assigned to this channel. Invite a Manager or give an existing user access."
           />
         ) : (
           <DataTable
-            caption="Workspace users"
+            caption="Channel users"
             columns={columns}
             getRowKey={(user) => user.email}
             mobileCard={(user) => (

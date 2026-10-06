@@ -302,7 +302,7 @@ describe("Creative Performance settings", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
-  it("restores the channel image only after confirmation", async () => {
+  it("restores the platform image only after confirmation", async () => {
     useCreativesApi([{ ...sky, has_custom_thumbnail: true }]);
     let deletes = 0;
     server.use(
@@ -323,14 +323,14 @@ describe("Creative Performance settings", () => {
     renderInspector(creativeWidget().item);
     await openCreative(sky.original_title);
     await userEvent.click(
-      screen.getByRole("button", { name: "Use channel image" }),
+      screen.getByRole("button", { name: "Use platform image" }),
     );
     const dialog = screen.getByRole("dialog", {
       name: "Remove the uploaded image?",
     });
     expect(deletes).toBe(0);
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Use channel image" }),
+      within(dialog).getByRole("button", { name: "Use platform image" }),
     );
     await waitFor(() => expect(deletes).toBe(1));
   });

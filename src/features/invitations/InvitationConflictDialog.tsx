@@ -29,7 +29,7 @@ export function InvitationConflictDialog({
 
   return (
     <Dialog
-      description={`${alreadyPending.length} workspace${
+      description={`${alreadyPending.length} channel${
         alreadyPending.length === 1 ? "" : "s"
       } already ${
         alreadyPending.length === 1 ? "has" : "have"
@@ -43,7 +43,7 @@ export function InvitationConflictDialog({
             <Button disabled={isPending} onClick={onSendToRemaining}>
               {isPending
                 ? "Sending..."
-                : `Send to the remaining ${creatable.length} workspace${
+                : `Send to the remaining ${creatable.length} channel${
                     creatable.length === 1 ? "" : "s"
                   }`}
             </Button>
@@ -52,7 +52,7 @@ export function InvitationConflictDialog({
       }
       isOpen={isOpen}
       onClose={isPending ? () => undefined : onCancel}
-      title="Some workspaces already have a pending invitation"
+      title="Some channels already have a pending invitation"
     >
       <div className="space-y-4">
         <div>
@@ -65,7 +65,7 @@ export function InvitationConflictDialog({
               >
                 <div>
                   <p className="text-strong font-medium">
-                    {workspace.workspace_name ?? "All workspaces of the client"}
+                    {workspace.workspace_name ?? "All channels of the client"}
                   </p>
                   <p className="text-muted-foreground text-xs">
                     Sent {formatDate(workspace.sent_at)} · Expires{" "}
@@ -91,7 +91,7 @@ export function InvitationConflictDialog({
         {hasCreatable && (
           <div>
             <h3 className="text-strong text-sm font-medium">
-              Send to the remaining workspace
+              Send to the remaining channel
               {creatable.length === 1 ? "" : "s"}?
             </h3>
             <ul className="mt-2 space-y-1">
@@ -102,7 +102,7 @@ export function InvitationConflictDialog({
                     workspace.workspace_id ?? `client-${workspace.client_id}`
                   }
                 >
-                  {workspace.workspace_name ?? "All workspaces of the client"}
+                  {workspace.workspace_name ?? "All channels of the client"}
                 </li>
               ))}
             </ul>

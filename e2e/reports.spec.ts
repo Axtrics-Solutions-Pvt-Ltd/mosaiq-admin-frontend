@@ -100,7 +100,7 @@ test("a report is created, shaped, written and corrected in the builder", async 
     .getByRole("button", { name: "Correct Spend" })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: `Correct Spend — Meta Ads (Report Client ${clientNumber} – Meta Ads)`,
+    name: `Correct Spend — Report Client ${clientNumber} – Meta Ads (Meta Ads)`,
   });
   await dialog.getByLabel("New total").fill("1600");
   await dialog.getByRole("button", { name: "Save correction" }).click();
@@ -123,7 +123,7 @@ test("a report is created, shaped, written and corrected in the builder", async 
   expect(hasOverflow).toBe(false);
 });
 
-test("the reports list shows a client's reports with their channels", async ({
+test("the reports list shows a client's reports with their platforms", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium");

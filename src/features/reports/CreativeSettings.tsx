@@ -206,7 +206,7 @@ function ThumbnailControls({
         onSuccess: () => {
           setProblem("");
           toast({
-            title: `${name} shows the channel image again`,
+            title: `${name} shows the platform image again`,
             tone: "success",
           });
         },
@@ -247,7 +247,7 @@ function ThumbnailControls({
             variant="ghost"
           >
             <Undo2 aria-hidden className="size-4" />
-            Use channel image
+            Use platform image
           </Button>
         )}
       </div>
@@ -277,10 +277,10 @@ function ThumbnailControls({
         body={
           <p>
             The image uploaded for {name} is deleted, and the image from the
-            channel shows again.
+            platform shows again.
           </p>
         }
-        confirmLabel="Use channel image"
+        confirmLabel="Use platform image"
         description="This can't be undone."
         isOpen={isConfirming}
         isPending={remove.isPending}

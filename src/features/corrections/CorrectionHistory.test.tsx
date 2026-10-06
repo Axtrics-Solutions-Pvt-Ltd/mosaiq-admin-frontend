@@ -127,7 +127,7 @@ describe("CorrectionHistory", () => {
     });
   });
 
-  it("offers no reset for a reset correction or an inaccessible workspace", async () => {
+  it("offers no reset for a reset correction or an inaccessible channel", async () => {
     useHistoryApi([
       correction({ id: 12, is_active: false }),
       correction({ id: 13, workspace_id: 99 }),
@@ -136,7 +136,7 @@ describe("CorrectionHistory", () => {
     const table = await screen.findByRole("table", {
       name: "Data corrections",
     });
-    expect(within(table).getByText("Workspace #99")).toBeVisible();
+    expect(within(table).getByText("Channel #99")).toBeVisible();
     expect(within(table).queryByRole("button", { name: /^Reset/ })).toBeNull();
   });
 });

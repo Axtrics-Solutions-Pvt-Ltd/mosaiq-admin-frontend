@@ -23,14 +23,14 @@ export const clientAccessPayloadSchema = z
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Choose at least one workspace or All workspaces.",
+        message: "Choose at least one channel or All channels.",
       });
     }
     if (new Set(workspaceIds).size !== workspaceIds.length) {
       context.addIssue({
         code: "custom",
         path: ["workspace_ids"],
-        message: "Choose each workspace only once.",
+        message: "Choose each channel only once.",
       });
     }
   });
@@ -150,8 +150,8 @@ export function describeSelection(selection: ClientAccessSelection) {
     0,
   );
   const parts = [`${entries.length} client${entries.length === 1 ? "" : "s"}`];
-  if (allCount > 0) parts.push(`${allCount} with all workspaces`);
+  if (allCount > 0) parts.push(`${allCount} with all channels`);
   if (workspaceCount > 0)
-    parts.push(`${workspaceCount} workspace${workspaceCount === 1 ? "" : "s"}`);
+    parts.push(`${workspaceCount} channel${workspaceCount === 1 ? "" : "s"}`);
   return parts.join(" · ");
 }

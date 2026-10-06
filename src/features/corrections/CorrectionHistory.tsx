@@ -120,7 +120,7 @@ export function CorrectionHistory({
     return (
       <div className="min-w-0">
         <p className="text-strong font-medium">
-          {workspace?.name ?? `Workspace #${correction.workspace_id}`}
+          {workspace?.name ?? `Channel #${correction.workspace_id}`}
         </p>
         {workspace?.connector && (
           <p className="text-muted-foreground text-xs">
@@ -164,7 +164,7 @@ export function CorrectionHistory({
       render: (correction) =>
         correction.created_at ? formatDate(correction.created_at) : "--",
     },
-    { id: "workspace", header: "Channel / workspace", render: workspaceCell },
+    { id: "workspace", header: "Channel / platform", render: workspaceCell },
     {
       id: "metric",
       header: "Metric",
@@ -221,7 +221,7 @@ export function CorrectionHistory({
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <div>
-            <Label htmlFor="correction-workspace">Workspace</Label>
+            <Label htmlFor="correction-workspace">Channel</Label>
             <Select
               className="mt-1.5"
               id="correction-workspace"
@@ -233,7 +233,7 @@ export function CorrectionHistory({
               }
               value={filters.workspaceId ? String(filters.workspaceId) : "all"}
             >
-              <option value="all">All workspaces</option>
+              <option value="all">All channels</option>
               {workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}

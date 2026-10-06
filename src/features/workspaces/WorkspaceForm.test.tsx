@@ -139,33 +139,27 @@ function mockCreateScreenApi() {
   return created;
 }
 
-it("requires a channel before creating a workspace", async () => {
+it("requires a platform before creating a channel", async () => {
   const created = mockCreateScreenApi();
   renderWithScope(<WorkspaceCreateScreen agencyId={1} clientId={20} />, {
     platformRoleCode: "SUPER_ADMIN",
   });
   await screen.findByRole("option", { name: "Meta Ads" });
-  await userEvent.type(screen.getByLabelText(/Workspace name/), "Acme ads");
-  await userEvent.click(
-    screen.getByRole("button", { name: "Create workspace" }),
-  );
-  expect(await screen.findByText("Choose a channel.")).toBeVisible();
+  await userEvent.type(screen.getByLabelText(/Channel name/), "Acme ads");
+  await userEvent.click(screen.getByRole("button", { name: "Create channel" }));
+  expect(await screen.findByText("Choose a platform.")).toBeVisible();
   expect(created).toEqual([]);
 });
 
-it("suggests the client and channel as the name and sends the channel", async () => {
+it("suggests the client and platform as the name and sends the platform", async () => {
   const created = mockCreateScreenApi();
   renderWithScope(<WorkspaceCreateScreen agencyId={1} clientId={20} />, {
     platformRoleCode: "SUPER_ADMIN",
   });
   await screen.findByRole("option", { name: "Meta Ads" });
-  await userEvent.selectOptions(screen.getByLabelText(/Channel/), "Meta Ads");
-  expect(screen.getByLabelText(/Workspace name/)).toHaveValue(
-    "Acme – Meta Ads",
-  );
-  await userEvent.click(
-    screen.getByRole("button", { name: "Create workspace" }),
-  );
+  await userEvent.selectOptions(screen.getByLabelText(/Platform/), "Meta Ads");
+  expect(screen.getByLabelText(/Channel name/)).toHaveValue("Acme – Meta Ads");
+  await userEvent.click(screen.getByRole("button", { name: "Create channel" }));
   await waitFor(() =>
     expect(created).toEqual([
       expect.objectContaining({ connector_id: 3, name: "Acme – Meta Ads" }),

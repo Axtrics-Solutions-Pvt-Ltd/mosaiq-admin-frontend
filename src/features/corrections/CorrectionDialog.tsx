@@ -30,7 +30,7 @@ export type CorrectionContext = {
   clientName: string;
   workspaceId: number;
   workspaceName: string;
-  channelName: string;
+  platformName: string;
   metricCode: MetricCode;
   metricLabel: string;
   campaignKey?: string;
@@ -190,7 +190,7 @@ function CorrectionForm({
         />
       </FormField>
       <p className="bg-muted text-muted-foreground rounded-lg border p-3 text-sm">
-        This changes {context.metricLabel} for {context.channelName} in every{" "}
+        This changes {context.metricLabel} for {context.workspaceName} in every{" "}
         {context.clientName} report for these dates. Totals, ROAS, CPA and
         charts will recalculate.
       </p>
@@ -226,7 +226,7 @@ export function CorrectionDialog({
       onClose={onClose}
       title={
         context
-          ? `Correct ${context.metricLabel} — ${context.channelName} (${context.workspaceName})`
+          ? `Correct ${context.metricLabel} — ${context.workspaceName} (${context.platformName})`
           : "Correct value"
       }
     >

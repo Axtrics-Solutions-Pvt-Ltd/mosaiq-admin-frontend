@@ -30,7 +30,7 @@ const context: CorrectionContext = {
   clientName: "Acme",
   workspaceId: 7,
   workspaceName: "Acme – Meta Ads",
-  channelName: "Meta Ads",
+  platformName: "Meta Ads",
   metricCode: "clicks",
   metricLabel: "Clicks",
   campaignKey: "cmp-9",
@@ -79,7 +79,7 @@ describe("CorrectionDialog", () => {
     renderWithScope(<CorrectionDialog context={context} onClose={onClose} />);
     expect(
       screen.getByRole("heading", {
-        name: "Correct Clicks — Meta Ads (Acme – Meta Ads)",
+        name: "Correct Clicks — Acme – Meta Ads (Meta Ads)",
       }),
     ).toBeVisible();
     expect(screen.getByText("Campaign: Autumn sale")).toBeVisible();

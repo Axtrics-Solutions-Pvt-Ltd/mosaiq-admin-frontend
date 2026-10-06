@@ -22,7 +22,7 @@ describe("agency user contract", () => {
 
   // A Manager with client-level access may have no workspaces; the edit form
   // requires workspaces only when the Manager has no client access.
-  it("allows a Manager without workspaces", () => {
+  it("allows a Manager without channels", () => {
     expect(
       updateAgencyUserSchema.safeParse({
         role_code: "MANAGER",
@@ -42,7 +42,7 @@ describe("agency user contract", () => {
       expect(result.error.issues[0]?.path).toEqual(["client_id"]);
   });
 
-  it("rejects duplicate workspace assignments", () => {
+  it("rejects duplicate channel assignments", () => {
     const result = updateAgencyUserSchema.safeParse({
       role_code: "MANAGER",
       workspace_ids: [9, 9],

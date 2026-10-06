@@ -67,7 +67,7 @@ function AgencyActions({ agency }: { agency: AgencySummary }) {
           className="hover:bg-muted flex items-center gap-2 rounded-sm px-3 py-2"
           href={`${routes.workspaces.index}?agency=${agency.id}`}
         >
-          <Gauge aria-hidden className="size-4" /> Open workspaces
+          <Gauge aria-hidden className="size-4" /> Open channels
         </Link>
       </div>
     </details>
@@ -117,7 +117,7 @@ const columns: readonly DataTableColumn<AgencySummary>[] = [
   },
   {
     align: "right",
-    header: "Workspaces",
+    header: "Channels",
     id: "workspaces",
     render: (agency) => agency.workspaces,
   },
@@ -179,9 +179,7 @@ function AgencyCard({ agency }: { agency: AgencySummary }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-xs">
-              Workspaces / users
-            </dt>
+            <dt className="text-muted-foreground text-xs">Channels / users</dt>
             <dd className="text-strong mt-0.5 tabular-nums">
               {agency.workspaces} / {agency.users}
             </dd>
@@ -306,7 +304,7 @@ function AgencyList({ filters, page }: AgencyDirectoryProps) {
             </Button>
           ) : undefined
         }
-        description="Manage agency profiles, administrators, defaults, and workspace access."
+        description="Manage agency profiles, administrators, defaults, and channel access."
         title="Agencies"
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -322,7 +320,7 @@ function AgencyList({ filters, page }: AgencyDirectoryProps) {
         />
         <MetricCard
           icon={Gauge}
-          label="Total workspaces"
+          label="Total channels"
           value={formatNumber(summary?.total_workspaces ?? 0)}
         />
         <MetricCard
@@ -378,7 +376,7 @@ function AgencyList({ filters, page }: AgencyDirectoryProps) {
           </Select>
         </div>
         <div>
-          <Label htmlFor="agency-workspaces">Workspaces</Label>
+          <Label htmlFor="agency-workspaces">Channels</Label>
           <Select
             className="mt-1.5"
             id="agency-workspaces"
@@ -386,9 +384,9 @@ function AgencyList({ filters, page }: AgencyDirectoryProps) {
             value={filters.workspaces}
           >
             <option value="all">Any count</option>
-            <option value="none">No workspaces</option>
-            <option value="one-to-five">1-5 workspaces</option>
-            <option value="six-plus">6+ workspaces</option>
+            <option value="none">No channels</option>
+            <option value="one-to-five">1-5 channels</option>
+            <option value="six-plus">6+ channels</option>
           </Select>
         </div>
         <div>
@@ -443,7 +441,7 @@ function AgencyList({ filters, page }: AgencyDirectoryProps) {
           description={
             hasFilters
               ? "Try another name or remove a filter."
-              : "Create an agency profile to organize clients and workspaces."
+              : "Create an agency profile to organize clients and channels."
           }
           kind={hasFilters ? "no-results" : "empty"}
           title={

@@ -11,7 +11,7 @@ export async function POST(
   const ids = [values.agency, values.client, values.workspace].map(Number);
   if (!ids.every((id) => Number.isSafeInteger(id) && id > 0))
     return Response.json(
-      { message: "Invalid workspace scope." },
+      { message: "Invalid channel scope." },
       { status: 400 },
     );
   const [agencyId, clientId, workspaceId] = ids as [number, number, number];

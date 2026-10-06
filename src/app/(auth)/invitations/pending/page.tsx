@@ -4,7 +4,7 @@ import { PendingInvitationsScreen } from "@/features/invitations/PendingInvitati
 export default function PendingInvitationsPage() {
   return (
     <AuthCard
-      description="Accept an invitation to get access to your agency's workspaces."
+      description="Accept an invitation to get access to your agency's channels."
       title="Your invitations"
     >
       <PendingInvitationsScreen />

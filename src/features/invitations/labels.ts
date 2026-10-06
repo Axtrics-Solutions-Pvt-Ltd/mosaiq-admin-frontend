@@ -10,7 +10,7 @@ export function wholeClientLabel(
     workspaceCount === null || workspaceCount === undefined
       ? ""
       : ` (${workspaceCount})`;
-  return `All workspaces${client}${count}`;
+  return `All channels${client}${count}`;
 }
 
 export const invitationRoleLabels: Record<Invitation["role_code"], string> = {

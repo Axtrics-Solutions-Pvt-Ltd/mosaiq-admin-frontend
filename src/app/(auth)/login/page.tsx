@@ -14,7 +14,7 @@ export default async function LoginPage({
   const next = typeof params.next === "string" ? params.next : undefined;
   return (
     <AuthCard
-      description="Sign in to manage agencies, workspaces, access, and operational data."
+      description="Sign in to manage agencies, channels, access, and operational data."
       footer={
         <span>
           Having trouble?{" "}

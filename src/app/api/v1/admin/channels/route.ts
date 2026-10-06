@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const parsed = channelRequestSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
-      { message: "Invalid channel details." },
+      { message: "Invalid platform details." },
       { status: 422 },
     );
   return forwardAdminRequest(

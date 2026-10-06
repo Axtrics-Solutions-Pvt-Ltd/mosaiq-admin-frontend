@@ -221,7 +221,7 @@ it("resends an expired invitation and updates its row in place", async () => {
   expect(screen.getAllByLabelText("Status: Pending")[0]).toBeVisible();
 });
 
-it("filters invitations by workspace for an Agency Admin", async () => {
+it("filters invitations by channel for an Agency Admin", async () => {
   let requestedUrl = "";
   server.use(
     http.get(workspacePaths.agencyCollection(12), () =>
@@ -261,7 +261,7 @@ it("filters invitations by workspace for an Agency Admin", async () => {
       membership: { agencyId: 12, roleCode: "AGENCY_ADMIN" },
     },
   );
-  const workspaceSelect = await screen.findByLabelText("Workspace");
+  const workspaceSelect = await screen.findByLabelText("Channel");
   expect(await screen.findByText("Northstar Growth")).toBeInTheDocument();
   await screen.findByText("No invitations found");
   fireEvent.change(workspaceSelect, { target: { value: "7" } });

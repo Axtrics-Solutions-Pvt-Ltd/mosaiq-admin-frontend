@@ -239,7 +239,7 @@ it("lists a selected client missing from the tree so it can be removed", async (
   const others = await screen.findByRole("list", {
     name: "Other selected clients",
   });
-  expect(others).toHaveTextContent("Retired Client · 1 workspace");
+  expect(others).toHaveTextContent("Retired Client · 1 channel");
   await user.click(
     within(others).getByRole("button", { name: "Remove Retired Client" }),
   );

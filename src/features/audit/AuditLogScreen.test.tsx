@@ -57,7 +57,7 @@ beforeEach(() => {
 });
 
 describe("AuditLogScreen", () => {
-  it("lists events with a readable action, actor and workspace", async () => {
+  it("lists events with a readable action, actor and channel", async () => {
     renderWithScope(<AuditLogScreen {...defaults} />, {
       membership: { agencyId: 2, roleCode: "AGENCY_ADMIN" },
     });

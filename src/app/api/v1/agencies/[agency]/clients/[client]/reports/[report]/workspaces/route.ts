@@ -24,7 +24,7 @@ export async function PUT(request: Request, context: Context) {
   const parsed = reportWorkspacesRequestSchema.safeParse(read.body);
   if (!parsed.success)
     return Response.json(
-      { message: "Invalid source workspaces." },
+      { message: "Invalid source channels." },
       { status: 422 },
     );
   return forwardAgencyRequest(

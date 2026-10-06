@@ -114,9 +114,9 @@ function DesignSystemShowcase() {
                   />
                 </FormField>
                 <FormField
-                  error="Enter a valid workspace name."
+                  error="Enter a valid channel name."
                   id="preview-workspace"
-                  label="Workspace"
+                  label="Channel"
                 >
                   <Input
                     aria-describedby="preview-workspace-error"
@@ -219,7 +219,7 @@ function DesignSystemShowcase() {
             <thead className="bg-muted text-muted-foreground border-b text-xs">
               <tr>
                 <th className="px-4 py-3">Agency</th>
-                <th className="px-4 py-3">Workspaces</th>
+                <th className="px-4 py-3">Channels</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>

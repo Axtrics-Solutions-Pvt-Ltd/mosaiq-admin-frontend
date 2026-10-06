@@ -360,7 +360,7 @@ export function AgencyForm({
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Workspace defaults</CardTitle>
+            <CardTitle>Channel defaults</CardTitle>
           </CardHeader>
           <CardContent>
             <FormGrid>
@@ -463,17 +463,17 @@ export function AgencyForm({
     },
     {
       value: "workspaces",
-      label: "Workspaces",
+      label: "Channels",
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Workspaces</CardTitle>
+            <CardTitle>Channels</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
               {mode === "create"
-                ? "Workspaces can be added after creating the agency."
-                : `${record?.workspace_count ?? 0} linked workspaces. Manage them from the workspace area.`}
+                ? "Channels can be added after creating the agency."
+                : `${record?.workspace_count ?? 0} linked channels. Manage them from the channel area.`}
             </p>
           </CardContent>
         </Card>

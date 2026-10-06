@@ -8,7 +8,7 @@ export async function PUT(
 ) {
   const channelId = Number((await params).connector);
   if (!Number.isSafeInteger(channelId) || channelId <= 0)
-    return Response.json({ message: "Invalid channel." }, { status: 400 });
+    return Response.json({ message: "Invalid platform." }, { status: 400 });
   let body: unknown;
   try {
     body = await request.json();
@@ -18,7 +18,7 @@ export async function PUT(
   const parsed = channelRequestSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
-      { message: "Invalid channel details." },
+      { message: "Invalid platform details." },
       { status: 422 },
     );
   return forwardAdminRequest(

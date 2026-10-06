@@ -38,7 +38,7 @@ function Scope({ user }: { user: AgencyUser }) {
           Client #{user.client_id}
         </span>
         <span className="text-muted-foreground block text-xs">
-          {user.workspace_ids.length} workspace
+          {user.workspace_ids.length} channel
           {user.workspace_ids.length === 1 ? "" : "s"}
         </span>
       </span>
@@ -305,18 +305,18 @@ export function UserDirectory({
           </div>
         )}
         <div>
-          <Label htmlFor="user-workspace">Workspace</Label>
+          <Label htmlFor="user-workspace">Channel</Label>
           <Select
             className="mt-1.5"
             disabled={!agencyId || workspacesQuery.isPending}
             id="user-workspace"
             onChange={(event) => changeWorkspace(event.target.value)}
             title={
-              agencyId ? undefined : "Choose an agency to filter by workspace"
+              agencyId ? undefined : "Choose an agency to filter by channel"
             }
             value={workspaceId ? String(workspaceId) : ""}
           >
-            <option value="">All workspaces</option>
+            <option value="">All channels</option>
             {workspaces.map((workspace) => (
               <option key={workspace.id} value={workspace.id}>
                 {workspace.name}

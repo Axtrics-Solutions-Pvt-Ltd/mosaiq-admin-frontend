@@ -297,7 +297,7 @@ export function ReportDirectory({
     },
     {
       id: "channels",
-      header: "Channels",
+      header: "Platforms",
       render: (report) => <ReportChannels report={report} />,
     },
     {
@@ -353,7 +353,7 @@ export function ReportDirectory({
             </Button>
           ) : undefined
         }
-        description="Build client reports from their channel workspaces and share them with the client portal."
+        description="Build client reports from their channels and share them with the client portal."
         title="Reports"
       />
       <FilterBar className="lg:grid lg:grid-cols-4">

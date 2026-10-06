@@ -78,7 +78,7 @@ function Scope({ invitation }: { invitation: Invitation }) {
   if (scope === "client") {
     return (
       <span>
-        <span className="text-strong block font-medium">All workspaces</span>
+        <span className="text-strong block font-medium">All channels</span>
         <span className="text-muted-foreground block text-xs">
           {clientLabel}
         </span>
@@ -89,7 +89,7 @@ function Scope({ invitation }: { invitation: Invitation }) {
     return (
       <span>
         <span className="text-strong block font-medium">
-          {invitation.workspace_name ?? `Workspace #${invitation.workspace_id}`}
+          {invitation.workspace_name ?? `Channel #${invitation.workspace_id}`}
         </span>
         {clientLabel && (
           <span className="text-muted-foreground block text-xs">
@@ -116,7 +116,7 @@ const columns: readonly DataTableColumn<Invitation>[] = [
     render: (invitation) => roleLabels[invitation.role_code],
   },
   {
-    header: "Workspace",
+    header: "Channel",
     id: "scope",
     render: (invitation) => <Scope invitation={invitation} />,
   },
@@ -161,7 +161,7 @@ function InvitationCard({ invitation }: { invitation: Invitation }) {
         </div>
         <dl className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
           <div>
-            <dt className="text-muted-foreground text-xs">Workspace</dt>
+            <dt className="text-muted-foreground text-xs">Channel</dt>
             <dd className="mt-1">
               <Scope invitation={invitation} />
             </dd>
@@ -319,18 +319,18 @@ export function InvitationDirectory({
           </div>
         )}
         <div>
-          <Label htmlFor="invitation-workspace">Workspace</Label>
+          <Label htmlFor="invitation-workspace">Channel</Label>
           <Select
             className="mt-1.5"
             disabled={!agencyId || workspacesQuery.isPending}
             id="invitation-workspace"
             onChange={(event) => changeWorkspace(event.target.value)}
             title={
-              agencyId ? undefined : "Choose an agency to filter by workspace"
+              agencyId ? undefined : "Choose an agency to filter by channel"
             }
             value={workspaceId ? String(workspaceId) : ""}
           >
-            <option value="">All workspaces</option>
+            <option value="">All channels</option>
             {workspaces.map((workspace) => (
               <option key={workspace.id} value={workspace.id}>
                 {workspace.name}

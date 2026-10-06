@@ -42,7 +42,7 @@ function liveScopeLabel(scope: DashboardSummary["scope"]) {
     case "client":
       return "Your client";
     case "assigned":
-      return "Your assigned workspaces";
+      return "Your assigned channels";
   }
 }
 
@@ -61,7 +61,7 @@ function buildLiveMetrics(summary: DashboardSummary) {
   metrics.push({ id: "clients", label: "Clients", value: summary.clients });
   metrics.push({
     id: "workspaces",
-    label: "Active workspaces",
+    label: "Active channels",
     value: summary.workspaces,
   });
   metrics.push({ id: "reports", label: "Reports", value: summary.reports });
@@ -109,7 +109,7 @@ function LiveSummary() {
             Retry
           </Button>
         }
-        description="Live agency, workspace, report, link, and user totals could not be loaded."
+        description="Live agency, channel, report, link, and user totals could not be loaded."
         kind="error"
         title="Summary unavailable"
       />
@@ -173,7 +173,7 @@ export function DashboardPreview() {
   return (
     <PageStack>
       <PageHeader
-        description="Monitor agency operations, workspace activity, and data health from one place."
+        description="Monitor agency operations, channel activity, and data health from one place."
         title="Dashboard"
       />
       <LiveSummary />

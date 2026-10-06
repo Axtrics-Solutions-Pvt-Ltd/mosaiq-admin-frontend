@@ -12,7 +12,7 @@ export function ChannelBadge({
 }: {
   channel: { name: string; category: string } | null;
 }) {
-  if (!channel) return <Badge tone="neutral">No channel</Badge>;
+  if (!channel) return <Badge tone="neutral">No platform</Badge>;
   const Icon = categoryIcons[channel.category] ?? Plug;
   return (
     <Badge tone="primary">

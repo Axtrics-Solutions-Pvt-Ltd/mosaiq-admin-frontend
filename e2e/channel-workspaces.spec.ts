@@ -1,6 +1,6 @@
 import { expect, signIn, test } from "./fixtures";
 
-test("a client gets a Meta workspace that connects and fetches sample data", async ({
+test("a client gets a Meta channel that connects and fetches sample data", async ({
   page,
 }, testInfo) => {
   const clientName = `Acme ${testInfo.project.name}`;
@@ -12,13 +12,13 @@ test("a client gets a Meta workspace that connects and fetches sample data", asy
     page.getByRole("heading", { name: clientName, level: 1 }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Add channel workspace" }).click();
+  await page.getByRole("link", { name: "Add channel" }).click();
   await expect(page.getByRole("option", { name: "Meta Ads" })).toBeAttached();
-  await page.getByLabel("Channel").selectOption({ label: "Meta Ads" });
-  await expect(page.getByLabel("Workspace name")).toHaveValue(
+  await page.getByLabel("Platform").selectOption({ label: "Meta Ads" });
+  await expect(page.getByLabel("Channel name")).toHaveValue(
     `${clientName} – Meta Ads`,
   );
-  await page.getByRole("button", { name: "Create workspace" }).click();
+  await page.getByRole("button", { name: "Create channel" }).click();
   await expect(
     page.getByRole("heading", { name: `${clientName} – Meta Ads`, level: 1 }),
   ).toBeVisible();
@@ -68,7 +68,7 @@ test("a client gets a Meta workspace that connects and fetches sample data", asy
   expect(hasOverflow).toBe(false);
 });
 
-test("a Manager reaches clients and workspaces but cannot delete one", async ({
+test("a Manager reaches clients and channels but cannot delete one", async ({
   page,
 }) => {
   await signIn(page, "manager@example.test");
@@ -80,29 +80,27 @@ test("a Manager reaches clients and workspaces but cannot delete one", async ({
     page.getByRole("link", { name: "Edit", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Delete workspace" }),
+    page.getByRole("button", { name: "Delete channel" }),
   ).toHaveCount(0);
   await page.goto("/clients/20?agency=1");
   await expect(
     page.getByRole("heading", { name: "Northstar Client", level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit client" })).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: "Add channel workspace" }),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add channel" })).toBeVisible();
 });
 
-test("a Super Admin reviews the channel catalogue", async ({
+test("a Super Admin reviews the platform catalogue", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium");
   await signIn(page);
   await page
     .getByRole("navigation", { name: "Primary" })
-    .getByRole("link", { name: "Channels" })
+    .getByRole("link", { name: "Platforms" })
     .click();
-  await expect(page.getByRole("heading", { name: "Channels" })).toBeVisible();
-  const catalogue = page.getByRole("table", { name: "Channel catalogue" });
+  await expect(page.getByRole("heading", { name: "Platforms" })).toBeVisible();
+  const catalogue = page.getByRole("table", { name: "Platform catalogue" });
   await expect(catalogue.getByText("meta_ads")).toBeVisible();
   await catalogue.getByRole("button", { name: "Edit Meta Ads" }).click();
   const drawer = page.getByRole("dialog", { name: "Edit Meta Ads" });

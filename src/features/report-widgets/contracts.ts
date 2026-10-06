@@ -116,6 +116,8 @@ const payloadSchemas = {
       z.object({
         key: z.string(),
         label: z.string(),
+        // On channel donuts: the channel's platform code.
+        platform: z.string().nullable().optional(),
         value: numberOrNull,
         format: formatSchema,
         share: numberOrNull,
@@ -182,6 +184,7 @@ const payloadSchemas = {
       z.object({
         channel: z.string(),
         label: z.string(),
+        platform: z.string().nullable().optional(),
         spend: numberOrNull,
         share: numberOrNull,
         roas: numberOrNull,

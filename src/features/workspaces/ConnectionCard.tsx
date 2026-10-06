@@ -136,7 +136,7 @@ function CredentialsForm({
       setReplacing(new Set());
       toast({
         title: "Credentials saved",
-        description: "The workspace connection details were saved.",
+        description: "The channel connection details were saved.",
         tone: "success",
       });
     } catch (error) {
@@ -156,7 +156,7 @@ function CredentialsForm({
   if (fields.length === 0)
     return (
       <p className="text-muted-foreground text-sm">
-        This channel needs no credentials.
+        This platform needs no credentials.
       </p>
     );
   return (
@@ -290,14 +290,14 @@ export function ConnectionCard({
                   workspace.client_id,
                 )}
               >
-                Choose a channel
+                Choose a platform
               </Link>
             </Button>
           ) : undefined
         }
-        description="This workspace was created before channels. Choose its channel before connecting it."
+        description="This channel was created before platforms. Choose its platform before connecting it."
         kind="unavailable"
-        title="No channel assigned"
+        title="No platform assigned"
       />
     );
 
@@ -329,7 +329,7 @@ export function ConnectionCard({
     } catch (error) {
       setActionError(
         error instanceof ApiError && error.status === 422
-          ? "Data can only be fetched for a connected workspace. Check the credentials and try again."
+          ? "Data can only be fetched for a connected channel. Check the credentials and try again."
           : "The data fetch failed. Please try again.",
       );
     }
@@ -359,14 +359,14 @@ export function ConnectionCard({
       setIsDisconnecting(false);
       setLastAction(undefined);
       toast({
-        title: "Workspace disconnected",
+        title: "Channel disconnected",
         description: "The stored credentials were removed.",
         tone: "success",
       });
     } catch {
       setIsDisconnecting(false);
       setActionError(
-        "The workspace could not be disconnected. Please try again.",
+        "The channel could not be disconnected. Please try again.",
       );
     }
   }
@@ -391,7 +391,7 @@ export function ConnectionCard({
             <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
             {isSample ? (
               <p>
-                <strong>Sample data:</strong> reports for this workspace show
+                <strong>Sample data:</strong> reports for this channel show
                 generated numbers. The first live fetch from {channel.name}{" "}
                 replaces them.
               </p>
@@ -427,7 +427,7 @@ export function ConnectionCard({
           <>
             <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <dt className="text-muted-foreground text-xs">Channel</dt>
+                <dt className="text-muted-foreground text-xs">Platform</dt>
                 <dd className="text-strong mt-1 font-medium">{channel.name}</dd>
               </div>
               <div>
@@ -539,7 +539,7 @@ export function ConnectionCard({
           </p>
         }
         confirmLabel="Fetch live data"
-        description="Sample data cannot be generated again once the workspace has live data."
+        description="Sample data cannot be generated again once the channel has live data."
         isOpen={isConfirmingLiveFetch}
         isPending={fetchData.isPending}
         onCancel={() => setIsConfirmingLiveFetch(false)}

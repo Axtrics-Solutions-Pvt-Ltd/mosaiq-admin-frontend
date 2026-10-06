@@ -226,7 +226,7 @@ describe("ValueCorrection", () => {
       />,
     );
     const trigger = screen.getByRole("button", {
-      name: "Spend combines several workspaces. Choose how to correct it",
+      name: "Spend combines several channels. Choose how to correct it",
     });
     // A working button, not a disabled one.
     expect(trigger).not.toHaveAttribute("aria-disabled");

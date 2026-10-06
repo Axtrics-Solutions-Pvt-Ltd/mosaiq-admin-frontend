@@ -36,7 +36,7 @@ describe("agency view model", () => {
     expect(matches.map((agency) => agency.id)).toEqual(["agency_northstar"]);
   });
 
-  it("returns semantic details and a true empty-workspace agency", () => {
+  it("returns semantic details and a true empty-channel agency", () => {
     const agency = getAgency("agency_newbridge");
 
     expect(agency?.primaryContact.name).toBe("Zara Ahmed");

@@ -69,7 +69,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
       {
         href: routes.workspaces.index,
         icon: Gauge,
-        label: "Workspaces",
+        label: "Channels",
         capability: "workspaces.manage",
       },
     ],
@@ -108,7 +108,7 @@ export const navigationGroups: readonly NavigationGroup[] = [
       {
         href: routes.channels,
         icon: Plug,
-        label: "Channels",
+        label: "Platforms",
         capability: "channels.manage",
       },
       {

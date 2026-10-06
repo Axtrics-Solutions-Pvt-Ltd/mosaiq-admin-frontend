@@ -22,7 +22,7 @@ export const quickActions: readonly ActionDefinition[] = [
   },
   {
     id: "add-workspace",
-    label: "Add workspace",
+    label: "Add channel",
     href: routes.workspaces.new,
     icon: Plus,
     capability: "workspaces.manage",

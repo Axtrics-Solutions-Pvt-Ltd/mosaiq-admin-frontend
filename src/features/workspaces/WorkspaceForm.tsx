@@ -147,14 +147,14 @@ function WorkspaceForm({
         }
         setSubmitError(error.message);
       } else
-        setSubmitError("The workspace could not be saved. Please try again.");
+        setSubmitError("The channel could not be saved. Please try again.");
       document.getElementById("workspace-form-error")?.focus();
     }
   }
   const profileCard = (
     <Card>
       <CardHeader>
-        <CardTitle>Workspace profile</CardTitle>
+        <CardTitle>Channel profile</CardTitle>
       </CardHeader>
       <CardContent>
         <FormGrid>
@@ -166,7 +166,7 @@ function WorkspaceForm({
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <ChannelBadge channel={record?.connector ?? null} />
                 <span className="text-muted-foreground text-xs">
-                  A workspace&apos;s channel can&apos;t be changed.
+                  A channel&apos;s platform can&apos;t be changed.
                 </span>
               </div>
             </div>
@@ -175,17 +175,17 @@ function WorkspaceForm({
               <FormField
                 description={
                   mode === "edit"
-                    ? "This workspace was created before channels. Choose its channel once; it can't be changed later."
-                    : "Each workspace reports one channel for its client."
+                    ? "This channel was created before platforms. Choose its platform once; it can't be changed later."
+                    : "Each channel connects to one platform."
                 }
                 error={
                   errors.connector_id?.message ??
                   (channels.isError
-                    ? "Channels could not be loaded. Reload the page to try again."
+                    ? "Platforms could not be loaded. Reload the page to try again."
                     : undefined)
                 }
                 id="connector_id"
-                label="Channel"
+                label="Platform"
                 required
               >
                 <div className="flex flex-wrap items-center gap-3">
@@ -210,10 +210,10 @@ function WorkspaceForm({
                   >
                     <option value="">
                       {channels.isPending
-                        ? "Loading channels..."
+                        ? "Loading platforms..."
                         : activeChannels.length === 0
-                          ? "No active channels"
-                          : "Select a channel"}
+                          ? "No active platforms"
+                          : "Select a platform"}
                     </option>
                     {activeChannels.map((channel) => (
                       <option key={channel.id} value={channel.id}>
@@ -228,7 +228,7 @@ function WorkspaceForm({
               </FormField>
               {channels.isSuccess && activeChannels.length === 0 && (
                 <p className="text-muted-foreground mt-2 text-xs">
-                  A Super Admin must add an active channel before workspaces can
+                  A Super Admin must add an active platform before channels can
                   be created.
                 </p>
               )}
@@ -236,13 +236,13 @@ function WorkspaceForm({
           )}
           <FormField
             id="name"
-            label="Workspace name"
+            label="Channel name"
             required
             error={errors.name?.message}
           >
             <Input
               id="name"
-              placeholder="Client reporting workspace"
+              placeholder="Client reporting channel"
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? "name-error" : undefined}
               {...register("name")}
@@ -299,9 +299,9 @@ function WorkspaceForm({
   return (
     <PageStack>
       <PageHeader
-        title={mode === "create" ? "Create workspace" : "Edit " + record?.name}
-        description="Save the workspace profile."
-        breadcrumbs={<Link href={backHref}>Workspaces</Link>}
+        title={mode === "create" ? "Create channel" : "Edit " + record?.name}
+        description="Save the channel profile."
+        breadcrumbs={<Link href={backHref}>Channels</Link>}
       />
       {submitError && (
         <p
@@ -346,8 +346,8 @@ function WorkspaceForm({
               {isPending
                 ? "Saving..."
                 : mode === "create"
-                  ? "Create workspace"
-                  : "Save workspace"}
+                  ? "Create channel"
+                  : "Save channel"}
             </Button>
           </div>
         </div>
@@ -356,7 +356,7 @@ function WorkspaceForm({
         isOpen={isDiscarding}
         title="Discard changes?"
         description="Your edits have not been saved."
-        body={<p>Your unsaved workspace changes will be discarded.</p>}
+        body={<p>Your unsaved channel changes will be discarded.</p>}
         confirmLabel="Discard changes"
         onCancel={() => setIsDiscarding(false)}
         onConfirm={() => router.push(backHref)}
@@ -406,12 +406,12 @@ export function WorkspaceCreateScreen({
     (isSuperAdmin && agencies.isPending) ||
     (agencyId > 0 && clients.isPending)
   )
-    return <p aria-busy="true">Loading workspace setup...</p>;
+    return <p aria-busy="true">Loading channel setup...</p>;
   if ((isSuperAdmin && agencies.isError) || clients.isError)
     return (
       <StatePanel
         kind="error"
-        title="Workspace setup unavailable"
+        title="Channel setup unavailable"
         description="Agency or client choices could not be loaded."
         action={
           <Button
@@ -429,15 +429,15 @@ export function WorkspaceCreateScreen({
     return (
       <StatePanel
         kind="permission"
-        title="Workspace creation unavailable"
-        description="You do not have permission to create a workspace in this agency."
+        title="Channel creation unavailable"
+        description="You do not have permission to create a channel in this agency."
       />
     );
   return (
     <PageStack>
       <Card>
         <CardHeader>
-          <CardTitle>Workspace owner</CardTitle>
+          <CardTitle>Channel owner</CardTitle>
         </CardHeader>
         <CardContent>
           <FormGrid>
@@ -475,10 +475,10 @@ export function WorkspaceCreateScreen({
                       >
                         Add a client
                       </Link>{" "}
-                      before creating a workspace.
+                      before creating a channel.
                     </>
                   ) : (
-                    "There are no clients you can add a workspace to."
+                    "There are no clients you can add a channel to."
                   )}
                 </p>
               ) : (
@@ -542,7 +542,7 @@ export function WorkspaceCreateScreen({
         <StatePanel
           kind="empty"
           title="Choose a client"
-          description="A workspace must belong to an existing client."
+          description="A channel must belong to an existing client."
         />
       )}
     </PageStack>
@@ -567,23 +567,23 @@ export function WorkspaceEditScreen({
     return (
       <StatePanel
         kind="error"
-        title="Workspace scope required"
-        description="Open this workspace from the directory to edit it."
+        title="Channel scope required"
+        description="Open this channel from the directory to edit it."
         action={
           <Button asChild>
-            <Link href={routes.workspaces.index}>Open workspaces</Link>
+            <Link href={routes.workspaces.index}>Open channels</Link>
           </Button>
         }
       />
     );
   if (query.isPending || user.isPending)
-    return <p aria-busy="true">Loading workspace...</p>;
+    return <p aria-busy="true">Loading channel...</p>;
   if (query.isError)
     return (
       <StatePanel
         kind="error"
-        title="Workspace unavailable"
-        description="The workspace could not be loaded."
+        title="Channel unavailable"
+        description="The channel could not be loaded."
         action={<Button onClick={() => query.refetch()}>Try again</Button>}
       />
     );
@@ -594,8 +594,8 @@ export function WorkspaceEditScreen({
     return (
       <StatePanel
         kind="permission"
-        title="Workspace editing unavailable"
-        description="You do not have permission to edit this workspace."
+        title="Channel editing unavailable"
+        description="You do not have permission to edit this channel."
       />
     );
   return (

@@ -15,7 +15,7 @@ describe("budget grid", () => {
     expect(monthsOfYear(2026)[11]).toBe("2026-12");
   });
 
-  it("keys saved budgets by workspace and month", () => {
+  it("keys saved budgets by channel and month", () => {
     expect(
       budgetCells([
         {

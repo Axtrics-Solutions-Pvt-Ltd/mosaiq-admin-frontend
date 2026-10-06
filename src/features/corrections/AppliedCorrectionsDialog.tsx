@@ -105,8 +105,7 @@ export function AppliedCorrectionsDialog({
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="text-strong font-medium">
                       {metricLabel(correction.metric_code)} ·{" "}
-                      {workspace?.name ??
-                        `Workspace #${correction.workspace_id}`}
+                      {workspace?.name ?? `Channel #${correction.workspace_id}`}
                     </p>
                     <StatusBadge status={correctionStatus(correction)} />
                   </div>

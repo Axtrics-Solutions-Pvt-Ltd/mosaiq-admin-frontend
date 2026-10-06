@@ -357,7 +357,7 @@ export function UserEditForm({
             </FormField>
             {roleCode === "MANAGER" ? (
               <FormField
-                description="Tick a client for all its workspaces, including ones added later, or open it to choose workspaces."
+                description="Tick a client for all its channels, including ones added later, or open it to choose channels."
                 error={clientsError}
                 id="edit-clients"
                 label="Clients"
@@ -378,7 +378,7 @@ export function UserEditForm({
                 {(isAccessChanged || !wasManager) && (
                   <p className="bg-muted mt-2 rounded-lg border p-3 text-xs">
                     Removed access is revoked as soon as you save. Newly added
-                    clients or workspaces are sent to the user as one invitation
+                    clients or channels are sent to the user as one invitation
                     email and apply once accepted.
                   </p>
                 )}

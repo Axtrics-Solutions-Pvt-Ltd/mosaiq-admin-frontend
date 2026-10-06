@@ -21,7 +21,7 @@ export async function GET(
   if (workspaceIdParam !== null) {
     const workspaceId = Number(workspaceIdParam);
     if (!Number.isSafeInteger(workspaceId) || workspaceId <= 0)
-      return Response.json({ message: "Invalid workspace." }, { status: 400 });
+      return Response.json({ message: "Invalid channel." }, { status: 400 });
     query.set("workspace_id", String(workspaceId));
   }
   const clientIdParam = incoming.searchParams.get("client_id");

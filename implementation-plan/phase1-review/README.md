@@ -59,6 +59,7 @@ The capabilities `imports.create`, `importHistory.view`, `connectors.view` and `
 | 7 | [STEP-7-LEGACY-RETIREMENT.md](STEP-7-LEGACY-RETIREMENT.md) | KPI curation and leftover legacy code removed |
 | 8 | [STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md](STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md) | Manager access to several clients, on invite and edit |
 | 9 | [STEP-9-SECTION-ACCENTS.md](STEP-9-SECTION-ACCENTS.md) | Section colours in the builder: picker, coloured section and tab rows |
+| 10 | [STEP-10-CHANNEL-PLATFORM-RENAME.md](STEP-10-CHANNEL-PLATFORM-RENAME.md) | UI rename Workspace → Channel, Channel → Platform; report data per channel (workspace) |
 
 ## Definition of done per step
 

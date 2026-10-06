@@ -244,7 +244,7 @@ function LiveNumbersNote({
     note =
       channel === undefined && canPickChannel
         ? "This report combines several channels, so these totals can't be edited directly. Choose a channel below, then use the pencil beside a value in the preview."
-        : "These values combine several workspaces, so they can't be corrected from this preview.";
+        : "These values combine several channels, so they can't be corrected from this preview.";
 
   return (
     <div className="bg-muted text-muted-foreground space-y-3 rounded-md border p-3 text-xs">

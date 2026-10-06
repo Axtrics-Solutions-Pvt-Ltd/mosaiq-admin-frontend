@@ -128,7 +128,7 @@ beforeEach(() => {
 });
 
 describe("WorkspaceDetails team and activity tabs", () => {
-  it("lists workspace users and pending invitations for an Agency Admin", async () => {
+  it("lists channel users and pending invitations for an Agency Admin", async () => {
     renderWithScope(
       <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
       { membership: { agencyId: 2, roleCode: "AGENCY_ADMIN" } },
@@ -159,7 +159,7 @@ describe("WorkspaceDetails team and activity tabs", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows workspace activity", async () => {
+  it("shows channel activity", async () => {
     renderWithScope(
       <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
       { membership: { agencyId: 2, roleCode: "MANAGER" } },
@@ -183,23 +183,23 @@ describe("WorkspaceDetails delete action", () => {
       await screen.findByRole("link", { name: /Edit/ }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Delete workspace" }),
+      screen.queryByRole("button", { name: "Delete channel" }),
     ).not.toBeInTheDocument();
   });
 
-  it("asks an Agency Admin to type the workspace name before deleting", async () => {
+  it("asks an Agency Admin to type the channel name before deleting", async () => {
     renderWithScope(
       <WorkspaceDetails agencyId={2} clientId={4} workspaceId={7} />,
       { membership: { agencyId: 2, roleCode: "AGENCY_ADMIN" } },
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Delete workspace" }),
+      await screen.findByRole("button", { name: "Delete channel" }),
     );
     const dialog = screen.getByRole("dialog", {
       name: "Delete Acme – Meta Ads?",
     });
     const confirm = within(dialog).getByRole("button", {
-      name: "Delete workspace",
+      name: "Delete channel",
     });
     expect(confirm).toBeDisabled();
     await userEvent.type(

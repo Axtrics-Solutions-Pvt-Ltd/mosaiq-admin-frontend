@@ -270,7 +270,7 @@ export function getAgency(id: string): AgencyDetail | undefined {
       {
         id: "activity_3",
         title: "Reporting defaults confirmed",
-        description: `Currency remains ${agency.currency} for new workspaces.`,
+        description: `Currency remains ${agency.currency} for new channels.`,
         time: "6 days ago",
       },
     ],
@@ -290,7 +290,7 @@ export function getAgency(id: string): AgencyDetail | undefined {
     ],
     brandColor: "#2563EB",
     dateFormat: "DD MMM YYYY",
-    description: `${agency.name} manages client reporting and performance workspaces across its portfolio.`,
+    description: `${agency.name} manages client reporting and performance channels across its portfolio.`,
     displayName: agency.name,
     language: "English (UK)",
     legalName: `${agency.name} Ltd`,

@@ -204,7 +204,7 @@ function ReportCreateForm({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Source workspaces</CardTitle>
+            <CardTitle>Source channels</CardTitle>
             <p className="text-muted-foreground text-sm">
               The report combines data from the channel workspaces of{" "}
               {clientName} you choose here.
@@ -216,7 +216,7 @@ function ReportCreateForm({
                 workspaceError ? "report-sources-error" : undefined
               }
             >
-              <legend className="sr-only">Source workspaces</legend>
+              <legend className="sr-only">Source channels</legend>
               {workspaceError && (
                 <p
                   className="text-destructive mb-3 text-sm font-medium"
@@ -227,7 +227,7 @@ function ReportCreateForm({
                 </p>
               )}
               {workspaces.isPending && (
-                <p aria-busy="true">Loading workspaces...</p>
+                <p aria-busy="true">Loading channels...</p>
               )}
               {workspaces.isError && (
                 <StatePanel
@@ -236,9 +236,9 @@ function ReportCreateForm({
                       Try again
                     </Button>
                   }
-                  description="The client's workspaces could not be loaded."
+                  description="The client's channels could not be loaded."
                   kind="error"
-                  title="Workspaces unavailable"
+                  title="Channels unavailable"
                 />
               )}
               {workspaces.isSuccess && records.length === 0 && (
@@ -258,7 +258,7 @@ function ReportCreateForm({
                   }
                   description="You can create the report now and add sources later in its settings."
                   kind="empty"
-                  title="No workspaces you can use"
+                  title="No channels you can use"
                 />
               )}
               {records.length > 0 && (
@@ -280,8 +280,8 @@ function ReportCreateForm({
         <div className="bg-card sticky bottom-0 z-10 flex flex-col-reverse gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground text-xs">
             {workspaceIds.length === 1
-              ? "1 source workspace selected"
-              : `${workspaceIds.length} source workspaces selected`}
+              ? "1 source channel selected"
+              : `${workspaceIds.length} source channels selected`}
           </p>
           <div className="flex gap-2">
             {isDirty ? (
@@ -347,7 +347,7 @@ export function ReportCreateScreen({
           Reports
         </Link>
       }
-      description="Choose the client and the channel workspaces the report combines. You design its layout next."
+      description="Choose the client and the channels the report combines. You design its layout next."
       title="New report"
     />
   );

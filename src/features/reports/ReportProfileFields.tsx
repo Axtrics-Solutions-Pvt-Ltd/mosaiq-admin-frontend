@@ -50,7 +50,7 @@ export function ReportProfileFields({
     register,
     formState: { errors },
   } = form;
-  const currencyHint = "Every source workspace must use this currency.";
+  const currencyHint = "Every source channel must use this currency.";
   return (
     <FormGrid>
       <div className="md:col-span-2">

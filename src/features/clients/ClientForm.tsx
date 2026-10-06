@@ -84,7 +84,7 @@ function ClientForm({
         toast({
           title: "Client created",
           description: defaultWorkspace
-            ? `Client created with a default workspace, ${defaultWorkspace.name}, in ${defaultWorkspace.currency}/${defaultWorkspace.timezone}.`
+            ? `Client created with a default channel, ${defaultWorkspace.name}, in ${defaultWorkspace.currency}/${defaultWorkspace.timezone}.`
             : "Client created.",
           tone: "success",
         });
@@ -129,7 +129,7 @@ function ClientForm({
         }
         description={
           mode === "create"
-            ? "Create a client under this agency. A default workspace is created automatically."
+            ? "Create a client under this agency. A default channel is created automatically."
             : "Update the client's name and status."
         }
         title={

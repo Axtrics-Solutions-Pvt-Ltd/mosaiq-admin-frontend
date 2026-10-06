@@ -82,7 +82,7 @@ function WorkspaceCard({
                 record.client_id,
               )}
             >
-              Edit workspace
+              Edit channel
             </Link>
           </Button>
         )}
@@ -136,7 +136,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
   const columns: readonly DataTableColumn<WorkspaceRecord>[] = [
     {
       id: "workspace",
-      header: "Workspace",
+      header: "Channel",
       render: (record) => (
         <Link
           className="text-strong hover:text-primary font-medium"
@@ -152,7 +152,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
     },
     {
       id: "channel",
-      header: "Channel",
+      header: "Platform",
       render: (record) => <ChannelBadge channel={record.connector} />,
     },
     {
@@ -221,8 +221,8 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
   return (
     <PageStack>
       <PageHeader
-        title="Client Workspaces"
-        description="Manage client workspaces across all agencies or within the selected agency."
+        title="Client Channels"
+        description="Manage client channels across all agencies or within the selected agency."
         actions={
           canManage ? (
             <Button asChild>
@@ -233,7 +233,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
                     : routes.workspaces.new
                 }
               >
-                <Plus aria-hidden className="size-4" /> Add workspace
+                <Plus aria-hidden className="size-4" /> Add channel
               </Link>
             </Button>
           ) : undefined
@@ -242,7 +242,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           icon={FolderKanban}
-          label="Workspaces matching filters"
+          label="Channels matching filters"
           value={formatNumber(query.data?.meta.total ?? 0)}
         />
         <MetricCard
@@ -262,7 +262,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
       </div>
       <FilterBar className="lg:grid lg:grid-cols-3">
         <div>
-          <Label htmlFor="workspace-search">Search workspaces</Label>
+          <Label htmlFor="workspace-search">Search channels</Label>
           <Input
             id="workspace-search"
             className="mt-1.5"
@@ -270,7 +270,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
             onChange={(event) =>
               replace({ search: event.target.value, page: undefined })
             }
-            placeholder="Workspace name"
+            placeholder="Channel name"
           />
         </div>
         <div>
@@ -289,7 +289,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
           </Select>
         </div>
         <div>
-          <Label htmlFor="workspace-channel">Channel</Label>
+          <Label htmlFor="workspace-channel">Platform</Label>
           <Select
             id="workspace-channel"
             className="mt-1.5"
@@ -298,7 +298,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
               replace({ channel: event.target.value, page: undefined })
             }
           >
-            <option value="all">All channels</option>
+            <option value="all">All platforms</option>
             {(channels.data ?? []).map((channel) => (
               <option key={channel.id} value={channel.id}>
                 {channel.name}
@@ -308,13 +308,13 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
         </div>
       </FilterBar>
       {(isAgencyListPending || query.isPending) && (
-        <p aria-busy="true">Loading workspaces...</p>
+        <p aria-busy="true">Loading channels...</p>
       )}
       {((scope.isSuperAdmin && agenciesQuery.isError) || query.isError) && (
         <StatePanel
           kind="error"
-          title="Workspaces unavailable"
-          description="The workspace list could not be loaded."
+          title="Channels unavailable"
+          description="The channel list could not be loaded."
           action={
             <Button
               onClick={() => {
@@ -331,17 +331,17 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
         <StatePanel
           kind="empty"
           title="No agencies"
-          description="Create an agency before adding client workspaces."
+          description="Create an agency before adding client channels."
         />
       )}
       {query.isSuccess && records.length === 0 && (
         <StatePanel
           kind={hasFilters ? "no-results" : "empty"}
-          title={hasFilters ? "No matching workspaces" : "No workspaces yet"}
+          title={hasFilters ? "No matching channels" : "No channels yet"}
           description={
             hasFilters
-              ? "Try another search, status or channel."
-              : "Add a workspace to get started."
+              ? "Try another search, status or platform."
+              : "Add a channel to get started."
           }
           action={
             hasFilters ? (
@@ -367,7 +367,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
                       : routes.workspaces.new
                   }
                 >
-                  Add workspace
+                  Add channel
                 </Link>
               </Button>
             ) : undefined
@@ -378,12 +378,12 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
-              Showing {records.length} of {query.data.meta.total} workspaces
+              Showing {records.length} of {query.data.meta.total} channels
             </p>
             <Badge tone="neutral">Priority columns on mobile</Badge>
           </div>
           <DataTable
-            caption="Workspace directory"
+            caption="Channel directory"
             columns={columns}
             getRowKey={(record) => String(record.id)}
             mobileCard={(record) => (
@@ -397,7 +397,7 @@ export function WorkspaceDirectory({ filters }: { filters: Filters }) {
             rows={records}
           />
           <nav
-            aria-label="Workspace pagination"
+            aria-label="Channel pagination"
             className="bg-card flex items-center justify-between rounded-lg border p-3"
           >
             <p className="text-muted-foreground text-sm">

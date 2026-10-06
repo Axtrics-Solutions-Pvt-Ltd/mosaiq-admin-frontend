@@ -77,13 +77,13 @@ function DeleteWorkspaceDialog({
         workspaceId: record.id,
       });
       toast({
-        title: "Workspace deleted",
+        title: "Channel deleted",
         description: `${record.name} was removed from reports and its access was revoked.`,
         tone: "success",
       });
       router.push(clientDetailUrl(record.client_id, record.agency_id));
     } catch {
-      setError("The workspace could not be deleted. Please try again.");
+      setError("The channel could not be deleted. Please try again.");
     }
   }
   return (
@@ -113,8 +113,8 @@ function DeleteWorkspaceDialog({
           )}
         </div>
       }
-      confirmLabel="Delete workspace"
-      description="This removes the workspace for everyone."
+      confirmLabel="Delete channel"
+      description="This removes the channel for everyone."
       isConfirmDisabled={typedName !== record.name}
       isOpen={isOpen}
       isPending={mutation.isPending}
@@ -149,22 +149,22 @@ export function WorkspaceDetails({
     return (
       <StatePanel
         kind="error"
-        title="Workspace scope required"
-        description="Open this workspace from the directory so its agency and client are known."
+        title="Channel scope required"
+        description="Open this channel from the directory so its agency and client are known."
         action={
           <Button asChild>
-            <Link href={routes.workspaces.index}>Open workspaces</Link>
+            <Link href={routes.workspaces.index}>Open channels</Link>
           </Button>
         }
       />
     );
-  if (workspace.isPending) return <p aria-busy="true">Loading workspace...</p>;
+  if (workspace.isPending) return <p aria-busy="true">Loading channel...</p>;
   if (workspace.isError)
     return (
       <StatePanel
         kind="error"
-        title="Workspace unavailable"
-        description="The workspace could not be loaded."
+        title="Channel unavailable"
+        description="The channel could not be loaded."
         action={<Button onClick={() => workspace.refetch()}>Try again</Button>}
       />
     );
@@ -198,7 +198,7 @@ export function WorkspaceDetails({
       });
       setIsConfirming(false);
     } catch {
-      setError("The workspace status could not be changed. Please try again.");
+      setError("The channel status could not be changed. Please try again.");
     }
   }
   const tabs: readonly TabOption[] = [
@@ -209,14 +209,14 @@ export function WorkspaceDetails({
         <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Workspace overview</CardTitle>
+              <CardTitle>Channel overview</CardTitle>
             </CardHeader>
             <CardContent>
               <DetailList
                 values={[
-                  { label: "Workspace", value: record.name },
+                  { label: "Channel", value: record.name },
                   {
-                    label: "Channel",
+                    label: "Platform",
                     value: record.connector?.name ?? "Not assigned",
                   },
                   {
@@ -246,7 +246,7 @@ export function WorkspaceDetails({
             <CardContent className="space-y-4">
               <StatusBadge status={record.status} />
               <p className="text-muted-foreground text-sm">
-                Workspace status is saved to the API.
+                Channel status is saved to the API.
               </p>
             </CardContent>
           </Card>
@@ -294,8 +294,8 @@ export function WorkspaceDetails({
           " / " +
           (client.data?.name ?? "Client")
         }
-        description="Workspace details and management."
-        breadcrumbs={<Link href={routes.workspaces.index}>Workspaces</Link>}
+        description="Channel details and management."
+        breadcrumbs={<Link href={routes.workspaces.index}>Channels</Link>}
         actions={
           canManage ? (
             <>
@@ -315,7 +315,7 @@ export function WorkspaceDetails({
                   variant="destructive"
                   onClick={() => setIsDeleting(true)}
                 >
-                  <Trash2 aria-hidden className="size-4" /> Delete workspace
+                  <Trash2 aria-hidden className="size-4" /> Delete channel
                 </Button>
               )}
             </>
@@ -340,10 +340,10 @@ export function WorkspaceDetails({
         isPending={mutation.isPending}
         title={
           record.status === "active"
-            ? "Deactivate workspace?"
-            : "Activate workspace?"
+            ? "Deactivate channel?"
+            : "Activate channel?"
         }
-        description="This changes the workspace status in the API."
+        description="This changes the channel status in the API."
         body={<p>Confirm the status change for {record.name}.</p>}
         confirmLabel={record.status === "active" ? "Deactivate" : "Activate"}
         onCancel={() => setIsConfirming(false)}

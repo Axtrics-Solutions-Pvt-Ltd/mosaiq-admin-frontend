@@ -36,7 +36,7 @@ describe("invitation contract", () => {
     }
   });
 
-  it("makes workspaces optional for an Agency Admin and requires clients for a Manager", () => {
+  it("makes channels optional for an Agency Admin and requires clients for a Manager", () => {
     expect(
       inviteSchema.safeParse({
         email: "admin@example.test",
@@ -64,7 +64,7 @@ describe("invitation contract", () => {
       expect(result.error.issues[0]?.path).toEqual(["clients"]);
   });
 
-  it("requires All workspaces or a workspace for each client, each client once", () => {
+  it("requires All channels or a channel for each client, each client once", () => {
     const noWorkspace = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",
@@ -146,7 +146,7 @@ describe("invitation contract", () => {
     ).toBe(true);
   });
 
-  it("rejects duplicate workspace assignments", () => {
+  it("rejects duplicate channel assignments", () => {
     const result = inviteSchema.safeParse({
       email: "manager@example.test",
       role_code: "MANAGER",

@@ -41,7 +41,7 @@ const record = {
   created_at: null,
   updated_at: null,
 };
-describe("workspace API", () => {
+describe("channel API", () => {
   it("scopes list filters to agency and client and reads pagination", async () => {
     let requested = "";
     server.use(
@@ -65,7 +65,7 @@ describe("workspace API", () => {
     expect(result.meta.total).toBe(12);
     expect(result.data[0]?.connector?.name).toBe("Meta Ads");
   });
-  it("sends the channel filter as connector_id", async () => {
+  it("sends the platform filter as connector_id", async () => {
     let requested = "";
     server.use(
       http.get(workspacePaths.collection(2, 4), ({ request }) => {
@@ -79,7 +79,7 @@ describe("workspace API", () => {
     await listWorkspaces(2, 4, { connector_id: 3 });
     expect(requested).toContain("connector_id=3");
   });
-  it("reads a legacy workspace without a channel", async () => {
+  it("reads a legacy channel without a platform", async () => {
     server.use(
       http.get(workspacePaths.detail(2, 4, 7), () =>
         HttpResponse.json({
@@ -96,7 +96,7 @@ describe("workspace API", () => {
     expect(workspace.connector).toBeNull();
     expect(workspace.connection).toBeNull();
   });
-  it("creates, reads, and updates a workspace with the documented profile", async () => {
+  it("creates, reads, and updates a channel with the documented profile", async () => {
     const calls: unknown[] = [];
     server.use(
       http.post(workspacePaths.collection(2, 4), async ({ request }) => {
@@ -133,7 +133,7 @@ describe("workspace API", () => {
       fieldErrors: { name: "Name already exists." },
     });
   });
-  it("deletes a workspace", async () => {
+  it("deletes a channel", async () => {
     let method = "";
     server.use(
       http.delete(workspacePaths.detail(2, 4, 7), ({ request }) => {
@@ -146,7 +146,7 @@ describe("workspace API", () => {
   });
 });
 
-describe("workspace connection API", () => {
+describe("channel connection API", () => {
   const credentials = {
     workspace_id: 7,
     connector_id: 3,
