@@ -325,12 +325,15 @@ export function ListControls({
 }
 
 // A list of rows edited in place: each row has ↑/↓/remove, and the list has
-// an add button up to `max` rows.
+// an add button up to `max` rows. `shown` (indexes, in order) limits the rows
+// on screen, e.g. to the builder's audience filter: the others stay in the
+// form and are saved as they are, and ↑/↓ move a row past the next shown one.
 export function RowListEditor({
   addLabel,
   count,
   description,
   error,
+  hasHiddenError = false,
   legend,
   max,
   move,
@@ -339,11 +342,14 @@ export function RowListEditor({
   remove,
   renderRow,
   rowKeys,
+  shown,
 }: {
   addLabel: string;
   count: number;
   description?: ReactNode;
   error?: string;
+  // A row that isn't shown has an error, so it can't be fixed from here.
+  hasHiddenError?: boolean;
   legend: string;
   max: number;
   move: (from: number, to: number) => void;
@@ -352,7 +358,11 @@ export function RowListEditor({
   remove: (index: number) => void;
   renderRow: (index: number) => ReactNode;
   rowKeys: readonly string[];
+  shown?: readonly number[];
 }) {
+  const visible = shown ?? rowKeys.map((_, index) => index);
+  const hidden = rowKeys.length - visible.length;
+  const at = (position: number) => visible[position] ?? position;
   return (
     <fieldset className="space-y-2">
       <legend className="text-strong text-sm font-medium">{legend}</legend>
@@ -364,20 +374,40 @@ export function RowListEditor({
           {error}
         </p>
       )}
-      {count > 0 && (
+      {hidden > 0 && (
+        <p
+          className={
+            hasHiddenError
+              ? "text-destructive text-xs font-medium"
+              : "text-muted-foreground text-xs"
+          }
+          role={hasHiddenError ? "alert" : undefined}
+        >
+          {hidden === 1
+            ? `1 ${noun} for other audiences is hidden and will be kept.`
+            : `${hidden} ${noun}s for other audiences are hidden and will be kept.`}{" "}
+          {hasHiddenError
+            ? "One of them has an error: clear the audience filter to fix it."
+            : "Clear the audience filter to see them."}
+        </p>
+      )}
+      {count > 0 && visible.length > 0 && (
         <ol className="space-y-3">
-          {rowKeys.map((key, index) => (
-            <li className="space-y-2 rounded-md border p-3" key={key}>
+          {visible.map((index, position) => (
+            <li
+              className="space-y-2 rounded-md border p-3"
+              key={rowKeys[index] ?? index}
+            >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-strong text-sm font-medium capitalize">
-                  {noun} {index + 1}
+                  {noun} {position + 1}
                 </p>
                 <ListControls
-                  count={count}
-                  index={index}
-                  label={`${noun} ${index + 1}`}
-                  move={move}
-                  remove={remove}
+                  count={visible.length}
+                  index={position}
+                  label={`${noun} ${position + 1}`}
+                  move={(from, to) => move(at(from), at(to))}
+                  remove={(row) => remove(at(row))}
                 />
               </div>
               {renderRow(index)}

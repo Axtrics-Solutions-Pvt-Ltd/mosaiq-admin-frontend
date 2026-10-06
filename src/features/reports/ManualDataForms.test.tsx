@@ -50,12 +50,27 @@ function usePatchApi(fixture: LayoutItemFixture, response?: () => Response) {
   return sent;
 }
 
-function renderEditor(item: ReturnType<typeof manualWidget>["item"]) {
+function renderEditor(
+  item: ReturnType<typeof manualWidget>["item"],
+  audienceFilter?: readonly string[],
+) {
   return renderWithScope(
-    <WidgetInspector item={item} onDirtyChange={vi.fn()} scope={scope} />,
+    <WidgetInspector
+      audienceFilter={audienceFilter}
+      audiences={audienceFilter ? audiences : undefined}
+      item={item}
+      onDirtyChange={vi.fn()}
+      scope={scope}
+    />,
     { platformRoleCode: "SUPER_ADMIN" },
   );
 }
+
+const audiences = [
+  { code: "south_asian", label: "South Asian" },
+  { code: "chinese", label: "Chinese" },
+  { code: "filipino", label: "Filipino" },
+];
 
 const save = () =>
   userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -526,5 +541,84 @@ describe("Manual content editors", () => {
         items: [{ label: "Gen Z", value: 31, format: "number" }],
       },
     });
+  });
+
+  it("shows only the filtered audience's rows and saves the hidden ones too", async () => {
+    const { fixture, item } = manualWidget({
+      code: "religion",
+      title: "Religion & Faith",
+      type: "field_table",
+      content: {
+        rows: [
+          { field: "Faith matters", value: "62%", note: null },
+          { field: "Sikh", value: "30%", note: null, audience: "south_asian" },
+          {
+            field: "No religion",
+            value: "56%",
+            note: null,
+            audience: "chinese",
+          },
+          { field: "Hindu", value: "29%", note: null, audience: "south_asian" },
+        ],
+      },
+    });
+    const sent = usePatchApi(fixture);
+    renderEditor(item, ["south_asian"]);
+
+    expect(
+      screen
+        .getAllByLabelText("Field")
+        .map((input) => (input as HTMLInputElement).value),
+    ).toEqual(["Sikh", "Hindu"]);
+    expect(
+      screen.getByText(
+        /2 rows for other audiences are hidden and will be kept/,
+      ),
+    ).toBeInTheDocument();
+
+    // ↑ moves past the hidden Chinese row, and a new row is South Asian.
+    await userEvent.click(
+      screen.getByRole("button", { name: "Move row 2 up" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add row" }));
+    await userEvent.type(screen.getAllByLabelText("Field")[2]!, "Muslim");
+    await userEvent.type(screen.getAllByLabelText("Value")[2]!, "24%");
+    await save();
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      content: {
+        rows: [
+          { field: "Faith matters", value: "62%" },
+          { field: "Hindu", audience: "south_asian" },
+          { field: "Sikh", audience: "south_asian" },
+          { field: "No religion", audience: "chinese" },
+          { field: "Muslim", value: "24%", audience: "south_asian" },
+        ],
+      },
+    });
+  });
+
+  it("shows every row when every audience is selected", () => {
+    const { item } = manualWidget({
+      content: {
+        items: [
+          { label: "Visits", value: "171K", format: "text" },
+          {
+            label: "Visits",
+            value: "96K",
+            format: "text",
+            audience: "south_asian",
+          },
+        ],
+      },
+    });
+    renderEditor(
+      item,
+      audiences.map((audience) => audience.code),
+    );
+    expect(screen.getAllByLabelText("Label")).toHaveLength(2);
+    expect(
+      screen.queryByText(/hidden and will be kept/),
+    ).not.toBeInTheDocument();
   });
 });

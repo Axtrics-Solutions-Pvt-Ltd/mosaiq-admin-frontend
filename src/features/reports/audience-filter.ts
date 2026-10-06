@@ -111,9 +111,7 @@ export function filterByAudience(
         const keyOf = (column: unknown) =>
           String((column as Content | null)?.key ?? "");
         const keptKeys = new Set(kept.map(keyOf));
-        removedColumns = entries
-          .map(keyOf)
-          .filter((key) => !keptKeys.has(key));
+        removedColumns = entries.map(keyOf).filter((key) => !keptKeys.has(key));
       }
       if (kind === "summary")
         kept = withAudienceLabels(
@@ -157,4 +155,22 @@ export function filterByAudience(
   const shown = main === undefined ? undefined : next[main];
   if (Array.isArray(shown) && shown.length === 0) return null;
   return next;
+}
+
+// Indexes of the entries an editor shows for the selection, given each
+// entry's audience code ("" for untagged). Like the served content, a list
+// without tags is shown whole, and so is every list without a filter. With
+// one, only the selected audiences' entries are shown; `keepUntagged` keeps
+// the untagged ones too, as for data table columns.
+export function audienceEntriesShown(
+  tags: readonly string[],
+  selected: readonly string[],
+  keepUntagged = false,
+) {
+  const indexes = tags.map((_, index) => index);
+  if (selected.length === 0 || !tags.some((tag) => tag !== "")) return indexes;
+  return indexes.filter((index) => {
+    const tag = tags[index] ?? "";
+    return tag === "" ? keepUntagged : selected.includes(tag);
+  });
 }

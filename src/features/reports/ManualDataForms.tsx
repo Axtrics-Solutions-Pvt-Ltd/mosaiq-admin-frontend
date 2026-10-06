@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
   type DefaultValues,
   type FieldValues,
@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { type ValueFormat, valueFormats } from "@/lib/formatters";
 
+import { audienceEntriesShown } from "./audience-filter";
 import type { Audience } from "./contracts";
 import {
   AsOfField,
@@ -205,7 +206,59 @@ function AudienceNote({
 type ManualFormProps<Type extends ManualType> = InspectorFormProps & {
   initial: ManualValues<Type>;
   audiences: readonly Audience[];
+  // The builder's audience filter, empty for none.
+  audienceFilter: readonly string[];
 };
+
+// The entries of a list the form shows for the builder's audience filter.
+// An entry is placed by the audience it had when it came into the form, or
+// when the filter last changed, so changing its tag doesn't hide it while
+// it's being edited.
+function useShownEntries(
+  fields: readonly { id: string }[],
+  current: () => readonly unknown[],
+  filter: readonly string[],
+  keepUntagged = false,
+) {
+  const key = filter.join(",");
+  const [placed, setPlaced] = useState({
+    key,
+    tags: {} as Record<string, string>,
+  });
+  if (placed.key !== key) {
+    const values = current();
+    setPlaced({
+      key,
+      tags: Object.fromEntries(
+        fields.map((field, index) => [field.id, audienceOf(values[index])]),
+      ),
+    });
+  }
+  return audienceEntriesShown(
+    fields.map((field) => placed.tags[field.id] ?? audienceOf(field)),
+    filter,
+    keepUntagged,
+  );
+}
+
+function audienceOf(entry: unknown) {
+  const audience = (entry as { audience?: unknown } | undefined)?.audience;
+  return typeof audience === "string" ? audience : "";
+}
+
+// Whether a row the form doesn't show has an error.
+function hasHiddenError(errors: unknown, shown: readonly number[]) {
+  return (
+    Array.isArray(errors) &&
+    errors.some((error, index) => error && !shown.includes(index))
+  );
+}
+
+// A row added while the filter is on starts tagged with its first audience,
+// so it is shown.
+function newRowAudience(filter: readonly string[]) {
+  return filter[0] ? { audience: filter[0] } : {};
+}
 
 function arrayError(error: unknown) {
   const record = error as
@@ -246,11 +299,14 @@ function ManualShell<Values extends ManualValues<ManualType>>({
   );
 }
 
-function KpiListForm(
-  props: ManualFormProps<"kpi_list">,
-) {
+function KpiListForm(props: ManualFormProps<"kpi_list">) {
   const { form, ...submit } = useManualForm("kpi_list", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
+  const shown = useShownEntries(
+    items.fields,
+    () => form.getValues("items"),
+    props.audienceFilter,
+  );
   return (
     <ManualShell
       {...submit}
@@ -264,11 +320,17 @@ function KpiListForm(
         count={items.fields.length}
         description="Values are shown exactly as typed, e.g. 1.8M or $65B+."
         error={arrayError(form.formState.errors.items)}
+        hasHiddenError={hasHiddenError(form.formState.errors.items, shown)}
         legend="Rows"
         max={manualLimits.kpiList}
         move={items.move}
         noun="row"
-        onAdd={() => items.append(emptyRow("kpi_list", form.getValues()))}
+        onAdd={() =>
+          items.append({
+            ...emptyRow("kpi_list", form.getValues()),
+            ...newRowAudience(props.audienceFilter),
+          })
+        }
         remove={items.remove}
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -282,16 +344,20 @@ function KpiListForm(
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
+        shown={shown}
       />
     </ManualShell>
   );
 }
 
-function BarChartForm(
-  props: ManualFormProps<"bar_chart">,
-) {
+function BarChartForm(props: ManualFormProps<"bar_chart">) {
   const { form, ...submit } = useManualForm("bar_chart", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
+  const shown = useShownEntries(
+    items.fields,
+    () => form.getValues("items"),
+    props.audienceFilter,
+  );
   return (
     <ManualShell
       {...submit}
@@ -304,17 +370,19 @@ function BarChartForm(
         addLabel="Add bar"
         count={items.fields.length}
         error={arrayError(form.formState.errors.items)}
+        hasHiddenError={hasHiddenError(form.formState.errors.items, shown)}
         legend="Bars"
         max={manualLimits.barChart}
         move={items.move}
         noun="bar"
         onAdd={() =>
-          items.append(
-            emptyRow(
+          items.append({
+            ...(emptyRow(
               "bar_chart",
               form.getValues(),
-            ) as ManualValues<"bar_chart">["items"][number],
-          )
+            ) as ManualValues<"bar_chart">["items"][number]),
+            ...newRowAudience(props.audienceFilter),
+          })
         }
         remove={items.remove}
         renderRow={(index) => (
@@ -341,16 +409,20 @@ function BarChartForm(
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
+        shown={shown}
       />
     </ManualShell>
   );
 }
 
-function DonutForm(
-  props: ManualFormProps<"donut">,
-) {
+function DonutForm(props: ManualFormProps<"donut">) {
   const { form, ...submit } = useManualForm("donut", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
+  const shown = useShownEntries(
+    items.fields,
+    () => form.getValues("items"),
+    props.audienceFilter,
+  );
   return (
     <ManualShell
       {...submit}
@@ -388,11 +460,17 @@ function DonutForm(
         count={items.fields.length}
         description="Shares are worked out from the values."
         error={arrayError(form.formState.errors.items)}
+        hasHiddenError={hasHiddenError(form.formState.errors.items, shown)}
         legend="Segments"
         max={manualLimits.donutItems}
         move={items.move}
         noun="segment"
-        onAdd={() => items.append(emptyRow("donut", form.getValues()))}
+        onAdd={() =>
+          items.append({
+            ...emptyRow("donut", form.getValues()),
+            ...newRowAudience(props.audienceFilter),
+          })
+        }
         remove={items.remove}
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -411,14 +489,13 @@ function DonutForm(
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
+        shown={shown}
       />
     </ManualShell>
   );
 }
 
-function ProgressListForm(
-  props: ManualFormProps<"progress_list">,
-) {
+function ProgressListForm(props: ManualFormProps<"progress_list">) {
   const { form, ...submit } = useManualForm(
     "progress_list",
     props,
@@ -427,6 +504,16 @@ function ProgressListForm(
   const groups = useFieldArray({ control: form.control, name: "groups" });
   const items = useFieldArray({ control: form.control, name: "items" });
   const footer = useFieldArray({ control: form.control, name: "footer" });
+  const shownItems = useShownEntries(
+    items.fields,
+    () => form.getValues("items"),
+    props.audienceFilter,
+  );
+  const shownFooter = useShownEntries(
+    footer.fields,
+    () => form.getValues("footer"),
+    props.audienceFilter,
+  );
   const groupValues = useWatch({ control: form.control, name: "groups" });
   const groupOptions = [
     { value: "", label: "Choose a group" },
@@ -474,17 +561,19 @@ function ProgressListForm(
         addLabel="Add row"
         count={items.fields.length}
         error={arrayError(errors.items)}
+        hasHiddenError={hasHiddenError(errors.items, shownItems)}
         legend="Rows"
         max={manualLimits.progressItems}
         move={items.move}
         noun="row"
         onAdd={() =>
-          items.append(
-            emptyRow(
+          items.append({
+            ...(emptyRow(
               "progress_list",
               form.getValues(),
-            ) as ManualValues<"progress_list">["items"][number],
-          )
+            ) as ManualValues<"progress_list">["items"][number]),
+            ...newRowAudience(props.audienceFilter),
+          })
         }
         remove={items.remove}
         renderRow={(index) => (
@@ -545,12 +634,14 @@ function ProgressListForm(
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
+        shown={shownItems}
       />
       <RowListEditor
         addLabel="Add total"
         count={footer.fields.length}
         description="Optional. Up to 4 totals under the list, each shown as its own column."
         error={arrayError(errors.footer)}
+        hasHiddenError={hasHiddenError(errors.footer, shownFooter)}
         legend="Footer"
         max={manualLimits.progressFooter}
         move={footer.move}
@@ -566,6 +657,7 @@ function ProgressListForm(
             changeSentiment: "",
             changeLabel: "",
             audience: "",
+            ...newRowAudience(props.audienceFilter),
           })
         }
         remove={footer.remove}
@@ -634,20 +726,24 @@ function ProgressListForm(
           </div>
         )}
         rowKeys={footer.fields.map((field) => field.id)}
+        shown={shownFooter}
       />
     </ManualShell>
   );
 }
 
-function FieldTableForm(
-  props: ManualFormProps<"field_table">,
-) {
+function FieldTableForm(props: ManualFormProps<"field_table">) {
   const { form, ...submit } = useManualForm(
     "field_table",
     props,
     props.initial,
   );
   const rows = useFieldArray({ control: form.control, name: "rows" });
+  const shown = useShownEntries(
+    rows.fields,
+    () => form.getValues("rows"),
+    props.audienceFilter,
+  );
   return (
     <ManualShell
       {...submit}
@@ -673,11 +769,17 @@ function FieldTableForm(
         addLabel="Add row"
         count={rows.fields.length}
         error={arrayError(form.formState.errors.rows)}
+        hasHiddenError={hasHiddenError(form.formState.errors.rows, shown)}
         legend="Rows"
         max={manualLimits.fieldRows}
         move={rows.move}
         noun="row"
-        onAdd={() => rows.append(emptyRow("field_table", form.getValues()))}
+        onAdd={() =>
+          rows.append({
+            ...emptyRow("field_table", form.getValues()),
+            ...newRowAudience(props.audienceFilter),
+          })
+        }
         remove={rows.remove}
         renderRow={(index) => (
           <div className="grid gap-2">
@@ -697,6 +799,7 @@ function FieldTableForm(
           </div>
         )}
         rowKeys={rows.fields.map((field) => field.id)}
+        shown={shown}
       />
     </ManualShell>
   );
@@ -749,14 +852,23 @@ function useCellColumns<
   };
 }
 
-function DataTableForm(
-  props: ManualFormProps<"data_table">,
-) {
+function DataTableForm(props: ManualFormProps<"data_table">) {
   const { form, ...submit } = useManualForm("data_table", props, props.initial);
   const grid = useCellColumns<"data_table">(form);
   const columnValues = useWatch({ control: form.control, name: "columns" });
   const rowValues = useWatch({ control: form.control, name: "rows" });
   const errors = form.formState.errors;
+  const shownColumns = useShownEntries(
+    grid.columns.fields,
+    () => form.getValues("columns"),
+    props.audienceFilter,
+    true,
+  );
+  const shownRows = useShownEntries(
+    grid.rows.fields,
+    () => form.getValues("rows"),
+    props.audienceFilter,
+  );
   // Text columns after the first can carry status chips; any column keeps
   // the chips it already has.
   const hasStatus = (rowIndex: number, columnIndex: number) =>
@@ -774,12 +886,19 @@ function DataTableForm(
         count={grid.columns.fields.length}
         description="The first column labels each row."
         error={arrayError(errors.columns)}
+        hasHiddenError={hasHiddenError(errors.columns, shownColumns)}
         legend="Columns"
         max={manualLimits.dataColumns}
         move={grid.moveColumn}
         noun="column"
         onAdd={() =>
-          grid.addColumn({ key: "", label: "", format: "number", audience: "" })
+          grid.addColumn({
+            key: "",
+            label: "",
+            format: "number",
+            audience: "",
+            ...newRowAudience(props.audienceFilter),
+          })
         }
         remove={grid.removeColumn}
         renderRow={(index) => (
@@ -810,6 +929,7 @@ function DataTableForm(
           </div>
         )}
         rowKeys={grid.columns.fields.map((field) => field.id)}
+        shown={shownColumns}
       />
       <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
@@ -817,12 +937,16 @@ function DataTableForm(
         count={grid.rows.fields.length}
         description="Leave a cell empty to show a dash. A text cell can also show a status chip."
         error={arrayError(errors.rows)}
+        hasHiddenError={hasHiddenError(errors.rows, shownRows)}
         legend="Rows"
         max={manualLimits.dataRows}
         move={grid.rows.move}
         noun="row"
         onAdd={() =>
-          grid.rows.append(emptyRow("data_table", form.getValues()) as never)
+          grid.rows.append({
+            ...emptyRow("data_table", form.getValues()),
+            ...newRowAudience(props.audienceFilter),
+          } as never)
         }
         remove={grid.rows.remove}
         renderRow={(index) => (
@@ -833,6 +957,8 @@ function DataTableForm(
               name={`rows.${index}.audience`}
             />
             {columnValues.map((column, columnIndex) => {
+              // Cells of hidden columns are kept as they are.
+              if (!shownColumns.includes(columnIndex)) return null;
               const label = column.label.trim() || `Column ${columnIndex + 1}`;
               return (
                 <div
@@ -868,18 +994,22 @@ function DataTableForm(
           </div>
         )}
         rowKeys={grid.rows.fields.map((field) => field.id)}
+        shown={shownRows}
       />
     </ManualShell>
   );
 }
 
-function HeatmapForm(
-  props: ManualFormProps<"heatmap">,
-) {
+function HeatmapForm(props: ManualFormProps<"heatmap">) {
   const { form, ...submit } = useManualForm("heatmap", props, props.initial);
   const grid = useCellColumns<"heatmap">(form);
   const columnValues = useWatch({ control: form.control, name: "columns" });
   const errors = form.formState.errors;
+  const shownRows = useShownEntries(
+    grid.rows.fields,
+    () => form.getValues("rows"),
+    props.audienceFilter,
+  );
   return (
     <ManualShell
       {...submit}
@@ -908,12 +1038,16 @@ function HeatmapForm(
         count={grid.rows.fields.length}
         description="One number per column. Leave a cell empty for no value."
         error={arrayError(errors.rows)}
+        hasHiddenError={hasHiddenError(errors.rows, shownRows)}
         legend="Rows"
         max={manualLimits.heatmapRows}
         move={grid.rows.move}
         noun="row"
         onAdd={() =>
-          grid.rows.append(emptyRow("heatmap", form.getValues()) as never)
+          grid.rows.append({
+            ...emptyRow("heatmap", form.getValues()),
+            ...newRowAudience(props.audienceFilter),
+          } as never)
         }
         remove={grid.rows.remove}
         renderRow={(index) => (
@@ -936,14 +1070,13 @@ function HeatmapForm(
           </div>
         )}
         rowKeys={grid.rows.fields.map((field) => field.id)}
+        shown={shownRows}
       />
     </ManualShell>
   );
 }
 
-function GaugeForm(
-  props: ManualFormProps<"gauge">,
-) {
+function GaugeForm(props: ManualFormProps<"gauge">) {
   const { form, ...submit } = useManualForm("gauge", props, props.initial);
   const details = useFieldArray({ control: form.control, name: "details" });
   return (
@@ -1032,12 +1165,25 @@ function GaugeForm(
 }
 
 // One generic editor per render type, reused by every manual widget of it.
-// `audiences` are offered as row tags on Marketing Intelligence widgets.
+// `audiences` are offered as row tags on Marketing Intelligence widgets, and
+// with an `audienceFilter` only the rows for those audiences are shown.
 export function ManualDataForm({
+  audienceFilter = [],
   audiences = [],
   ...inspectorProps
-}: InspectorFormProps & { audiences?: readonly Audience[] }) {
-  const props = { ...inspectorProps, audiences };
+}: InspectorFormProps & {
+  audienceFilter?: readonly string[];
+  audiences?: readonly Audience[];
+}) {
+  // Every audience selected is no filter.
+  const known = audienceFilter.filter((code) =>
+    audiences.some((audience) => audience.code === code),
+  );
+  const props = {
+    ...inspectorProps,
+    audienceFilter: known.length === audiences.length ? [] : known,
+    audiences,
+  };
   const { item } = props;
   switch (item.type) {
     case "kpi_list":

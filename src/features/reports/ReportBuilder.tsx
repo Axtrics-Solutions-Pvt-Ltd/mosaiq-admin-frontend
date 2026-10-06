@@ -347,8 +347,13 @@ function Builder({
         .map((audience) => audience.code)
         .filter((code) => requestedAudiences.includes(code))
     : [];
+  // Every audience selected is no filter, as the API serves it: the totals.
+  const filterAudiences =
+    selectedAudiences.length === reportAudiences.length
+      ? []
+      : selectedAudiences;
   const audienceView: AudienceView = {
-    selected: selectedAudiences,
+    selected: filterAudiences,
     labels: Object.fromEntries(
       reportAudiences.map((audience) => [audience.code, audience.label]),
     ),
@@ -357,7 +362,7 @@ function Builder({
     from: view.from,
     to: view.to,
     channel: view.channel,
-    audiences: selectedAudiences.join(",") || undefined,
+    audiences: filterAudiences.join(",") || undefined,
   });
   const selectedItem =
     selectedItemId !== undefined
@@ -698,6 +703,7 @@ function Builder({
     <WidgetInspector
       accents={layout.data?.accents}
       audiences={isAudienceItem ? reportAudiences : undefined}
+      audienceFilter={isAudienceItem ? filterAudiences : undefined}
       budgets={{
         allBudgetsHref: `${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`,
         focusRequest: budgetFocusRequest,

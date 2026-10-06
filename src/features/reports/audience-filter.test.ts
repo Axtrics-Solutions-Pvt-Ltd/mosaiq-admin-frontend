@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterByAudience } from "./audience-filter";
+import { audienceEntriesShown, filterByAudience } from "./audience-filter";
 import { audienceCode } from "./contracts";
 
 const labels = { south_asian: "South Asian", chinese: "Chinese" };
@@ -9,7 +9,12 @@ describe("filterByAudience", () => {
   const kpis = {
     items: [
       { label: "Visits", value: "171K", format: "text" },
-      { label: "Visits", value: "96K", format: "text", audience: "south_asian" },
+      {
+        label: "Visits",
+        value: "96K",
+        format: "text",
+        audience: "south_asian",
+      },
       { label: "Visits", value: "75K", format: "text", audience: "chinese" },
     ],
   };
@@ -48,7 +53,12 @@ describe("filterByAudience", () => {
       ],
       items: [
         { group: "visits", label: "Chinese", value: 5, audience: "chinese" },
-        { group: "views", label: "South Asian", value: 9, audience: "south_asian" },
+        {
+          group: "views",
+          label: "South Asian",
+          value: 9,
+          audience: "south_asian",
+        },
       ],
     };
     expect(
@@ -66,12 +76,19 @@ describe("filterByAudience", () => {
     const content = {
       columns: [
         { key: "metric", label: "Metric", format: "text" },
-        { key: "sa", label: "South Asian", format: "percent", audience: "south_asian" },
+        {
+          key: "sa",
+          label: "South Asian",
+          format: "percent",
+          audience: "south_asian",
+        },
         { key: "ch", label: "Chinese", format: "percent", audience: "chinese" },
       ],
       rows: [{ metric: "Recall", sa: 7, ch: 4 }],
     };
-    expect(filterByAudience("data_table", content, ["chinese"], labels)).toEqual({
+    expect(
+      filterByAudience("data_table", content, ["chinese"], labels),
+    ).toEqual({
       columns: [
         { key: "metric", label: "Metric", format: "text" },
         { key: "ch", label: "Chinese", format: "percent" },
@@ -85,6 +102,20 @@ describe("filterByAudience", () => {
     expect(
       filterByAudience("field_table", content, ["chinese"], labels),
     ).toEqual(content);
+  });
+});
+
+describe("audienceEntriesShown", () => {
+  const tags = ["", "south_asian", "chinese", "south_asian"];
+
+  it("shows every entry without a filter or without tags", () => {
+    expect(audienceEntriesShown(tags, [])).toEqual([0, 1, 2, 3]);
+    expect(audienceEntriesShown(["", ""], ["chinese"])).toEqual([0, 1]);
+  });
+
+  it("shows only the selected audiences' entries with a filter", () => {
+    expect(audienceEntriesShown(tags, ["south_asian"])).toEqual([1, 3]);
+    expect(audienceEntriesShown(tags, ["chinese"], true)).toEqual([0, 2]);
   });
 });
 

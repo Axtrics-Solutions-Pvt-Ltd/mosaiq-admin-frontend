@@ -707,6 +707,7 @@ export type InspectorBudgets = {
 // swatches from GET layout).
 export function WidgetInspector({
   accents = [],
+  audienceFilter,
   audiences,
   budgets,
   focusPart,
@@ -720,6 +721,9 @@ export function WidgetInspector({
   scope,
 }: {
   accents?: readonly Accent[];
+  // The builder's audience filter (codes, empty for none): a Marketing
+  // Intelligence widget's form shows only the rows for those audiences.
+  audienceFilter?: readonly string[];
   // The report's audiences, for a Marketing Intelligence widget whose rows
   // can be tagged with one.
   audiences?: readonly Audience[];
@@ -877,6 +881,7 @@ export function WidgetInspector({
           {item.kind === "text" &&
             (hasManualEditor(item.type) ? (
               <ManualDataForm
+                audienceFilter={audienceFilter}
                 audiences={audiences}
                 key={formKey}
                 {...formProps}
@@ -887,6 +892,7 @@ export function WidgetInspector({
           {item.kind === "manual_data" &&
             (hasManualEditor(item.type) ? (
               <ManualDataForm
+                audienceFilter={audienceFilter}
                 audiences={audiences}
                 key={formKey}
                 {...formProps}

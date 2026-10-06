@@ -38,6 +38,18 @@ In `ManualDataForms` / `manual-forms.ts`, for Marketing Intelligence widgets onl
 - The selection is part of the builder view state (URL query `audiences`, comma-separated) and is sent with `previewTab`. It is part of the `previewTab` query key.
 - The Next proxy route for `preview/tabs/[tab]` already forwards the query string. Check that `audiences` passes through.
 - **Draft preview:** manual widgets preview from the draft without the API (`draft-preview.ts`). The same filtering rules are ported to TypeScript (`audience-filter.ts`) and applied to the draft content, so the preview matches the API.
+- **All selected = no filter:** the builder treats every audience selected like the API does (totals), for the preview request, the draft preview and the inspector. The dropdown still shows them all ticked.
+
+## 3a. Inspector follows the filter
+
+With an audience filter on, a Marketing Intelligence widget's content form shows only the entries for the selected audiences, the same ones the preview shows:
+- A tagged list shows only the entries tagged with a selected audience. Untagged entries (the totals) are hidden too. `data_table` keeps its untagged columns and hides the cells of hidden columns.
+- A list with no tags, and every list without a filter, is shown whole.
+- Hidden entries stay in the form and are saved as they are (`PATCH` replaces the whole content), so no API change is needed. The list says "N rows for other audiences are hidden and will be kept", in red if one of them has an error.
+- An entry is placed by the audience it had when it came into the form (or when the filter last changed), so changing its tag doesn't hide it mid-edit.
+- ↑/↓ move an entry past the next shown one. The row limit counts hidden entries.
+- An entry added while the filter is on is tagged with the first selected audience.
+- `audienceEntriesShown()` in `audience-filter.ts` holds the rule; `RowListEditor` takes the `shown` indexes.
 
 ## 4. Contracts
 
@@ -50,3 +62,4 @@ In `ManualDataForms` / `manual-forms.ts`, for Marketing Intelligence widgets onl
 - **Manual forms:** the Audience select appears only for MI widgets of reports with audiences, and saves `audience`.
 - **`audience-filter.ts`:** the same cases as the API filter tests.
 - **Builder:** the filter appears on MI tabs only, and changing it refetches with `audiences`.
+- **Inspector filter:** only the selected audience's rows are shown, hidden rows are saved in place, ↑ skips hidden rows, new rows get the audience, and every audience selected shows all rows.
