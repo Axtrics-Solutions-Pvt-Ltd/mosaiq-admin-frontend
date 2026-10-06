@@ -1,5 +1,6 @@
 import { parseWidget } from "@/features/report-widgets/contracts";
 
+import { filterByAudience } from "./audience-filter";
 import type {
   Accent,
   LayoutItem,
@@ -14,6 +15,13 @@ import { replaceLayoutItem } from "./layout";
 // its numbers, which only the API can work out, so they show once saved.
 
 export type InspectorDraft = { itemId: number; patch: LayoutItemPatch };
+
+// The preview's audience filter, for a Marketing Intelligence widget: the
+// selected codes (none means no filter) and every audience's label.
+export type AudienceView = {
+  selected: readonly string[];
+  labels: Readonly<Record<string, string>>;
+};
 
 type Content = Record<string, unknown>;
 type Entry = Record<string, unknown>;
@@ -228,11 +236,13 @@ export function withDraftLayout(
 }
 
 // The served widget with the draft laid over it. A draft the widget can't
-// show yet, such as a half-typed number, keeps the served content.
+// show yet, such as a half-typed number, keeps the served content. A
+// Marketing Intelligence widget's draft is filtered by `audiences` first.
 export function draftPreviewWidget(
   widget: PreviewWidget,
   item: LayoutItem,
   patch: LayoutItemPatch,
+  audiences?: AudienceView,
 ): PreviewWidget {
   const settings = draftSettings(patch);
   // Without a stored subtitle the served one is the catalogue default, which
@@ -251,9 +261,18 @@ export function draftPreviewWidget(
   };
   if (item.kind === "live" || !("content" in patch)) return envelope;
   if (!hasContent(patch.content)) return { ...envelope, empty: true };
+  const content = audiences
+    ? filterByAudience(
+        item.type,
+        patch.content,
+        audiences.selected,
+        audiences.labels,
+      )
+    : patch.content;
+  if (!content) return { ...envelope, empty: true };
   const drafted: PreviewWidget = {
     ...envelope,
-    ...normaliseContent(item.type, patch.content),
+    ...normaliseContent(item.type, content),
     empty: false,
   };
   return parseWidget(drafted).type === "unsupported" ? envelope : drafted;

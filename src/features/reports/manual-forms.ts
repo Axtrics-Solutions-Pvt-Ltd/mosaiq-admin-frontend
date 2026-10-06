@@ -143,6 +143,11 @@ const rows = <Schema extends z.ZodType>(
     .min(min, `Add at least one ${noun}.`)
     .max(max, `Add up to ${max} ${noun}s.`);
 
+// An entry's audience code; empty means it isn't tagged (a total, or a row
+// for everyone). Only Marketing Intelligence widgets of a report with
+// audiences offer it, and the API checks the code.
+const audience = z.string();
+
 const common = {
   title: text(150, "title"),
   subtitle: text(255, "subtitle"),
@@ -207,6 +212,7 @@ export const manualSchemas = {
       z.object({
         label: required(100, "label"),
         value: required(100, "value"),
+        audience,
       }),
       1,
       manualLimits.kpiList,
@@ -220,6 +226,7 @@ export const manualSchemas = {
         label: required(100, "label"),
         value: amount("value"),
         format: numericFormat,
+        audience,
       }),
       1,
       manualLimits.barChart,
@@ -242,6 +249,7 @@ export const manualSchemas = {
             (value) => (parseAmount(value) ?? 0) >= 0,
             "Enter a value of 0 or more.",
           ),
+          audience,
         }),
         1,
         manualLimits.donutItems,
@@ -286,6 +294,7 @@ export const manualSchemas = {
           secondaryLabel: text(100, "label"),
           secondaryValue: z.string(),
           secondaryFormat: anyFormat,
+          audience,
         }),
         1,
         manualLimits.progressItems,
@@ -305,6 +314,7 @@ export const manualSchemas = {
             changeDirection: z.union([z.literal(""), z.enum(changeDirections)]),
             changeSentiment: z.union([z.literal(""), z.enum(changeSentiments)]),
             changeLabel: text(60, "comparison label"),
+            audience,
           }),
         )
         .max(manualLimits.progressFooter, "Add up to 4 totals."),
@@ -373,6 +383,7 @@ export const manualSchemas = {
           field: required(200, "field"),
           value: required(500, "value"),
           note: text(1000, "note"),
+          audience,
         }),
         1,
         manualLimits.fieldRows,
@@ -396,12 +407,18 @@ export const manualSchemas = {
       ...common,
       columns: rows(
         z.object({
-          key: required(40, "key").refine(
-            (key) => columnKeyPattern.test(key.trim()),
-            "Start with a lowercase letter; use a–z, 0–9 and _ only.",
-          ),
+          key: required(40, "key")
+            .refine(
+              (key) => columnKeyPattern.test(key.trim()),
+              "Start with a lowercase letter; use a–z, 0–9 and _ only.",
+            )
+            .refine(
+              (key) => key.trim() !== "audience",
+              "The key audience is reserved. Choose another.",
+            ),
           label: required(100, "heading"),
           format: anyFormat,
+          audience,
         }),
         1,
         manualLimits.dataColumns,
@@ -417,6 +434,7 @@ export const manualSchemas = {
               label: text(60, "status label"),
             }),
           ),
+          audience,
         }),
         1,
         manualLimits.dataRows,
@@ -475,6 +493,7 @@ export const manualSchemas = {
       z.object({
         label: required(100, "label"),
         values: z.array(optionalAmount("value")),
+        audience,
       }),
       1,
       manualLimits.heatmapRows,
@@ -569,7 +588,11 @@ export function toManualValues<Type extends ManualType>(
       ...base,
       items: list(content.items).map((entry) => {
         const row = record(entry);
-        return { label: string(row.label), value: display(row.value) };
+        return {
+          label: string(row.label),
+          value: display(row.value),
+          audience: string(row.audience),
+        };
       }),
     }),
     bar_chart: () => ({
@@ -580,6 +603,7 @@ export function toManualValues<Type extends ManualType>(
           label: string(row.label),
           value: display(row.value),
           format: oneOf(numericFormats, row.format, "number"),
+          audience: string(row.audience),
         };
       }),
     }),
@@ -597,6 +621,7 @@ export function toManualValues<Type extends ManualType>(
         items: items.map((row) => ({
           label: string(row.label),
           value: display(row.value),
+          audience: string(row.audience),
         })),
       };
     },
@@ -618,6 +643,7 @@ export function toManualValues<Type extends ManualType>(
           secondaryLabel: string(secondary.label),
           secondaryValue: display(secondary.value),
           secondaryFormat: oneOf(valueFormats, secondary.format, "number"),
+          audience: string(row.audience),
         };
       }),
       footer: list(content.footer).map((entry) => {
@@ -640,6 +666,7 @@ export function toManualValues<Type extends ManualType>(
             "",
           ),
           changeLabel: string(change.label),
+          audience: string(kpi.audience),
         };
       }),
     }),
@@ -658,6 +685,7 @@ export function toManualValues<Type extends ManualType>(
             field: string(row.field),
             value: string(row.value),
             note: string(row.note),
+            audience: string(row.audience),
           };
         }),
       };
@@ -669,6 +697,7 @@ export function toManualValues<Type extends ManualType>(
           key: string(column.key),
           label: string(column.label),
           format: oneOf(valueFormats, column.format, "text"),
+          audience: string(column.audience),
         };
       });
       return {
@@ -687,6 +716,7 @@ export function toManualValues<Type extends ManualType>(
               ),
             ),
             statuses: cells.map((cell) => toStatus(record(cell).status)),
+            audience: string(row.audience),
           };
         }),
       };
@@ -704,6 +734,7 @@ export function toManualValues<Type extends ManualType>(
           return {
             label: string(row.label),
             values: columns.map((_, index) => display(cells[index])),
+            audience: string(row.audience),
           };
         }),
       };
@@ -756,11 +787,11 @@ export function emptyRow<Type extends ManualType>(
 function blankRow(type: ManualType, values: ManualValues<ManualType>) {
   switch (type) {
     case "kpi_list":
-      return { label: "", value: "" };
+      return { label: "", value: "", audience: "" };
     case "bar_chart":
-      return { label: "", value: "", format: "number" };
+      return { label: "", value: "", format: "number", audience: "" };
     case "donut":
-      return { label: "", value: "" };
+      return { label: "", value: "", audience: "" };
     case "progress_list": {
       const groups = (values as ManualValues<"progress_list">).groups;
       return {
@@ -772,21 +803,24 @@ function blankRow(type: ManualType, values: ManualValues<ManualType>) {
         secondaryLabel: "",
         secondaryValue: "",
         secondaryFormat: "number",
+        audience: "",
       };
     }
     case "field_table":
-      return { field: "", value: "", note: "" };
+      return { field: "", value: "", note: "", audience: "" };
     case "data_table": {
       const columns = (values as ManualValues<"data_table">).columns;
       return {
         values: columns.map(() => ""),
         statuses: columns.map(() => ({ code: "", label: "" })),
+        audience: "",
       };
     }
     case "heatmap":
       return {
         label: "",
         values: (values as ManualValues<"heatmap">).columns.map(() => ""),
+        audience: "",
       };
     case "gauge":
       return { label: "", value: "", format: "number" };
@@ -805,7 +839,7 @@ function withStarterRows<Type extends ManualType>(
     if (columns.length === 0)
       next.columns =
         type === "data_table"
-          ? [{ key: "", label: "", format: "text" }]
+          ? [{ key: "", label: "", format: "text", audience: "" }]
           : [{ label: "" }];
   }
   const rowsKey =
@@ -821,6 +855,11 @@ function toChip(status: { code: string; label: string }) {
   if (!status.code) return null;
   const code = status.code as (typeof cellStatusCodes)[number];
   return { code, label: status.label.trim() || statusCodeLabels[code] };
+}
+
+// The `audience` key of an entry, sent only when it is tagged.
+function tag(audience: string) {
+  return audience ? { audience } : {};
 }
 
 function amountOrText(value: string, format: ValueFormat) {
@@ -840,6 +879,7 @@ function toContent<Type extends ManualType>(
           label: row.label.trim(),
           value: row.value.trim(),
           format: "text",
+          ...tag(row.audience),
         })),
       };
     }
@@ -850,6 +890,7 @@ function toContent<Type extends ManualType>(
           label: row.label.trim(),
           value: parseAmount(row.value) ?? null,
           format: row.format,
+          ...tag(row.audience),
         })),
       };
     }
@@ -869,6 +910,7 @@ function toContent<Type extends ManualType>(
           label: row.label.trim(),
           value: parseAmount(row.value) ?? null,
           format: form.itemFormat,
+          ...tag(row.audience),
         })),
       };
     }
@@ -901,6 +943,7 @@ function toContent<Type extends ManualType>(
                   format: row.secondaryFormat,
                 }
               : null,
+            ...tag(row.audience),
           };
         }),
         ...(form.footer.length > 0
@@ -918,6 +961,7 @@ function toContent<Type extends ManualType>(
                       label: kpi.changeLabel.trim() || null,
                     }
                   : null,
+                ...tag(kpi.audience),
               })),
             }
           : {}),
@@ -934,6 +978,7 @@ function toContent<Type extends ManualType>(
           field: row.field.trim(),
           value: row.value.trim(),
           note: row.note.trim() || null,
+          ...tag(row.audience),
         })),
       };
     }
@@ -945,9 +990,12 @@ function toContent<Type extends ManualType>(
         format: column.format,
       }));
       return {
-        columns,
-        rows: form.rows.map((row) =>
-          Object.fromEntries(
+        columns: columns.map((column, index) => ({
+          ...column,
+          ...tag(form.columns[index]?.audience ?? ""),
+        })),
+        rows: form.rows.map((row) => ({
+          ...Object.fromEntries(
             columns.map((column, index) => {
               const cell = row.values[index] ?? "";
               const value =
@@ -961,7 +1009,8 @@ function toContent<Type extends ManualType>(
               return [column.key, chip ? { value, status: chip } : value];
             }),
           ),
-        ),
+          ...tag(row.audience),
+        })),
       };
     }
     case "heatmap": {
@@ -973,6 +1022,7 @@ function toContent<Type extends ManualType>(
           values: form.columns.map(
             (_, index) => parseAmount(row.values[index] ?? "") ?? null,
           ),
+          ...tag(row.audience),
         })),
       };
     }
@@ -1048,6 +1098,8 @@ export function manualFieldForServerKey<Type extends ManualType>(
     return field;
   }
   if (index === undefined) return field;
+  // `content.items.2.audience`, or a data table column's.
+  if (part === "audience") return `${field}.${index}.audience`;
   switch (type) {
     case "kpi_list":
       return `items.${index}.${part === "label" ? "label" : "value"}`;

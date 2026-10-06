@@ -106,13 +106,10 @@ function ClientActions({
 function ClientIdentity({ client }: { client: ClientSummary }) {
   return (
     <Link
-      className="group flex min-w-40 flex-col"
+      className="text-strong hover:text-primary block min-w-40 font-medium"
       href={clientDetailUrl(Number(client.id), client.agencyId)}
     >
-      <span className="text-strong group-hover:text-primary font-medium">
-        {client.name}
-      </span>
-      <span className="text-muted-foreground text-xs">{client.id}</span>
+      {client.name}
     </Link>
   );
 }

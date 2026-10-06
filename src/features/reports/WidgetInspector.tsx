@@ -29,6 +29,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { PreviewRange, ReportScope } from "./api";
 import {
   type Accent,
+  type Audience,
   type EditingValue,
   type LayoutItem,
   reportMetricCodes,
@@ -706,6 +707,7 @@ export type InspectorBudgets = {
 // swatches from GET layout).
 export function WidgetInspector({
   accents = [],
+  audiences,
   budgets,
   focusPart,
   formRef,
@@ -718,6 +720,9 @@ export function WidgetInspector({
   scope,
 }: {
   accents?: readonly Accent[];
+  // The report's audiences, for a Marketing Intelligence widget whose rows
+  // can be tagged with one.
+  audiences?: readonly Audience[];
   budgets?: InspectorBudgets;
   // Moves focus to the field of a card part clicked on the canvas, each time
   // `count` changes.
@@ -871,13 +876,21 @@ export function WidgetInspector({
           table editor; headlines and lists use the text editor. */}
           {item.kind === "text" &&
             (hasManualEditor(item.type) ? (
-              <ManualDataForm key={formKey} {...formProps} />
+              <ManualDataForm
+                audiences={audiences}
+                key={formKey}
+                {...formProps}
+              />
             ) : (
               <TextWidgetForm key={formKey} {...formProps} />
             ))}
           {item.kind === "manual_data" &&
             (hasManualEditor(item.type) ? (
-              <ManualDataForm key={formKey} {...formProps} />
+              <ManualDataForm
+                audiences={audiences}
+                key={formKey}
+                {...formProps}
+              />
             ) : (
               <TitleOnlyForm
                 key={formKey}

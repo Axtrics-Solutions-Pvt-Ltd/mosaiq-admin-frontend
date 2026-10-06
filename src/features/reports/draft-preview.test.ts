@@ -111,6 +111,37 @@ describe("draftPreviewWidget", () => {
     });
   });
 
+  it("filters a Marketing Intelligence draft by the selected audiences", () => {
+    const overview = item({
+      code: "audience_overview",
+      type: "kpi_list",
+      kind: "manual_data",
+    });
+    const patch: LayoutItemPatch = {
+      content: {
+        items: [
+          { label: "Visits", value: "171K", format: "text" },
+          { label: "Visits", value: "75K", format: "text", audience: "chinese" },
+        ],
+      },
+    };
+    const widget = served({ type: "kpi_list", kind: "manual_data", items: [] });
+    const labels = { chinese: "Chinese", filipino: "Filipino" };
+
+    expect(
+      draftPreviewWidget(widget, overview, patch, {
+        selected: ["chinese"],
+        labels,
+      }),
+    ).toMatchObject({ items: [{ value: "75K" }], empty: false });
+    expect(
+      draftPreviewWidget(widget, overview, patch, {
+        selected: ["filipino"],
+        labels,
+      }),
+    ).toMatchObject({ empty: true });
+  });
+
   it("keeps the served content while the draft can't be drawn", () => {
     const gauge = item({ code: "health", type: "gauge", kind: "manual_data" });
     const widget = served({

@@ -34,6 +34,8 @@ export type PreviewRange = {
   from?: string;
   to?: string;
   channel?: string;
+  // Comma-separated audience codes; Marketing Intelligence tabs only.
+  audiences?: string;
 };
 
 export type CreativeListFilters = PreviewRange & {
@@ -199,6 +201,7 @@ export async function getPreviewTab(
       from: range.from,
       to: range.to,
       channel: range.channel,
+      audiences: range.audiences,
     }),
     { signal },
   );

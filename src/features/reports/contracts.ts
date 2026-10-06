@@ -55,6 +55,30 @@ const reportWorkspaceSchema = z.object({
     .nullable(),
 });
 
+// An audience segment Marketing Intelligence can be filtered by. The code is
+// made from the label when the audience is added and never changes, so a
+// renamed audience keeps its tags on widget rows.
+export const audienceCodePattern = /^[a-z][a-z0-9_]*$/;
+export const maxAudiences = 20;
+export const audienceSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+});
+
+// The code for a new audience: its label in snake case, e.g. "South Asian" →
+// "south_asian", with a number added when another audience has it.
+export function audienceCode(label: string, taken: readonly string[]) {
+  const base =
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^[^a-z]+|_+$/g, "")
+      .slice(0, 36) || "audience";
+  let code = base;
+  for (let suffix = 2; taken.includes(code); suffix++) code = `${base}_${suffix}`;
+  return code;
+}
+
 const reportSchema = z.object({
   id: idSchema,
   agency_id: idSchema,
@@ -65,6 +89,8 @@ const reportSchema = z.object({
   currency: z.string(),
   timezone: z.string(),
   default_range_preset: z.enum(rangePresets),
+  // Older API versions leave it out: no audiences.
+  audiences: z.array(audienceSchema).default([]),
   layout_version: z.number().int(),
   // Links that open in the portal: not revoked, not expired, and the report
   // is not archived (an archived report always reports 0).
@@ -96,6 +122,16 @@ const workspaceIdsSchema = z
     message: "Each source channel can be added once.",
   });
 
+const audiencesRequestSchema = z
+  .array(
+    z.strictObject({
+      code: z.string().max(40).regex(audienceCodePattern),
+      label: z.string().trim().min(1).max(60),
+    }),
+  )
+  .max(maxAudiences)
+  .nullable();
+
 // Request bodies, matching the API's ReportRequest rules.
 export const reportCreateRequestSchema = z.strictObject({
   name: z.string().trim().min(1).max(150),
@@ -103,6 +139,7 @@ export const reportCreateRequestSchema = z.strictObject({
   timezone: z.string().min(1).max(64).optional(),
   default_range_preset: z.enum(rangePresets).optional(),
   workspace_ids: workspaceIdsSchema.optional(),
+  audiences: audiencesRequestSchema.optional(),
 });
 export const reportUpdateRequestSchema = z.strictObject({
   name: z.string().trim().min(1).max(150).optional(),
@@ -110,6 +147,8 @@ export const reportUpdateRequestSchema = z.strictObject({
   currency: currencySchema.optional(),
   timezone: z.string().min(1).max(64).optional(),
   default_range_preset: z.enum(rangePresets).optional(),
+  // The full list in display order; null or [] removes every audience.
+  audiences: audiencesRequestSchema.optional(),
 });
 export const reportWorkspacesRequestSchema = z.strictObject({
   workspace_ids: workspaceIdsSchema,
@@ -251,6 +290,8 @@ export const previewMetaSchema = z.object({
           .optional(),
       }),
     ),
+    // The audiences the Marketing Intelligence preview can be filtered by.
+    audiences: z.array(audienceSchema).default([]),
     sections: z.array(
       z.object({
         code: z.string(),
@@ -300,6 +341,9 @@ export const previewTabSchema = z.object({
       compare_to: z.string(),
     }),
     channel: z.string().nullable(),
+    // The applied audience filter, in report order; [] for none (and on tabs
+    // outside Marketing Intelligence).
+    audiences: z.array(z.string()).default([]),
     layout_version: z.number().int(),
     widgets: z.array(previewWidgetSchema),
   }),
@@ -371,6 +415,7 @@ export const creativeThumbnailResponseSchema = z.object({
 });
 
 export type Report = z.infer<typeof reportSchema>;
+export type Audience = z.infer<typeof audienceSchema>;
 export type ReportWorkspace = z.infer<typeof reportWorkspaceSchema>;
 export type ReportStatus = (typeof reportStatuses)[number];
 export type RangePreset = (typeof rangePresets)[number];

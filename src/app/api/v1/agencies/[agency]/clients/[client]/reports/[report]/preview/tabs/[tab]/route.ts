@@ -16,7 +16,7 @@ export async function GET(
   if (!ids || !/^[a-z][a-z0-9_]{0,59}$/.test(tab)) return invalidScope();
   const incoming = new URL(request.url).searchParams;
   const query = new URLSearchParams();
-  for (const key of ["from", "to", "channel"]) {
+  for (const key of ["from", "to", "channel", "audiences"]) {
     const value = incoming.get(key);
     if (value) query.set(key, value);
   }

@@ -34,6 +34,7 @@ export default async function ReportBuilderPage({
         from: hasRange ? from : undefined,
         to: hasRange ? to : undefined,
         channel: single(query.channel),
+        audiences: single(query.audiences),
       }}
     />
   );

@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { type ValueFormat, valueFormats } from "@/lib/formatters";
 
+import type { Audience } from "./contracts";
 import {
   AsOfField,
   FormShell,
@@ -146,6 +147,66 @@ const sentimentOptions = [
   })),
 ];
 
+// The audience a row is shown for, on Marketing Intelligence widgets of a
+// report with audiences. A code no longer in the list is kept as it is, so
+// saving never drops a tag silently.
+function AudienceField<Values extends FieldValues>({
+  audiences,
+  form,
+  name,
+}: {
+  audiences: readonly Audience[];
+  form: UseFormReturn<Values>;
+  name: Path<Values>;
+}) {
+  const current = String(form.getValues(name) ?? "");
+  if (audiences.length === 0 && !current) return null;
+  const isKnown = audiences.some((audience) => audience.code === current);
+  return (
+    <Field
+      as="select"
+      form={form}
+      label="Audience"
+      name={name}
+      options={[
+        { value: "", label: "All audiences" },
+        ...audiences.map((audience) => ({
+          value: audience.code,
+          label: audience.label,
+        })),
+        ...(current && !isKnown
+          ? [{ value: current, label: "Unknown audience" }]
+          : []),
+      ]}
+    />
+  );
+}
+
+// How tagged rows behave in the portal's audience filter. Summary rows
+// (KPIs, fields, totals) are the totals when untagged; breakdown rows are
+// each audience's share.
+function AudienceNote({
+  audiences,
+  kind,
+}: {
+  audiences: readonly Audience[];
+  kind: "summary" | "breakdown";
+}) {
+  if (audiences.length === 0) return null;
+  return (
+    <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+      {kind === "summary"
+        ? "Viewers can filter by audience. Untagged rows are the totals, shown when no audience is selected; tag a row with an audience to show it when that audience is selected."
+        : "Viewers can filter by audience. Tag each row with its audience; with an audience selected, only its rows are shown."}
+    </p>
+  );
+}
+
+type ManualFormProps<Type extends ManualType> = InspectorFormProps & {
+  initial: ManualValues<Type>;
+  audiences: readonly Audience[];
+};
+
 function arrayError(error: unknown) {
   const record = error as
     { message?: string; root?: { message?: string } } | undefined;
@@ -186,9 +247,7 @@ function ManualShell<Values extends ManualValues<ManualType>>({
 }
 
 function KpiListForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"kpi_list">;
-  },
+  props: ManualFormProps<"kpi_list">,
 ) {
   const { form, ...submit } = useManualForm("kpi_list", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
@@ -199,6 +258,7 @@ function KpiListForm(
       isSaving={props.isSaving}
       item={props.item}
     >
+      <AudienceNote audiences={props.audiences} kind="summary" />
       <RowListEditor
         addLabel="Add row"
         count={items.fields.length}
@@ -214,6 +274,11 @@ function KpiListForm(
           <div className="grid gap-2 sm:grid-cols-2">
             <Field form={form} label="Label" name={`items.${index}.label`} />
             <Field form={form} label="Value" name={`items.${index}.value`} />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`items.${index}.audience`}
+            />
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
@@ -223,9 +288,7 @@ function KpiListForm(
 }
 
 function BarChartForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"bar_chart">;
-  },
+  props: ManualFormProps<"bar_chart">,
 ) {
   const { form, ...submit } = useManualForm("bar_chart", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
@@ -236,6 +299,7 @@ function BarChartForm(
       isSaving={props.isSaving}
       item={props.item}
     >
+      <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
         addLabel="Add bar"
         count={items.fields.length}
@@ -269,6 +333,11 @@ function BarChartForm(
               name={`items.${index}.format`}
               options={numericFormatOptions}
             />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`items.${index}.audience`}
+            />
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
@@ -278,9 +347,7 @@ function BarChartForm(
 }
 
 function DonutForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"donut">;
-  },
+  props: ManualFormProps<"donut">,
 ) {
   const { form, ...submit } = useManualForm("donut", props, props.initial);
   const items = useFieldArray({ control: form.control, name: "items" });
@@ -315,6 +382,7 @@ function DonutForm(
         name="itemFormat"
         options={numericFormatOptions}
       />
+      <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
         addLabel="Add segment"
         count={items.fields.length}
@@ -335,6 +403,11 @@ function DonutForm(
               label="Value"
               name={`items.${index}.value`}
             />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`items.${index}.audience`}
+            />
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
@@ -344,9 +417,7 @@ function DonutForm(
 }
 
 function ProgressListForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"progress_list">;
-  },
+  props: ManualFormProps<"progress_list">,
 ) {
   const { form, ...submit } = useManualForm(
     "progress_list",
@@ -398,6 +469,7 @@ function ProgressListForm(
         )}
         rowKeys={groups.fields.map((field) => field.id)}
       />
+      <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
         addLabel="Add row"
         count={items.fields.length}
@@ -465,6 +537,11 @@ function ProgressListForm(
               name={`items.${index}.secondaryFormat`}
               options={anyFormatOptions}
             />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`items.${index}.audience`}
+            />
           </div>
         )}
         rowKeys={items.fields.map((field) => field.id)}
@@ -488,6 +565,7 @@ function ProgressListForm(
             changeDirection: "",
             changeSentiment: "",
             changeLabel: "",
+            audience: "",
           })
         }
         remove={footer.remove}
@@ -502,6 +580,11 @@ function ProgressListForm(
                 label="Format"
                 name={`footer.${index}.format`}
                 options={anyFormatOptions}
+              />
+              <AudienceField
+                audiences={props.audiences}
+                form={form}
+                name={`footer.${index}.audience`}
               />
             </div>
             <fieldset className="space-y-2 rounded-md border p-3">
@@ -557,9 +640,7 @@ function ProgressListForm(
 }
 
 function FieldTableForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"field_table">;
-  },
+  props: ManualFormProps<"field_table">,
 ) {
   const { form, ...submit } = useManualForm(
     "field_table",
@@ -587,6 +668,7 @@ function FieldTableForm(
           <Field form={form} label="Third heading" name="columns.2" />
         </div>
       </fieldset>
+      <AudienceNote audiences={props.audiences} kind="summary" />
       <RowListEditor
         addLabel="Add row"
         count={rows.fields.length}
@@ -606,6 +688,11 @@ function FieldTableForm(
               form={form}
               label="Note"
               name={`rows.${index}.note`}
+            />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`rows.${index}.audience`}
             />
           </div>
         )}
@@ -663,9 +750,7 @@ function useCellColumns<
 }
 
 function DataTableForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"data_table">;
-  },
+  props: ManualFormProps<"data_table">,
 ) {
   const { form, ...submit } = useManualForm("data_table", props, props.initial);
   const grid = useCellColumns<"data_table">(form);
@@ -693,7 +778,9 @@ function DataTableForm(
         max={manualLimits.dataColumns}
         move={grid.moveColumn}
         noun="column"
-        onAdd={() => grid.addColumn({ key: "", label: "", format: "number" })}
+        onAdd={() =>
+          grid.addColumn({ key: "", label: "", format: "number", audience: "" })
+        }
         remove={grid.removeColumn}
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-3">
@@ -715,10 +802,16 @@ function DataTableForm(
               name={`columns.${index}.format`}
               options={anyFormatOptions}
             />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`columns.${index}.audience`}
+            />
           </div>
         )}
         rowKeys={grid.columns.fields.map((field) => field.id)}
       />
+      <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
         addLabel="Add row"
         count={grid.rows.fields.length}
@@ -734,6 +827,11 @@ function DataTableForm(
         remove={grid.rows.remove}
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-2">
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`rows.${index}.audience`}
+            />
             {columnValues.map((column, columnIndex) => {
               const label = column.label.trim() || `Column ${columnIndex + 1}`;
               return (
@@ -776,9 +874,7 @@ function DataTableForm(
 }
 
 function HeatmapForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"heatmap">;
-  },
+  props: ManualFormProps<"heatmap">,
 ) {
   const { form, ...submit } = useManualForm("heatmap", props, props.initial);
   const grid = useCellColumns<"heatmap">(form);
@@ -806,6 +902,7 @@ function HeatmapForm(
         )}
         rowKeys={grid.columns.fields.map((field) => field.id)}
       />
+      <AudienceNote audiences={props.audiences} kind="breakdown" />
       <RowListEditor
         addLabel="Add row"
         count={grid.rows.fields.length}
@@ -822,6 +919,11 @@ function HeatmapForm(
         renderRow={(index) => (
           <div className="grid gap-2 sm:grid-cols-2">
             <Field form={form} label="Row label" name={`rows.${index}.label`} />
+            <AudienceField
+              audiences={props.audiences}
+              form={form}
+              name={`rows.${index}.audience`}
+            />
             {columnValues.map((column, columnIndex) => (
               <Field
                 form={form}
@@ -840,9 +942,7 @@ function HeatmapForm(
 }
 
 function GaugeForm(
-  props: InspectorFormProps & {
-    initial: ManualValues<"gauge">;
-  },
+  props: ManualFormProps<"gauge">,
 ) {
   const { form, ...submit } = useManualForm("gauge", props, props.initial);
   const details = useFieldArray({ control: form.control, name: "details" });
@@ -932,7 +1032,12 @@ function GaugeForm(
 }
 
 // One generic editor per render type, reused by every manual widget of it.
-export function ManualDataForm(props: InspectorFormProps) {
+// `audiences` are offered as row tags on Marketing Intelligence widgets.
+export function ManualDataForm({
+  audiences = [],
+  ...inspectorProps
+}: InspectorFormProps & { audiences?: readonly Audience[] }) {
+  const props = { ...inspectorProps, audiences };
   const { item } = props;
   switch (item.type) {
     case "kpi_list":

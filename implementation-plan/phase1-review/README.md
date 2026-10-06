@@ -60,6 +60,7 @@ The capabilities `imports.create`, `importHistory.view`, `connectors.view` and `
 | 8 | [STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md](STEP-8-MANAGER-MULTI-CLIENT-ACCESS.md) | Manager access to several clients, on invite and edit |
 | 9 | [STEP-9-SECTION-ACCENTS.md](STEP-9-SECTION-ACCENTS.md) | Section colours in the builder: picker, coloured section and tab rows |
 | 10 | [STEP-10-CHANNEL-PLATFORM-RENAME.md](STEP-10-CHANNEL-PLATFORM-RENAME.md) | UI rename Workspace → Channel, Channel → Platform; report data per channel (workspace) |
+| 11 | [STEP-11-AUDIENCE-FILTER.md](STEP-11-AUDIENCE-FILTER.md) | Audience list in report settings, audience tags in Marketing Intelligence forms, audience filter in the preview |
 
 ## Definition of done per step
 

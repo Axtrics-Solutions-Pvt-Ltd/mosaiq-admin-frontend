@@ -61,6 +61,7 @@ export const reportKeys = {
       range.from ?? "",
       range.to ?? "",
       range.channel ?? "",
+      range.audiences ?? "",
     ] as const,
   // Under the preview prefix, so saving the widget's settings or reloading
   // the preview refreshes the list too.

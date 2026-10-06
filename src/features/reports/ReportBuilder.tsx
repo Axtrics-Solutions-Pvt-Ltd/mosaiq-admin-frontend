@@ -42,17 +42,20 @@ import {
   reportMetricLabel,
 } from "./contracts";
 import {
+  type AudienceView,
   draftPreviewWidget,
   type InspectorDraft,
   withDraftLayout,
 } from "./draft-preview";
 import type { InspectorFormHandle } from "./inspector-parts";
 import {
+  audienceSectionCode,
   defaultTabCode,
   findLayoutItem,
   findTab,
   itemTitle,
   layoutItemElementId,
+  sectionOfItem,
   tabsOf,
 } from "./layout";
 import { type DateRange, PreviewRangeControls } from "./PreviewRangeControls";
@@ -102,6 +105,8 @@ export type BuilderView = {
   from?: string;
   to?: string;
   channel?: string;
+  // Comma-separated audience codes, for Marketing Intelligence tabs.
+  audiences?: string;
 };
 
 function isNotFound(error: unknown) {
@@ -330,10 +335,29 @@ function Builder({
             to: meta.data.date_range.default.to,
           }
         : undefined;
+  // The audience filter applies to Marketing Intelligence only. Codes no
+  // longer in the report are dropped, so an old link still opens.
+  const reportAudiences = meta.data?.audiences ?? [];
+  const isAudienceTab =
+    findTab(sections, tabCode ?? "")?.section.code === audienceSectionCode &&
+    reportAudiences.length > 0;
+  const requestedAudiences = (view.audiences ?? "").split(",");
+  const selectedAudiences = isAudienceTab
+    ? reportAudiences
+        .map((audience) => audience.code)
+        .filter((code) => requestedAudiences.includes(code))
+    : [];
+  const audienceView: AudienceView = {
+    selected: selectedAudiences,
+    labels: Object.fromEntries(
+      reportAudiences.map((audience) => [audience.code, audience.label]),
+    ),
+  };
   const preview = usePreviewTab(scope, tabCode, {
     from: view.from,
     to: view.to,
     channel: view.channel,
+    audiences: selectedAudiences.join(",") || undefined,
   });
   const selectedItem =
     selectedItemId !== undefined
@@ -484,6 +508,10 @@ function Builder({
   function changeChannel(channel: string | undefined) {
     setPendingCorrection(undefined);
     replaceView({ channel });
+  }
+
+  function changeAudiences(audiences: readonly string[]) {
+    replaceView({ audiences: audiences.join(",") || undefined });
   }
 
   function saveOrder(order: ReorderItem[]) {
@@ -663,9 +691,13 @@ function Builder({
     range?.to ??
     new Date().toISOString()
   ).slice(0, 7);
+  const isAudienceItem =
+    selectedItem !== undefined &&
+    sectionOfItem(sections, selectedItem.id)?.code === audienceSectionCode;
   const inspector = selectedItem ? (
     <WidgetInspector
       accents={layout.data?.accents}
+      audiences={isAudienceItem ? reportAudiences : undefined}
       budgets={{
         allBudgetsHref: `${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`,
         focusRequest: budgetFocusRequest,
@@ -716,7 +748,12 @@ function Builder({
     selectedItem && shownDraft
       ? preview.data?.widgets.map((widget) =>
           widget.editing.item_id === shownDraft.itemId
-            ? draftPreviewWidget(widget, selectedItem, shownDraft.patch)
+            ? draftPreviewWidget(
+                widget,
+                selectedItem,
+                shownDraft.patch,
+                isAudienceItem ? audienceView : undefined,
+              )
             : widget,
         )
       : preview.data?.widgets;
@@ -744,6 +781,11 @@ function Builder({
       <Card className="flex flex-wrap items-end justify-between gap-3 p-4">
         {meta.data && range ? (
           <PreviewRangeControls
+            audienceFilter={
+              isAudienceTab
+                ? { selected: selectedAudiences, onChange: changeAudiences }
+                : undefined
+            }
             channel={view.channel}
             key={`${range.from}-${range.to}`}
             meta={meta.data}

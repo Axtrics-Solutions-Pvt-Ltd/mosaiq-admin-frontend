@@ -11,6 +11,7 @@ import { StatePanel } from "@/components/shared/StatePanel";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { FormField } from "@/components/ui/FormField";
+import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { toast } from "@/components/ui/Toast";
 import { routes } from "@/config/routes";
@@ -22,6 +23,9 @@ import { ApiError } from "@/lib/api/errors";
 
 import type { ReportScope } from "./api";
 import {
+  type Audience,
+  audienceCode,
+  maxAudiences,
   type Report,
   type ReportProfileForm,
   reportProfileFormSchema,
@@ -357,6 +361,231 @@ function SourcesCard({
   );
 }
 
+// Problems the API would refuse, found before saving.
+function audiencesProblem(audiences: readonly Audience[]) {
+  const labels = audiences.map((audience) => audience.label.trim());
+  if (labels.some((label) => label === ""))
+    return "Give every audience a name.";
+  if (labels.some((label) => label.length > 60))
+    return "Keep audience names to 60 characters.";
+  const lower = labels.map((label) => label.toLowerCase());
+  if (lower.some((label, index) => lower.indexOf(label) !== index))
+    return "Each audience needs its own name.";
+  return undefined;
+}
+
+// The audience segments viewers can filter Marketing Intelligence by. A new
+// audience gets its code from its name; renaming keeps the code, so rows
+// tagged with it stay tagged.
+function AudiencesCard({
+  report,
+  scope,
+}: {
+  report: Report;
+  scope: ReportScope;
+}) {
+  const mutation = useUpdateReport();
+  const [audiences, setAudiences] = useState<Audience[]>(report.audiences);
+  const [newLabel, setNewLabel] = useState("");
+  const [error, setError] = useState<string>();
+  const isDirty = JSON.stringify(audiences) !== JSON.stringify(report.audiences);
+  useUnsavedChangesWarning(isDirty);
+
+  function move(index: number, offset: -1 | 1) {
+    setAudiences((current) => {
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(index + offset, 0, moved!);
+      return next;
+    });
+  }
+
+  function rename(code: string, label: string) {
+    setAudiences((current) =>
+      current.map((audience) =>
+        audience.code === code ? { ...audience, label } : audience,
+      ),
+    );
+  }
+
+  function add() {
+    const label = newLabel.trim();
+    if (!label) return;
+    setAudiences((current) => [
+      ...current,
+      {
+        code: audienceCode(
+          label,
+          current.map((audience) => audience.code),
+        ),
+        label,
+      },
+    ]);
+    setNewLabel("");
+  }
+
+  async function save() {
+    const problem = audiencesProblem(audiences);
+    setError(problem);
+    if (problem) return;
+    try {
+      const saved = await mutation.mutateAsync({
+        scope,
+        payload: {
+          audiences: audiences.map((audience) => ({
+            code: audience.code,
+            label: audience.label.trim(),
+          })),
+        },
+      });
+      setAudiences(saved.audiences);
+      toast({ title: "Audience segments saved", tone: "success" });
+    } catch (caught) {
+      // An audience still tagged on a widget can't be removed; the API
+      // names the widgets.
+      setError(
+        caught instanceof ApiError
+          ? (Object.entries(caught.fieldErrors).find(([key]) =>
+              key.startsWith("audiences"),
+            )?.[1] ?? caught.message)
+          : "The audience segments could not be saved. Please try again.",
+      );
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Audience segments</CardTitle>
+        <p className="text-muted-foreground text-sm">
+          Viewers can filter Marketing Intelligence by these audiences. Tag
+          rows with an audience in each Marketing Intelligence widget.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && (
+          <p
+            className="text-destructive rounded-lg border p-3 text-sm"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+        {audiences.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+            No audiences. The portal shows no audience filter.
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {audiences.map((audience, index) => (
+              <li
+                className="flex flex-wrap items-end justify-between gap-3 rounded-lg border p-3"
+                key={audience.code}
+              >
+                <div className="min-w-60 flex-1">
+                  <FormField
+                    id={`report-audience-${audience.code}`}
+                    label={`Audience ${index + 1}`}
+                  >
+                    <Input
+                      autoComplete="off"
+                      id={`report-audience-${audience.code}`}
+                      maxLength={60}
+                      onChange={(event) =>
+                        rename(audience.code, event.target.value)
+                      }
+                      value={audience.label}
+                    />
+                  </FormField>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    aria-label={`Move ${audience.label} up`}
+                    disabled={index === 0}
+                    onClick={() => move(index, -1)}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <ArrowUp aria-hidden className="size-4" />
+                  </Button>
+                  <Button
+                    aria-label={`Move ${audience.label} down`}
+                    disabled={index === audiences.length - 1}
+                    onClick={() => move(index, 1)}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <ArrowDown aria-hidden className="size-4" />
+                  </Button>
+                  <Button
+                    aria-label={`Remove ${audience.label}`}
+                    onClick={() =>
+                      setAudiences((current) =>
+                        current.filter((entry) => entry.code !== audience.code),
+                      )
+                    }
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <Trash2 aria-hidden className="size-4" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-60 flex-1">
+            <FormField id="report-add-audience" label="Add an audience">
+              <Input
+                autoComplete="off"
+                disabled={audiences.length >= maxAudiences}
+                id="report-add-audience"
+                maxLength={60}
+                onChange={(event) => setNewLabel(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    add();
+                  }
+                }}
+                placeholder={
+                  audiences.length >= maxAudiences
+                    ? `Up to ${maxAudiences} audiences`
+                    : "e.g. South Asian"
+                }
+                value={newLabel}
+              />
+            </FormField>
+          </div>
+          <Button
+            disabled={!newLabel.trim() || audiences.length >= maxAudiences}
+            onClick={add}
+            type="button"
+            variant="outline"
+          >
+            <Plus aria-hidden className="size-4" /> Add
+          </Button>
+        </div>
+        <div className="flex items-center justify-end gap-3 border-t pt-4">
+          {isDirty && (
+            <span className="text-muted-foreground text-xs">
+              Unsaved changes
+            </span>
+          )}
+          <Button
+            disabled={mutation.isPending || !isDirty}
+            onClick={save}
+            type="button"
+          >
+            {mutation.isPending ? "Saving..." : "Save audiences"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ReportSettingsScreen({
   agencyId,
   clientId,
@@ -409,12 +638,17 @@ export function ReportSettingsScreen({
     <PageStack>
       <ReportPageHeader
         current="settings"
-        description="The report's name, status, default range, currency and time zone, and the channels it combines."
+        description="The report's name, status, default range, currency and time zone, the channels it combines, and the audiences viewers can filter by."
         report={report.data}
       />
       <ProfileCard key={report.data.id} report={report.data} scope={scope} />
       <SourcesCard
         key={report.data.workspaces.map((workspace) => workspace.id).join(",")}
+        report={report.data}
+        scope={scope}
+      />
+      <AudiencesCard
+        key={report.data.audiences.map((audience) => audience.code).join(",")}
         report={report.data}
         scope={scope}
       />

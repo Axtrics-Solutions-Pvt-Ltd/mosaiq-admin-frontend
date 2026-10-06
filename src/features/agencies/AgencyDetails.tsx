@@ -4,11 +4,8 @@ import {
   Activity,
   Building2,
   Gauge,
-  Mail,
   MapPin,
-  Palette,
   Pencil,
-  Phone,
   Power,
   UsersRound,
 } from "lucide-react";
@@ -93,65 +90,6 @@ function Overview({ agency }: { agency: AgencyDetail }) {
   );
 }
 
-function PrimaryContact({ agency }: { agency: AgencyDetail }) {
-  const contact = agency.primaryContact;
-  const hasName = contact.name !== "--";
-  const hasEmail = contact.email !== "--";
-  const hasPhone = contact.phone !== "--";
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Primary contact</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-start gap-4">
-          <span className="bg-primary-soft text-primary flex size-12 items-center justify-center rounded-full font-semibold">
-            {hasName
-              ? contact.name
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")
-                  .slice(0, 2)
-              : "?"}
-          </span>
-          <div>
-            <h3 className="text-strong font-semibold">
-              {hasName ? contact.name : "Not provided"}
-            </h3>
-            {contact.jobTitle !== "--" && (
-              <p className="text-muted-foreground">{contact.jobTitle}</p>
-            )}
-            <div className="mt-4 space-y-2 text-sm">
-              {hasEmail && (
-                <a
-                  className="hover:text-primary flex items-center gap-2"
-                  href={`mailto:${contact.email}`}
-                >
-                  <Mail aria-hidden className="size-4" />
-                  {contact.email}
-                </a>
-              )}
-              {hasPhone && (
-                <a
-                  className="hover:text-primary flex items-center gap-2"
-                  href={`tel:${contact.phone.replaceAll(" ", "")}`}
-                >
-                  <Phone aria-hidden className="size-4" />
-                  {contact.phone}
-                </a>
-              )}
-              {!hasEmail && !hasPhone && (
-                <p className="text-muted-foreground">
-                  No contact details provided.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 function Defaults({ agency }: { agency: AgencyDetail }) {
   return (
     <Card>
@@ -248,40 +186,6 @@ function Administrators({ agency }: { agency: AgencyDetail }) {
   );
 }
 
-function BrandPreview({ agency }: { agency: AgencyDetail }) {
-  return (
-    <Card className="overflow-hidden">
-      <div className="bg-primary h-2" />
-      <CardContent className="pt-5">
-        <div className="bg-muted flex min-h-64 items-center justify-center rounded-lg border p-6">
-          <div className="bg-card w-full max-w-sm rounded-lg border p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <AgencyLogo
-                className="size-12"
-                name={agency.name}
-                tone={agency.logoTone}
-                url={agency.logoUrl}
-              />
-              <div>
-                <p className="text-strong font-semibold">
-                  {agency.displayName}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Client reporting portal
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 h-2 rounded-full bg-[var(--brand-primary)]" />
-            <p className="text-muted-foreground mt-3 text-xs">
-              Accent colour {agency.brandColor}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function RecentActivity({ agency }: { agency: AgencyDetail }) {
   return (
     <Card>
@@ -339,11 +243,6 @@ export function AgencyDetails({
       value: "overview",
     },
     {
-      content: <PrimaryContact agency={agency} />,
-      label: "Primary contact",
-      value: "contact",
-    },
-    {
       content: <Defaults agency={agency} />,
       label: "Defaults",
       value: "defaults",
@@ -357,11 +256,6 @@ export function AgencyDetails({
       content: <Administrators agency={agency} />,
       label: "Administrators",
       value: "administrators",
-    },
-    {
-      content: <BrandPreview agency={agency} />,
-      label: "Brand preview",
-      value: "brand",
     },
     {
       content: <RecentActivity agency={agency} />,
@@ -402,8 +296,7 @@ export function AgencyDetails({
             <span>{agency.name}</span>
           </>
         }
-        context={agency.primaryContact.name}
-        description="Review agency identity, defaults, people, channels, branding, and administrative activity."
+        description="Review agency identity, defaults, people, channels, and administrative activity."
         title={agency.name}
       />
       <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:p-5">
@@ -422,20 +315,12 @@ export function AgencyDetails({
           </div>
           <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-5 gap-y-1 text-sm">
             <span className="flex items-center gap-1.5">
-              <Mail aria-hidden className="size-4" />
-              {agency.primaryContact.email}
-            </span>
-            <span className="flex items-center gap-1.5">
               <Building2 aria-hidden className="size-4" />
               {agency.workspaces} channels
             </span>
             <span className="flex items-center gap-1.5">
               <MapPin aria-hidden className="size-4" />
               {agency.timeZone.split(" (")[0]}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Palette aria-hidden className="size-4" />
-              {agency.brandColor}
             </span>
           </div>
         </div>

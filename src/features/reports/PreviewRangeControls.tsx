@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 
 import {
+  type Audience,
   type PreviewMeta,
   rangePresetDays,
   rangePresetLabels,
@@ -119,13 +122,123 @@ function CustomRange({
   );
 }
 
+// The portal's "Audience segments" multi-select. Nothing selected means all
+// audiences.
+export function AudienceFilter({
+  audiences,
+  onChange,
+  selected,
+}: {
+  audiences: readonly Audience[];
+  onChange: (selected: string[]) => void;
+  selected: readonly string[];
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
+  const labelId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // Closes on a click outside, or on Escape.
+    const closeOutside = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node))
+        setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("mousedown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
+  function toggle(code: string) {
+    // Kept in the report's order, as the API echoes it.
+    onChange(
+      audiences
+        .map((audience) => audience.code)
+        .filter((option) =>
+          option === code ? !selected.includes(code) : selected.includes(option),
+        ),
+    );
+  }
+
+  const summary =
+    selected.length === 0
+      ? "All audiences"
+      : selected.length === 1
+        ? (audiences.find((audience) => audience.code === selected[0])
+            ?.label ?? "1 selected")
+        : `${selected.length} selected`;
+  return (
+    <div className="relative" ref={containerRef}>
+      <Label id={labelId}>Audience segments</Label>
+      <Button
+        aria-controls={panelId}
+        aria-expanded={isOpen}
+        aria-labelledby={`${labelId} ${panelId}-summary`}
+        className="mt-1.5 h-9 font-normal"
+        onClick={() => setIsOpen((open) => !open)}
+        type="button"
+        variant="outline"
+      >
+        <span id={`${panelId}-summary`}>{summary}</span>
+        <ChevronDown aria-hidden className="size-4" />
+      </Button>
+      {isOpen && (
+        <div
+          className="bg-card absolute z-20 mt-1 min-w-56 space-y-1 rounded-lg border p-2 shadow-md"
+          id={panelId}
+        >
+          <fieldset>
+            <legend className="sr-only">Audience segments</legend>
+            {audiences.map((audience) => (
+              <label
+                className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                key={audience.code}
+              >
+                <Checkbox
+                  checked={selected.includes(audience.code)}
+                  onChange={() => toggle(audience.code)}
+                />
+                {audience.label}
+              </label>
+            ))}
+          </fieldset>
+          <div className="border-t pt-1">
+            <Button
+              disabled={selected.length === 0}
+              onClick={() => onChange([])}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Clear selection
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PreviewRangeControls({
+  audienceFilter,
   channel,
   meta,
   onChannelChange,
   onRangeChange,
   range,
 }: {
+  // Shown on Marketing Intelligence tabs of a report with audiences.
+  audienceFilter?: {
+    selected: readonly string[];
+    onChange: (selected: string[]) => void;
+  };
   channel: string | undefined;
   meta: PreviewMeta;
   onChannelChange: (channel: string | undefined) => void;
@@ -189,6 +302,13 @@ export function PreviewRangeControls({
             ))}
           </Select>
         </div>
+      )}
+      {audienceFilter && meta.audiences.length > 0 && (
+        <AudienceFilter
+          audiences={meta.audiences}
+          onChange={audienceFilter.onChange}
+          selected={audienceFilter.selected}
+        />
       )}
     </div>
   );

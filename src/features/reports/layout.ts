@@ -38,6 +38,19 @@ export function findLayoutItem(
   return undefined;
 }
 
+// The section an item sits in (a section is its own).
+export function sectionOfItem(
+  sections: readonly LayoutItem[],
+  id: number,
+): LayoutItem | undefined {
+  return sections.find(
+    (section) => section.id === id || findLayoutItem(section.children, id),
+  );
+}
+
+// The section whose widgets can be tagged and filtered by audience.
+export const audienceSectionCode = "marketing_intelligence";
+
 // Siblings under one parent; `null` means the sections themselves.
 export function siblingsOf(
   sections: readonly LayoutItem[],
