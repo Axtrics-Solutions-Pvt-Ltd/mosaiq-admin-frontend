@@ -21,6 +21,13 @@ import type { ValueAdornment, ValuesPanel, WidgetPayload } from "./contracts";
 
 type Series = WidgetPayload<"line_chart">["series"][number];
 
+// Each axis scales to its own series with headroom above the peak, so a
+// steady series does not hug the top edge where the other line runs.
+const AXIS_DOMAIN: [number, (dataMax: number) => number] = [
+  0,
+  (dataMax) => (dataMax > 0 ? dataMax * 1.2 : 1),
+];
+
 export function LineChartWidget({
   currency,
   payload,
@@ -110,6 +117,7 @@ export function LineChartWidget({
             fontSize={12}
           />
           <YAxis
+            domain={AXIS_DOMAIN}
             fontSize={12}
             stroke="var(--text-muted)"
             tickFormatter={(value: number) =>
@@ -121,6 +129,7 @@ export function LineChartWidget({
           />
           {hasRightAxis && (
             <YAxis
+              domain={AXIS_DOMAIN}
               fontSize={12}
               orientation="right"
               stroke="var(--text-muted)"
