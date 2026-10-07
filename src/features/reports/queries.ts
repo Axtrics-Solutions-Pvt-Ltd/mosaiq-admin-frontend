@@ -13,6 +13,7 @@ import {
   type CreativeListFilters,
   deleteReport,
   duplicateReport,
+  getCampaignAudiences,
   getPreviewMeta,
   getPreviewTab,
   getReport,
@@ -25,12 +26,14 @@ import {
   type ReportListFilters,
   type ReportScope,
   resetLayoutItem,
+  updateCampaignAudiences,
   updateLayoutItem,
   updateReport,
   updateReportWorkspaces,
   uploadCreativeThumbnail,
 } from "./api";
 import type {
+  CampaignAudiencesRequest,
   LayoutItemPatch,
   ReorderItem,
   ReportCreateRequest,
@@ -48,6 +51,8 @@ export const reportKeys = {
     ["reports", "detail", agencyId, clientId, reportId] as const,
   layout: ({ agencyId, clientId, reportId }: ReportScope) =>
     ["reports", "layout", agencyId, clientId, reportId] as const,
+  campaignAudiences: ({ agencyId, clientId, reportId }: ReportScope) =>
+    ["reports", "campaign-audiences", agencyId, clientId, reportId] as const,
   // Under the client prefix, so a data correction refreshes every preview.
   preview: ({ agencyId, clientId, reportId }: ReportScope) =>
     [...clientReportPreviewKey(agencyId, clientId), reportId] as const,
@@ -104,6 +109,14 @@ export function useReport(scope: ReportScope) {
   return useQuery({
     queryKey: reportKeys.detail(scope),
     queryFn: ({ signal }) => getReport(scope, signal),
+    enabled: validScope(scope),
+  });
+}
+
+export function useCampaignAudiences(scope: ReportScope) {
+  return useQuery({
+    queryKey: reportKeys.campaignAudiences(scope),
+    queryFn: ({ signal }) => getCampaignAudiences(scope, signal),
     enabled: validScope(scope),
   });
 }
@@ -194,7 +207,23 @@ function useRefreshReport() {
     Promise.all([
       client.invalidateQueries({ queryKey: reportKeys.lists }),
       client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
+      // Sources and audiences change which channels and codes it lists.
+      client.invalidateQueries({
+        queryKey: reportKeys.campaignAudiences(scope),
+      }),
     ]);
+}
+
+export function useUpdateCampaignAudiences(scope: ReportScope) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CampaignAudiencesRequest) =>
+      updateCampaignAudiences(scope, payload),
+    onSuccess: (saved) => {
+      client.setQueryData(reportKeys.campaignAudiences(scope), saved);
+      return client.invalidateQueries({ queryKey: reportKeys.preview(scope) });
+    },
+  });
 }
 
 export function useUpdateReport() {

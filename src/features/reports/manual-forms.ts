@@ -144,8 +144,8 @@ const rows = <Schema extends z.ZodType>(
     .max(max, `Add up to ${max} ${noun}s.`);
 
 // An entry's audience code; empty means it isn't tagged (a total, or a row
-// for everyone). Only Marketing Intelligence widgets of a report with
-// audiences offer it, and the API checks the code.
+// for everyone). Only Marketing Intelligence and Reporting widgets of a report
+// with audiences offer it, and the API checks the code.
 const audience = z.string();
 
 const common = {

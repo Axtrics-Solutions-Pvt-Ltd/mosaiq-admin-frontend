@@ -102,6 +102,9 @@ export const reportPaths = {
     `${reportBase(agencyId, clientId, reportId)}/workspaces`,
   duplicate: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/duplicate`,
+  // Each campaign's audience for the Reporting audience filter.
+  campaignAudiences: (agencyId: number, clientId: number, reportId: number) =>
+    `${reportBase(agencyId, clientId, reportId)}/campaign-audiences`,
   layout: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/layout`,
   layoutOrder: (agencyId: number, clientId: number, reportId: number) =>

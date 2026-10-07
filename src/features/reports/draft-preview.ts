@@ -16,8 +16,9 @@ import { replaceLayoutItem } from "./layout";
 
 export type InspectorDraft = { itemId: number; patch: LayoutItemPatch };
 
-// The preview's audience filter, for a Marketing Intelligence widget: the
-// selected codes (none means no filter) and every audience's label.
+// The preview's audience filter, for a Marketing Intelligence or Reporting
+// text or manual widget: the selected codes (none means no filter) and every
+// audience's label.
 export type AudienceView = {
   selected: readonly string[];
   labels: Readonly<Record<string, string>>;
@@ -237,7 +238,8 @@ export function withDraftLayout(
 
 // The served widget with the draft laid over it. A draft the widget can't
 // show yet, such as a half-typed number, keeps the served content. A
-// Marketing Intelligence widget's draft is filtered by `audiences` first.
+// Marketing Intelligence or Reporting widget's draft is filtered by
+// `audiences` first.
 export function draftPreviewWidget(
   widget: PreviewWidget,
   item: LayoutItem,

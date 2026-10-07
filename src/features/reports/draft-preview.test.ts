@@ -43,6 +43,7 @@ function served(overrides: Record<string, unknown>): PreviewWidget {
       is_enabled: true,
       is_available: true,
       settings: {},
+      locked_reason: null,
       values: [],
     },
     ...overrides,
@@ -121,7 +122,12 @@ describe("draftPreviewWidget", () => {
       content: {
         items: [
           { label: "Visits", value: "171K", format: "text" },
-          { label: "Visits", value: "75K", format: "text", audience: "chinese" },
+          {
+            label: "Visits",
+            value: "75K",
+            format: "text",
+            audience: "chinese",
+          },
         ],
       },
     };

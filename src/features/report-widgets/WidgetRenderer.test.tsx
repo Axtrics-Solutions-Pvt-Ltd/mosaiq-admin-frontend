@@ -266,6 +266,23 @@ describe("WidgetRenderer", () => {
     expect(screen.getByRole("link", { name: "Add budgets" })).toBeVisible();
   });
 
+  it("explains a split that can't be shown for an audience", () => {
+    render(
+      <WidgetRenderer
+        currency="USD"
+        emptyAction={<a href="#budgets">Add budgets</a>}
+        widget={widget({
+          ...noBudgetWidgetFixture,
+          reason: "audience_unavailable",
+        })}
+      />,
+    );
+    expect(screen.getByText(/Not available by audience/)).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: "Add budgets" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps an empty widget's card with a message", () => {
     render(
       <WidgetRenderer

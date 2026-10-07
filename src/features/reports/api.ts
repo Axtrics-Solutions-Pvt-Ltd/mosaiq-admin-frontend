@@ -2,6 +2,8 @@ import { apiRequest } from "@/lib/api/client";
 import { reportPaths } from "@/lib/api/paths";
 
 import {
+  type CampaignAudiencesRequest,
+  campaignAudiencesSchema,
   creativeListSchema,
   creativeThumbnailResponseSchema,
   type LayoutItemPatch,
@@ -34,7 +36,8 @@ export type PreviewRange = {
   from?: string;
   to?: string;
   channel?: string;
-  // Comma-separated audience codes; Marketing Intelligence tabs only.
+  // Comma-separated audience codes (and `untagged`), for tabs the audience
+  // filter applies to.
   audiences?: string;
 };
 
@@ -110,6 +113,28 @@ export async function updateReportWorkspaces(
     { method: "PUT", body: { workspace_ids: workspaceIds } },
   );
   return reportResponseSchema.parse(result).data;
+}
+
+export async function getCampaignAudiences(
+  { agencyId, clientId, reportId }: ReportScope,
+  signal?: AbortSignal,
+) {
+  const result = await apiRequest<unknown>(
+    reportPaths.campaignAudiences(agencyId, clientId, reportId),
+    { signal },
+  );
+  return campaignAudiencesSchema.parse(result).data;
+}
+
+export async function updateCampaignAudiences(
+  { agencyId, clientId, reportId }: ReportScope,
+  payload: CampaignAudiencesRequest,
+) {
+  const result = await apiRequest<unknown>(
+    reportPaths.campaignAudiences(agencyId, clientId, reportId),
+    { method: "PUT", body: payload },
+  );
+  return campaignAudiencesSchema.parse(result).data;
 }
 
 export async function duplicateReport({

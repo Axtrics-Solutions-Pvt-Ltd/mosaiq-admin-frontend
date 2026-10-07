@@ -48,8 +48,13 @@ export function sectionOfItem(
   );
 }
 
-// The section whose widgets can be tagged and filtered by audience.
-export const audienceSectionCode = "marketing_intelligence";
+// The sections whose text and manual widgets can be tagged and filtered by
+// audience. Reporting's live data is filtered by campaign instead.
+export const audienceSectionCodes: readonly string[] = [
+  "marketing_intelligence",
+  "reporting",
+];
+export const marketingIntelligenceCode = "marketing_intelligence";
 
 // Siblings under one parent; `null` means the sections themselves.
 export function siblingsOf(

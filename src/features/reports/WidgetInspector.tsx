@@ -201,6 +201,9 @@ export type LiveEditing = {
   onShowValues?: () => void;
   // The preview's date range and channel, for lists that follow it.
   range?: PreviewRange;
+  // Set while an audience filter keeps this widget's values from being
+  // corrected; clears the filter.
+  onClearAudiences?: () => void;
 };
 
 // Widgets with one row per campaign or creative. Their values belong to one
@@ -231,13 +234,17 @@ function LiveNumbersNote({
   const onRevealValues = liveEditing?.onRevealValues;
   const onShowValues = liveEditing?.onShowValues;
   const hasValues = (liveEditing?.values.length ?? 0) > 0;
-  const canPickChannel = channels.length > 1 && !rowNote;
+  const onClearAudiences = liveEditing?.onClearAudiences;
+  const canPickChannel = channels.length > 1 && !rowNote && !onClearAudiences;
   const showChannelPicker =
     canPickChannel && (combinesWorkspaces || channel !== undefined);
 
   let note =
     "Numbers in this widget come from the channel data. To change one, use the pencil beside the value in the preview. Calculated values such as ROAS show a lock: correct the values they are calculated from instead.";
-  if (rowNote) note = rowNote;
+  if (onClearAudiences)
+    note =
+      "An audience filter is on, so these numbers cover the selected audiences' campaigns only and can't be corrected. Clear the audience filter to edit.";
+  else if (rowNote) note = rowNote;
   else if (breakdownWidgetCodes.has(item.code))
     note =
       "These shares follow the report's corrected totals and can't be edited one by one.";
@@ -250,6 +257,16 @@ function LiveNumbersNote({
   return (
     <div className="bg-muted text-muted-foreground space-y-3 rounded-md border p-3 text-xs">
       <p>{note}</p>
+      {onClearAudiences && (
+        <Button
+          onClick={onClearAudiences}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Clear audience filter
+        </Button>
+      )}
       {onShowValues && hasValues && (
         <Button
           onClick={onShowValues}
@@ -722,10 +739,11 @@ export function WidgetInspector({
 }: {
   accents?: readonly Accent[];
   // The builder's audience filter (codes, empty for none): a Marketing
-  // Intelligence widget's form shows only the rows for those audiences.
+  // Intelligence or Reporting widget's form shows only the rows for those
+  // audiences.
   audienceFilter?: readonly string[];
-  // The report's audiences, for a Marketing Intelligence widget whose rows
-  // can be tagged with one.
+  // The report's audiences, for a Marketing Intelligence or Reporting widget
+  // whose rows can be tagged with one.
   audiences?: readonly Audience[];
   budgets?: InspectorBudgets;
   // Moves focus to the field of a card part clicked on the canvas, each time

@@ -22,6 +22,7 @@ import { useWorkspaces } from "@/features/workspaces/queries";
 import { ApiError } from "@/lib/api/errors";
 
 import type { ReportScope } from "./api";
+import { CampaignAudiencesCard } from "./CampaignAudiencesCard";
 import {
   type Audience,
   audienceCode,
@@ -374,8 +375,8 @@ function audiencesProblem(audiences: readonly Audience[]) {
   return undefined;
 }
 
-// The audience segments viewers can filter Marketing Intelligence by. A new
-// audience gets its code from its name; renaming keeps the code, so rows
+// The audience segments viewers can filter the report by. A new audience gets
+// its code from its name; renaming keeps the code, so rows and campaigns
 // tagged with it stay tagged.
 function AudiencesCard({
   report,
@@ -388,7 +389,8 @@ function AudiencesCard({
   const [audiences, setAudiences] = useState<Audience[]>(report.audiences);
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState<string>();
-  const isDirty = JSON.stringify(audiences) !== JSON.stringify(report.audiences);
+  const isDirty =
+    JSON.stringify(audiences) !== JSON.stringify(report.audiences);
   useUnsavedChangesWarning(isDirty);
 
   function move(index: number, offset: -1 | 1) {
@@ -441,8 +443,8 @@ function AudiencesCard({
       setAudiences(saved.audiences);
       toast({ title: "Audience segments saved", tone: "success" });
     } catch (caught) {
-      // An audience still tagged on a widget can't be removed; the API
-      // names the widgets.
+      // An audience still tagged on a widget, channel or campaign can't be
+      // removed; the API says where it is used.
       setError(
         caught instanceof ApiError
           ? (Object.entries(caught.fieldErrors).find(([key]) =>
@@ -458,8 +460,9 @@ function AudiencesCard({
       <CardHeader>
         <CardTitle>Audience segments</CardTitle>
         <p className="text-muted-foreground text-sm">
-          Viewers can filter Marketing Intelligence by these audiences. Tag
-          rows with an audience in each Marketing Intelligence widget.
+          Viewers can filter the Reporting Dashboard and Marketing Intelligence
+          by these audiences. Give campaigns an audience below, and tag rows
+          with one in Marketing Intelligence and Reporting content widgets.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -652,6 +655,7 @@ export function ReportSettingsScreen({
         report={report.data}
         scope={scope}
       />
+      <CampaignAudiencesCard report={report.data} scope={scope} />
     </PageStack>
   );
 }

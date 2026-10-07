@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { audienceEntriesShown, filterByAudience } from "./audience-filter";
+import {
+  appliedSelection,
+  audienceEntriesShown,
+  filterByAudience,
+} from "./audience-filter";
 import { audienceCode } from "./contracts";
 
 const labels = { south_asian: "South Asian", chinese: "Chinese" };
@@ -125,5 +129,37 @@ describe("audienceCode", () => {
     expect(audienceCode("South-Asian!", ["south_asian"])).toBe("south_asian_2");
     expect(audienceCode("2nd gen", [])).toBe("nd_gen");
     expect(audienceCode("中文", [])).toBe("audience");
+  });
+
+  it("never makes the reserved untagged code", () => {
+    expect(audienceCode("Untagged", [])).toBe("untagged_2");
+  });
+});
+
+describe("appliedSelection", () => {
+  const audiences = ["south_asian", "chinese", "filipino"];
+  const options = [...audiences, "untagged"];
+
+  it("keeps the selected options in their order", () => {
+    expect(appliedSelection(options, ["untagged", "chinese"])).toEqual([
+      "chinese",
+      "untagged",
+    ]);
+  });
+
+  it("treats every option selected as no filter", () => {
+    expect(appliedSelection(options, [...options])).toEqual([]);
+    expect(appliedSelection(audiences, audiences)).toEqual([]);
+  });
+
+  it("still filters Reporting when every audience but Untagged is selected", () => {
+    expect(appliedSelection(options, audiences)).toEqual(audiences);
+  });
+
+  it("ignores Untagged for entered content", () => {
+    expect(appliedSelection(audiences, ["untagged"])).toEqual([]);
+    expect(appliedSelection(audiences, ["chinese", "untagged"])).toEqual([
+      "chinese",
+    ]);
   });
 });

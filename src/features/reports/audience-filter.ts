@@ -9,6 +9,23 @@
 //   audiences' entries with one;
 // - columns keep the untagged ones plus the selected audiences' ones.
 // Values are never added up across audiences, and tags are never shown.
+//
+// The same filter narrows the Reporting Dashboard's live data to the
+// campaigns of the selected audiences; the API does that part.
+
+// The selection the API applies: the selected options in their order, and
+// none when every option is selected, since that is the same as no filter.
+// For Reporting data the options are the audiences, then Untagged, so every
+// audience without Untagged still leaves out untagged campaigns. For entered
+// content they are the audiences only: untagged rows are the totals, not an
+// audience.
+export function appliedSelection(
+  optionCodes: readonly string[],
+  selected: readonly string[],
+) {
+  const kept = optionCodes.filter((code) => selected.includes(code));
+  return kept.length === optionCodes.length ? [] : kept;
+}
 
 type Content = Record<string, unknown>;
 type Kind = "summary" | "breakdown" | "columns";

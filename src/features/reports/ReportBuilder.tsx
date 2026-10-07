@@ -33,7 +33,9 @@ import { formatDateRange } from "@/lib/formatters";
 import { useMediaQuery } from "@/lib/utils/useMediaQuery";
 
 import type { ReportScope } from "./api";
+import { appliedSelection } from "./audience-filter";
 import {
+  audienceFilterLock,
   type EditingValue,
   type LayoutItem,
   type PreviewWidget,
@@ -49,12 +51,13 @@ import {
 } from "./draft-preview";
 import type { InspectorFormHandle } from "./inspector-parts";
 import {
-  audienceSectionCode,
+  audienceSectionCodes,
   defaultTabCode,
   findLayoutItem,
   findTab,
   itemTitle,
   layoutItemElementId,
+  marketingIntelligenceCode,
   sectionOfItem,
   tabsOf,
 } from "./layout";
@@ -105,7 +108,8 @@ export type BuilderView = {
   from?: string;
   to?: string;
   channel?: string;
-  // Comma-separated audience codes, for Marketing Intelligence tabs.
+  // Comma-separated audience codes (and `untagged`). Kept while a tab
+  // without the audience filter is open, and sent on tabs with it.
   audiences?: string;
 };
 
@@ -335,25 +339,36 @@ function Builder({
             to: meta.data.date_range.default.to,
           }
         : undefined;
-  // The audience filter applies to Marketing Intelligence only. Codes no
-  // longer in the report are dropped, so an old link still opens.
+  // The audience filter applies to the tabs the API flags: Reporting (by
+  // campaign) and Marketing Intelligence (by tagged rows). Without the flag
+  // (older API), Marketing Intelligence only. Codes no longer in the report
+  // are dropped, so an old link still opens.
   const reportAudiences = meta.data?.audiences ?? [];
+  const untaggedAudience = meta.data?.untagged_audience ?? null;
+  const tabSectionCode = findTab(sections, tabCode ?? "")?.section.code;
+  const isMarketingTab = tabSectionCode === marketingIntelligenceCode;
+  const metaTab = meta.data?.sections
+    .flatMap((section) => section.tabs)
+    .find((tab) => tab.code === tabCode);
   const isAudienceTab =
-    findTab(sections, tabCode ?? "")?.section.code === audienceSectionCode &&
-    reportAudiences.length > 0;
+    reportAudiences.length > 0 && (metaTab?.audience_filter ?? isMarketingTab);
+  const audienceCodes = reportAudiences.map((audience) => audience.code);
+  const audienceOptionCodes = untaggedAudience
+    ? [...audienceCodes, untaggedAudience.code]
+    : audienceCodes;
   const requestedAudiences = (view.audiences ?? "").split(",");
   const selectedAudiences = isAudienceTab
-    ? reportAudiences
-        .map((audience) => audience.code)
-        .filter((code) => requestedAudiences.includes(code))
+    ? audienceOptionCodes.filter((code) => requestedAudiences.includes(code))
     : [];
-  // Every audience selected is no filter, as the API serves it: the totals.
-  const filterAudiences =
-    selectedAudiences.length === reportAudiences.length
-      ? []
-      : selectedAudiences;
+  // As the API applies them: Reporting data has the Untagged option, and
+  // entered content ignores it. Every option selected is no filter.
+  const requestAudiences = appliedSelection(
+    isMarketingTab ? audienceCodes : audienceOptionCodes,
+    selectedAudiences,
+  );
+  const contentAudiences = appliedSelection(audienceCodes, selectedAudiences);
   const audienceView: AudienceView = {
-    selected: filterAudiences,
+    selected: contentAudiences,
     labels: Object.fromEntries(
       reportAudiences.map((audience) => [audience.code, audience.label]),
     ),
@@ -362,8 +377,12 @@ function Builder({
     from: view.from,
     to: view.to,
     channel: view.channel,
-    audiences: filterAudiences.join(",") || undefined,
+    audiences: requestAudiences.join(",") || undefined,
   });
+  // With a Reporting audience filter on, live values can't be corrected.
+  const isEditingLocked = (preview.data?.widgets ?? []).some(
+    (widget) => widget.editing.locked_reason === audienceFilterLock,
+  );
   const selectedItem =
     selectedItemId !== undefined
       ? findLayoutItem(sections, selectedItemId)
@@ -698,12 +717,14 @@ function Builder({
   ).slice(0, 7);
   const isAudienceItem =
     selectedItem !== undefined &&
-    sectionOfItem(sections, selectedItem.id)?.code === audienceSectionCode;
+    audienceSectionCodes.includes(
+      sectionOfItem(sections, selectedItem.id)?.code ?? "",
+    );
   const inspector = selectedItem ? (
     <WidgetInspector
       accents={layout.data?.accents}
       audiences={isAudienceItem ? reportAudiences : undefined}
-      audienceFilter={isAudienceItem ? filterAudiences : undefined}
+      audienceFilter={isAudienceItem ? contentAudiences : undefined}
       budgets={{
         allBudgetsHref: `${clientDetailUrl(report.client_id, report.agency_id)}#${budgetsCardId}`,
         focusRequest: budgetFocusRequest,
@@ -719,6 +740,13 @@ function Builder({
         channel: view.channel,
         channels: meta.data?.channels ?? [],
         onChannelChange: changeChannel,
+        onClearAudiences: preview.data?.widgets.some(
+          (widget) =>
+            widget.editing.item_id === selectedItem.id &&
+            widget.editing.locked_reason === audienceFilterLock,
+        )
+          ? () => changeAudiences([])
+          : undefined,
         range: { from: view.from, to: view.to, channel: view.channel },
         onRevealValues: () =>
           setValuesReveal((current) => ({
@@ -819,6 +847,26 @@ function Builder({
               preview.data.period.compare_to,
             )}
           </p>
+        )}
+        {isEditingLocked && (
+          <div
+            className="bg-muted text-muted-foreground flex w-full flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs"
+            role="status"
+          >
+            <span>
+              An audience filter is on, so values show the selected campaigns
+              only and can&apos;t be corrected. Clear the audience filter to
+              edit.
+            </span>
+            <Button
+              onClick={() => changeAudiences([])}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Clear audience filter
+            </Button>
+          </div>
         )}
       </Card>
       {/* Wider on large screens, where forms with several columns of

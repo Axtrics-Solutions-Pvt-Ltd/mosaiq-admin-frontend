@@ -55,15 +55,19 @@ const reportWorkspaceSchema = z.object({
     .nullable(),
 });
 
-// An audience segment Marketing Intelligence can be filtered by. The code is
-// made from the label when the audience is added and never changes, so a
-// renamed audience keeps its tags on widget rows.
+// An audience segment the report can be filtered by. The code is made from
+// the label when the audience is added and never changes, so a renamed
+// audience keeps its tags on widget rows and campaigns.
 export const audienceCodePattern = /^[a-z][a-z0-9_]*$/;
 export const maxAudiences = 20;
 export const audienceSchema = z.object({
   code: z.string(),
   label: z.string(),
 });
+
+// The filter option and campaign audience for campaigns without an audience
+// ("Untagged / General"). It is never a report audience's code.
+export const untaggedAudienceCode = "untagged";
 
 // The code for a new audience: its label in snake case, e.g. "South Asian" →
 // "south_asian", with a number added when another audience has it.
@@ -74,8 +78,10 @@ export function audienceCode(label: string, taken: readonly string[]) {
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^[^a-z]+|_+$/g, "")
       .slice(0, 36) || "audience";
+  const unavailable = [...taken, untaggedAudienceCode];
   let code = base;
-  for (let suffix = 2; taken.includes(code); suffix++) code = `${base}_${suffix}`;
+  for (let suffix = 2; unavailable.includes(code); suffix++)
+    code = `${base}_${suffix}`;
   return code;
 }
 
@@ -290,14 +296,25 @@ export const previewMetaSchema = z.object({
           .optional(),
       }),
     ),
-    // The audiences the Marketing Intelligence preview can be filtered by.
+    // The audiences the preview can be filtered by.
     audiences: z.array(audienceSchema).default([]),
+    // The last filter option, for campaigns without an audience; null when
+    // the report has no audiences.
+    untagged_audience: audienceSchema.nullable().default(null),
     sections: z.array(
       z.object({
         code: z.string(),
         name: z.string(),
         accent: resolvedAccentSchema.nullable().default(null),
-        tabs: z.array(z.object({ code: z.string(), name: z.string() })),
+        tabs: z.array(
+          z.object({
+            code: z.string(),
+            name: z.string(),
+            // Whether the audience filter applies to (and shows on) the tab.
+            // Older API versions leave it out.
+            audience_filter: z.boolean().optional(),
+          }),
+        ),
       }),
     ),
   }),
@@ -320,6 +337,10 @@ const editingValueSchema = z.object({
   correction_ids: z.array(z.number().int()),
 });
 
+// Why a live widget's values can't be corrected: with a Reporting audience
+// filter on, its totals cover some campaigns only.
+export const audienceFilterLock = "audience_filter";
+
 const previewWidgetSchema = widgetEnvelopeSchema.extend({
   editing: z.object({
     item_id: idSchema,
@@ -327,6 +348,9 @@ const previewWidgetSchema = widgetEnvelopeSchema.extend({
     is_enabled: z.boolean(),
     is_available: z.boolean(),
     settings: settingsSchema,
+    // `audience_filter` when `values` is empty because of the audience
+    // filter; null otherwise (and from older API versions).
+    locked_reason: z.string().nullable().default(null),
     values: z.array(editingValueSchema),
   }),
 });
@@ -341,12 +365,68 @@ export const previewTabSchema = z.object({
       compare_to: z.string(),
     }),
     channel: z.string().nullable(),
-    // The applied audience filter, in report order; [] for none (and on tabs
-    // outside Marketing Intelligence).
+    // The audience filter the tab applied, in report order with `untagged`
+    // last; [] for none (and on tabs the filter doesn't apply to).
     audiences: z.array(z.string()).default([]),
     layout_version: z.number().int(),
     widgets: z.array(previewWidgetSchema),
   }),
+});
+
+// Which audience each campaign belongs to on the Reporting Dashboard: its own
+// (`audience`), else its channel's default, else none (`untagged`).
+export const campaignAudienceSources = ["campaign", "channel", "none"] as const;
+export const maxCampaignAudiences = 2000;
+
+const campaignAudienceSchema = z.object({
+  campaign_key: z.string(),
+  name: z.string(),
+  status: z.string(),
+  // A report audience code, `untagged` for General, or null to follow the
+  // channel default.
+  audience: z.string().nullable(),
+  effective_audience: z.string(),
+  source: z.enum(campaignAudienceSources),
+});
+
+export const campaignAudiencesSchema = z.object({
+  data: z.object({
+    channels: z.array(
+      z.object({
+        workspace_id: idSchema,
+        name: z.string(),
+        platform: z
+          .object({ code: z.string(), name: z.string() })
+          .nullable()
+          .optional(),
+        default_audience: z.string().nullable(),
+        campaigns: z.array(campaignAudienceSchema),
+      }),
+    ),
+    untagged_campaigns: z.number().int().nonnegative(),
+  }),
+});
+
+// The whole mapping: channels left out get no default, campaigns left out
+// follow their channel.
+export const campaignAudiencesRequestSchema = z.strictObject({
+  channels: z
+    .array(
+      z.strictObject({
+        workspace_id: idSchema,
+        default_audience: z.string().max(40).nullable(),
+      }),
+    )
+    .max(50),
+  campaigns: z
+    .array(
+      z.strictObject({
+        workspace_id: idSchema,
+        campaign_key: z.string().min(1).max(150),
+        audience: z.string().min(1).max(40),
+      }),
+    )
+    .max(maxCampaignAudiences),
 });
 
 // Creative Performance editing (API phase 1). Keys come from the connector
@@ -434,4 +514,10 @@ export type PreviewTab = z.infer<typeof previewTabSchema>["data"];
 export type PreviewWidget = PreviewTab["widgets"][number];
 export type EditingValue = z.infer<typeof editingValueSchema>;
 export type ListedCreative = z.infer<typeof listedCreativeSchema>;
+export type CampaignAudiences = z.infer<typeof campaignAudiencesSchema>["data"];
+export type CampaignAudienceChannel = CampaignAudiences["channels"][number];
+export type CampaignAudience = z.infer<typeof campaignAudienceSchema>;
+export type CampaignAudiencesRequest = z.infer<
+  typeof campaignAudiencesRequestSchema
+>;
 export type CreativeList = z.infer<typeof creativeListSchema>;

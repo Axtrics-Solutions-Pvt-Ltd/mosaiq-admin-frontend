@@ -123,15 +123,18 @@ function CustomRange({
 }
 
 // The portal's "Audience segments" multi-select. Nothing selected means all
-// audiences.
+// audiences. `untagged` ("Untagged / General", for campaigns without an
+// audience) comes last, after a divider.
 export function AudienceFilter({
   audiences,
   onChange,
   selected,
+  untagged,
 }: {
   audiences: readonly Audience[];
   onChange: (selected: string[]) => void;
   selected: readonly string[];
+  untagged?: Audience | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,13 +159,17 @@ export function AudienceFilter({
     };
   }, [isOpen]);
 
+  const options = untagged ? [...audiences, untagged] : audiences;
+
   function toggle(code: string) {
     // Kept in the report's order, as the API echoes it.
     onChange(
-      audiences
-        .map((audience) => audience.code)
+      options
+        .map((option) => option.code)
         .filter((option) =>
-          option === code ? !selected.includes(code) : selected.includes(option),
+          option === code
+            ? !selected.includes(code)
+            : selected.includes(option),
         ),
     );
   }
@@ -171,9 +178,21 @@ export function AudienceFilter({
     selected.length === 0
       ? "All audiences"
       : selected.length === 1
-        ? (audiences.find((audience) => audience.code === selected[0])
-            ?.label ?? "1 selected")
+        ? (options.find((option) => option.code === selected[0])?.label ??
+          "1 selected")
         : `${selected.length} selected`;
+  const optionRow = (option: Audience) => (
+    <label
+      className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+      key={option.code}
+    >
+      <Checkbox
+        checked={selected.includes(option.code)}
+        onChange={() => toggle(option.code)}
+      />
+      {option.label}
+    </label>
+  );
   return (
     <div className="relative" ref={containerRef}>
       <Label id={labelId}>Audience segments</Label>
@@ -196,18 +215,10 @@ export function AudienceFilter({
         >
           <fieldset>
             <legend className="sr-only">Audience segments</legend>
-            {audiences.map((audience) => (
-              <label
-                className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-                key={audience.code}
-              >
-                <Checkbox
-                  checked={selected.includes(audience.code)}
-                  onChange={() => toggle(audience.code)}
-                />
-                {audience.label}
-              </label>
-            ))}
+            {audiences.map(optionRow)}
+            {untagged && (
+              <div className="mt-1 border-t pt-1">{optionRow(untagged)}</div>
+            )}
           </fieldset>
           <div className="border-t pt-1">
             <Button
@@ -234,7 +245,7 @@ export function PreviewRangeControls({
   onRangeChange,
   range,
 }: {
-  // Shown on Marketing Intelligence tabs of a report with audiences.
+  // Shown on tabs the audience filter applies to, of a report with audiences.
   audienceFilter?: {
     selected: readonly string[];
     onChange: (selected: string[]) => void;
@@ -308,6 +319,7 @@ export function PreviewRangeControls({
           audiences={meta.audiences}
           onChange={audienceFilter.onChange}
           selected={audienceFilter.selected}
+          untagged={meta.untagged_audience}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { BarChartWidget } from "./BarChartWidget";
 import {
+  audienceUnavailableReason,
   parseWidget,
   type ValueAdornment,
   type ValuesPanel,
@@ -67,6 +68,16 @@ function WidgetBody({
   const title = widget.title ?? widget.code;
   switch (parsed.type) {
     case "empty":
+      if (widget.reason === audienceUnavailableReason)
+        return (
+          <WidgetMessage>
+            <span className="text-strong font-medium">
+              Not available by audience.{" "}
+            </span>
+            Age, gender, region, device and budget can&apos;t be split by
+            campaign.
+          </WidgetMessage>
+        );
       return (
         <div className="space-y-3">
           <WidgetMessage>

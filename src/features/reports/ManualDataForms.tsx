@@ -148,8 +148,8 @@ const sentimentOptions = [
   })),
 ];
 
-// The audience a row is shown for, on Marketing Intelligence widgets of a
-// report with audiences. A code no longer in the list is kept as it is, so
+// The audience a row is shown for, on Marketing Intelligence and Reporting
+// widgets of a report with audiences. A code no longer in the list is kept as it is, so
 // saving never drops a tag silently.
 function AudienceField<Values extends FieldValues>({
   audiences,
@@ -1165,8 +1165,9 @@ function GaugeForm(props: ManualFormProps<"gauge">) {
 }
 
 // One generic editor per render type, reused by every manual widget of it.
-// `audiences` are offered as row tags on Marketing Intelligence widgets, and
-// with an `audienceFilter` only the rows for those audiences are shown.
+// `audiences` are offered as row tags on Marketing Intelligence and Reporting
+// manual widgets, and with an `audienceFilter` only the rows for those
+// audiences are shown.
 export function ManualDataForm({
   audienceFilter = [],
   audiences = [],

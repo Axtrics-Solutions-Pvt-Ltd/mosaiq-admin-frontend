@@ -42,6 +42,10 @@ export const widgetEnvelopeSchema = z.looseObject({
   reason: z.string().nullable().optional(),
 });
 
+// The empty reason of splits that aren't per campaign (age, gender, region,
+// device, budget) while a Reporting audience filter is on.
+export const audienceUnavailableReason = "audience_unavailable";
+
 const changeSchema = z.object({
   value: numberOrNull,
   format: formatSchema.optional(),
