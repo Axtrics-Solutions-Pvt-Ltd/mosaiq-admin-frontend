@@ -21,16 +21,17 @@ const params = Promise.resolve({
   item: "5",
 });
 
-function stubTemplate(body: BodyInit) {
+function stubTemplate(
+  body: BodyInit,
+  headers: Record<string, string> = {
+    "Content-Type": "text/csv; charset=UTF-8",
+    "Content-Disposition":
+      'attachment; filename="MOSAIQ-Marketing-Intelligence.csv"',
+  },
+) {
   const fetchMock = vi.fn(
     async (_input: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(body, {
-        headers: {
-          "Content-Type": "text/csv; charset=UTF-8",
-          "Content-Disposition":
-            'attachment; filename="MOSAIQ-Marketing-Intelligence.csv"',
-        },
-      }),
+      new Response(body, { headers }),
   );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -67,6 +68,34 @@ describe("CSV template proxy", () => {
       /\/csv-template\?sample=1$/,
     );
     expect(String(fetchMock.mock.calls[1]![0])).toMatch(/\/csv-template$/);
+  });
+
+  it("passes a zip format through and drops an unknown one", async () => {
+    const fetchMock = stubTemplate("#card,a,A\n");
+    await GET(templateRequest("?format=zip&sample=1"), { params });
+    await GET(templateRequest("?format=xlsx"), { params });
+    await GET(templateRequest("?format=csv"), { params });
+    expect(String(fetchMock.mock.calls[0]![0])).toMatch(
+      /\/csv-template\?sample=1&format=zip$/,
+    );
+    expect(String(fetchMock.mock.calls[1]![0])).toMatch(/\/csv-template$/);
+    expect(String(fetchMock.mock.calls[2]![0])).toMatch(/\/csv-template$/);
+  });
+
+  it("passes a zip through byte for byte with its headers", async () => {
+    // A zip's local file header signature, then bytes that aren't text.
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff, 0x80]);
+    stubTemplate(bytes, {
+      "Content-Type": "application/zip",
+      "Content-Disposition":
+        'attachment; filename="MOSAIQ-Marketing-Intelligence-Templates.zip"',
+    });
+    const response = await GET(templateRequest("?format=zip"), { params });
+    expect(response.headers.get("Content-Type")).toBe("application/zip");
+    expect(response.headers.get("Content-Disposition")).toContain(
+      "MOSAIQ-Marketing-Intelligence-Templates.zip",
+    );
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
   });
 
   it("refuses a malformed id", async () => {

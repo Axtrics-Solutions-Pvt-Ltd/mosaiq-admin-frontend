@@ -1,6 +1,6 @@
 # Step 14 — One CSV per section, upload limits and blank templates
 
-Status: built, 15 October 2026 (see Implementation notes at the end). The decisions (E1–E10), the combined file format, the limits and the endpoint changes are in `mosaiq-laravel-api/docs/phase1-review/STEP-14-COMBINED-CSV-AND-UPLOAD-LIMITS.md`. This step changes the Step 13 import dialog ([STEP-13-CSV-CONTENT-IMPORT.md](STEP-13-CSV-CONTENT-IMPORT.md)), and everything there still applies unless this file changes it.
+Status: built, 15 October 2026 (see Implementation notes at the end). Zip templates (§6, E11) built the same day. The decisions (E1–E10), the combined file format, the limits and the endpoint changes are in `mosaiq-laravel-api/docs/phase1-review/STEP-14-COMBINED-CSV-AND-UPLOAD-LIMITS.md`. This step changes the Step 13 import dialog ([STEP-13-CSV-CONTENT-IMPORT.md](STEP-13-CSV-CONTENT-IMPORT.md)), and everything there still applies unless this file changes it.
 
 Today a Marketing Intelligence (MI) template is a zip with 6 folders of 7–11 files each. After this step:
 
@@ -131,6 +131,28 @@ Review
   - `sample` is passed through to the template endpoint.
 - **Playwright (`e2e/mock-auth-api.mjs`):** the mock API returns the combined-file fixture. The flow is: download link → drop one file → review → Apply.
 
+## 6. Zip templates (E11, 15 Oct 2026)
+
+Clients found the combined file hard to read, so section and tab templates can also be downloaded as a zip of card CSVs, as in Step 13. Both stay for a demo; one can be hidden later in the frontend only. Uploading needs no change, since zips are already accepted.
+
+**API:** `GET …/csv-template?format=zip` on a section or tab returns `application/zip` (`MOSAIQ-Marketing-Intelligence-Templates.zip`, `MOSAIQ-MI-Behaviour-Templates.zip`, `MOSAIQ-Media-Mix-Model-Templates.zip`). `sample=1` works the same. A widget always gets its `.csv`.
+
+**Changes**
+- **`reportPaths.csvTemplate(…, { sample, format })`:** adds `format=zip` when asked; `csv` is the default and isn't sent.
+- **`csv-template/route.ts`:** passes `format` through when it is `csv` or `zip`, and drops anything else. `forwardAdminFileDownload` already passes a binary body with its `Content-Type` and `Content-Disposition`; check that this holds for `application/zip`.
+- **`csvTemplateFormats`** in `csv-import.ts`: `["csv", "zip"]`. Removing a value hides its button, so after the demo only this constant changes.
+- **`CsvTemplateDownload.tsx`:** a `formats` prop. For a section or tab, two buttons share the **Include example rows** checkbox:
+  - **Download as one file** (`.csv`, every card stacked)
+  - **Download as zip** (one file per card)
+  
+  With one format left, a single **Download template** button. The widget inspector always shows the single button.
+- **Dialog hint:** "Fill one row per item under each card's header. Numbers without % or $." The `#` line rule only applies to the combined file, so it moves to the button's title.
+
+**Tests**
+- `CsvTemplateDownload`: two buttons for a section or tab and one for a widget; the links carry `format=zip` and `sample=1` correctly; one button when `formats` has one value.
+- Proxy route: `format=zip` is forwarded, an unknown `format` is dropped.
+- Mock handler: `format=zip` returns `application/zip` with the zip file name.
+
 ## Order
 
 1. Ship the API first, because Apply with `cards[]` needs it. The new response fields are optional in the schema (§1), so a frontend still on Step 13 keeps working against the new API.
@@ -146,4 +168,10 @@ Where the build differs from the plan above:
 - **Review names.** The table and the mobile list are now called "Cards checked", not "Files checked", because each row is a card.
 - **File-level errors.** Their line errors are always shown, with no Show/Hide button, because the row has nothing else in it.
 - **Shared control.** **Download template** and **Include example rows** are one component, `CsvTemplateDownload.tsx`, used by the dialog and the inspector. `InspectorCsvImport.templateHref` is now `(isSample) => string`.
+- **Zip templates (§6).**
+  - `CsvTemplateDownload.templateHref` is now `(isSample, format) => string`, so the inspector's one-argument callback still fits, and its default `formats` is `["csv"]`.
+  - The dialog passes `csvTemplateFormats` for a section or tab and `["csv"]` for a card.
+  - The link is `?sample=1&format=zip` when both apply.
+  - Each button's explanation is its `title`.
+  - The MSW handler and `e2e/mock-auth-api.mjs` answer `format=zip` with an empty zip and the zip file name; the Playwright flow checks both links and the zip download's headers.
 - **E2E mock.** `e2e/mock-auth-api.mjs` reads a combined file block by block. A data row with `%` is an error on its line, and a block with no data rows is skipped. An unknown code is `unrecognised`, and a card outside the scope is `out_of_scope`. Apply with `cards[]` writes only those cards, and returns a 422 on `cards` if one of them isn't ready.

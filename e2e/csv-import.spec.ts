@@ -44,11 +44,22 @@ test("Marketing Intelligence cards are filled from one combined CSV", async ({
   const dialog = page.getByRole("dialog", { name: "Import CSV" });
   await expect(dialog.getByText("Marketing Intelligence")).toBeVisible();
 
-  // The template is one CSV, blank unless the example rows are asked for.
-  const template = dialog.getByRole("link", { name: "Download template" });
+  // The template is one CSV or a zip of card CSVs, blank unless the example
+  // rows are asked for.
+  const template = dialog.getByRole("link", { name: "Download as one file" });
+  const zipTemplate = dialog.getByRole("link", { name: "Download as zip" });
   await expect(template).not.toHaveAttribute("href", /sample=1/);
+  await expect(zipTemplate).toHaveAttribute("href", /\?format=zip$/);
   await dialog.getByRole("checkbox", { name: "Include example rows" }).check();
   await expect(template).toHaveAttribute("href", /\?sample=1$/);
+  await expect(zipTemplate).toHaveAttribute("href", /\?sample=1&format=zip$/);
+  const zipDownload = await page.request.get(
+    (await zipTemplate.getAttribute("href"))!,
+  );
+  expect(zipDownload.headers()["content-type"]).toBe("application/zip");
+  expect(zipDownload.headers()["content-disposition"]).toContain(
+    "MOSAIQ-Marketing-Intelligence-Templates.zip",
+  );
   const download = await page.request.get(
     (await template.getAttribute("href"))!,
   );

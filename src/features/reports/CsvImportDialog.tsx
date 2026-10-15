@@ -40,6 +40,7 @@ import {
   chosenFileKey,
   csvResultKey,
   csvReviewRows,
+  csvTemplateFormats,
   hiddenScopeNote,
   isFileLevelError,
   isUnknownAudienceError,
@@ -653,17 +654,18 @@ export function CsvImportDialog({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-muted-foreground text-sm">
-                Fill one row per item under each card. Don&apos;t change the #
-                lines. Numbers without % or $.
+                Fill one row per item under each card&apos;s header. Numbers
+                without % or $.
               </p>
               <CsvTemplateDownload
-                templateHref={(isSample) =>
+                formats={isSingleCard ? ["csv"] : csvTemplateFormats}
+                templateHref={(isSample, format) =>
                   reportPaths.csvTemplate(
                     scope.agencyId,
                     scope.clientId,
                     scope.reportId,
                     item.id,
-                    { sample: isSample },
+                    { sample: isSample, format },
                   )
                 }
               />

@@ -2,6 +2,12 @@ import type { CsvImportFile, LayoutItem } from "./contracts";
 
 // Pure helpers for the CSV import dialog.
 
+export type CsvTemplateFormat = "csv" | "zip";
+
+// The template downloads offered for a section or tab: one combined CSV and a
+// zip of one CSV per card. Removing a value hides its button.
+export const csvTemplateFormats: readonly CsvTemplateFormat[] = ["csv", "zip"];
+
 // A stable key for a chosen file; the same file chosen twice is kept once.
 export function chosenFileKey(file: File) {
   return `${file.name}:${file.size}:${file.lastModified}`;

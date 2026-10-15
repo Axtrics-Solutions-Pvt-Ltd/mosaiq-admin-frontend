@@ -1669,6 +1669,19 @@ createServer(async (request, response) => {
           : card.code;
       if (csvMatch[2] === "csv-template" && request.method === "GET") {
         const isSample = url.searchParams.get("sample") === "1";
+        // A zip with no entries: only the end-of-central-directory record.
+        if (
+          url.searchParams.get("format") === "zip" &&
+          scopeNode.level !== "widget"
+        ) {
+          response.writeHead(200, {
+            "Content-Type": "application/zip",
+            "Content-Disposition": `attachment; filename="MOSAIQ-${scopeNode.title.replaceAll(" ", "-")}-Templates.zip"`,
+          });
+          return response.end(
+            Buffer.from([0x50, 0x4b, 0x05, 0x06, ...Array(18).fill(0)]),
+          );
+        }
         const lines = [
           `# MOSAIQ ${scopeSection.title} template.`,
           "# Fill the rows under each card. Don't change or remove the lines that start with #.",

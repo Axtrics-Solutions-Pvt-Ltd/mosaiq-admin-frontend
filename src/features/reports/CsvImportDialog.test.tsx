@@ -190,20 +190,40 @@ describe("CsvImportDialog", () => {
     expect(screen.getByRole("button", { name: "Check files" })).toBeDisabled();
   });
 
-  it("switches the template link to and from the example rows", async () => {
+  it("offers the section as one file or a zip, with or without example rows", async () => {
     renderDialog();
-    const link = screen.getByRole("link", { name: "Download template" });
+    const oneFile = screen.getByRole("link", { name: "Download as one file" });
+    const zip = screen.getByRole("link", { name: "Download as zip" });
+    expect(
+      screen.queryByRole("link", { name: "Download template" }),
+    ).not.toBeInTheDocument();
     const blank =
       "/api/v1/agencies/1/clients/20/reports/7/layout/5/csv-template";
-    expect(link).toHaveAttribute("href", blank);
+    expect(oneFile).toHaveAttribute("href", blank);
+    expect(zip).toHaveAttribute("href", `${blank}?format=zip`);
     const sample = screen.getByRole("checkbox", {
       name: "Include example rows",
     });
     expect(sample).not.toBeChecked();
     await userEvent.click(sample);
-    expect(link).toHaveAttribute("href", `${blank}?sample=1`);
+    expect(oneFile).toHaveAttribute("href", `${blank}?sample=1`);
+    expect(zip).toHaveAttribute("href", `${blank}?sample=1&format=zip`);
     await userEvent.click(sample);
-    expect(link).toHaveAttribute("href", blank);
+    expect(oneFile).toHaveAttribute("href", blank);
+    expect(zip).toHaveAttribute("href", `${blank}?format=zip`);
+  });
+
+  it("offers a card only its own CSV", () => {
+    renderDialog(card);
+    expect(
+      screen.getByRole("link", { name: "Download template" }),
+    ).toHaveAttribute(
+      "href",
+      `/api/v1/agencies/1/clients/20/reports/7/layout/${card.id}/csv-template`,
+    );
+    expect(
+      screen.queryByRole("link", { name: "Download as zip" }),
+    ).not.toBeInTheDocument();
   });
 
   it("lists every status, expands errors and hides ignored files", async () => {

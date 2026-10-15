@@ -153,15 +153,25 @@ export const reportPaths = {
     itemId: number,
   ) =>
     `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-import`,
-  // Blank (header rows only) unless `sample` asks for the example rows.
+  // Blank (header rows only) unless `sample` asks for the example rows. A
+  // section or tab is one combined `.csv`, or with `format: "zip"` a zip of
+  // one CSV per card; a widget is always its own `.csv`.
   csvTemplate: (
     agencyId: number,
     clientId: number,
     reportId: number,
     itemId: number,
-    { sample = false }: { sample?: boolean } = {},
-  ) =>
-    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-template${sample ? "?sample=1" : ""}`,
+    {
+      sample = false,
+      format = "csv",
+    }: { sample?: boolean; format?: "csv" | "zip" } = {},
+  ) => {
+    const query = new URLSearchParams();
+    if (sample) query.set("sample", "1");
+    if (format === "zip") query.set("format", "zip");
+    const search = query.toString();
+    return `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-template${search ? `?${search}` : ""}`;
+  },
   previewMeta: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/preview/meta`,
   previewTab: (
