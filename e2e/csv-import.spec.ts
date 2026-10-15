@@ -6,7 +6,7 @@ const clientByProject: Record<string, number> = {
   "mobile-320-chromium": 903,
 };
 
-test("Marketing Intelligence cards are filled from the template zip", async ({
+test("Marketing Intelligence cards are filled from one combined CSV", async ({
   page,
 }, testInfo) => {
   const clientId = clientByProject[testInfo.project.name] ?? 901;
@@ -43,17 +43,50 @@ test("Marketing Intelligence cards are filled from the template zip", async ({
 
   const dialog = page.getByRole("dialog", { name: "Import CSV" });
   await expect(dialog.getByText("Marketing Intelligence")).toBeVisible();
+
+  // The template is one CSV, blank unless the example rows are asked for.
+  const template = dialog.getByRole("link", { name: "Download template" });
+  await expect(template).not.toHaveAttribute("href", /sample=1/);
+  await dialog.getByRole("checkbox", { name: "Include example rows" }).check();
+  await expect(template).toHaveAttribute("href", /\?sample=1$/);
+  const download = await page.request.get(
+    (await template.getAttribute("href"))!,
+  );
+  expect(download.headers()["content-type"]).toContain("text/csv");
+  expect(download.headers()["content-disposition"]).toContain(
+    "MOSAIQ-Marketing-Intelligence.csv",
+  );
+  expect(await download.text()).toContain(
+    "#card,audience_overview,Audience Overview",
+  );
+
+  // One file: a ready card and a card the report doesn't have.
   await dialog.getByLabel("Choose CSV or zip files").setInputFiles({
-    name: "MOSAIQ-Marketing-Intelligence-Templates.zip",
-    mimeType: "application/zip",
-    buffer: Buffer.from("PK"),
+    name: "MOSAIQ-Marketing-Intelligence.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      [
+        "# MOSAIQ Marketing Intelligence template.",
+        "#tab,audience_profile,Audience Profile",
+        "#card,audience_overview,Audience Overview",
+        "label,value",
+        "Population,2100000",
+        "",
+        "#card,family_values,Family Values",
+        "label,value",
+        "Close-knit,30%",
+        "",
+      ].join("\r\n"),
+    ),
   });
   await dialog.getByRole("button", { name: "Check files" }).click();
   await expect(
-    dialog.getByText("1 ready · 0 with errors · 0 skipped"),
+    dialog.getByText("1 ready · 0 with errors · 0 skipped · 1 not used"),
   ).toBeVisible();
-  // The README in the zip is not listed.
-  await expect(dialog.getByText("README.txt")).toHaveCount(0);
+  // The table from md up, cards below it.
+  await expect(
+    dialog.getByText("Not recognised").filter({ visible: true }),
+  ).toBeVisible();
 
   await dialog.getByRole("button", { name: "Apply 1 card" }).click();
   await expect(page.getByText("1 card updated")).toBeVisible();

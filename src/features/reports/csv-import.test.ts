@@ -2,25 +2,32 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   csvImportApplyFixture,
+  csvImportCombinedFixtures,
   csvImportFileFixtures,
+  csvImportFormatErrorFixture,
   csvImportPreviewFixture,
 } from "@/mocks/fixtures/csv-import";
+import { layoutItem } from "@/mocks/fixtures/reports";
 
 import { applyCsvImport, previewCsvImport } from "./api";
 import {
   csvImportApplyResponseSchema,
-  type CsvImportFile,
   csvImportFileSchema,
   csvImportProblem,
   csvImportResponseSchema,
+  layoutItemResponseSchema,
 } from "./contracts";
-import { csvApplyPlan, hiddenScopeNote, todayIsoDate } from "./csv-import";
+import {
+  csvResultKey,
+  csvReviewRows,
+  hiddenScopeNote,
+  isFileLevelError,
+  readyCardCodes,
+  todayIsoDate,
+} from "./csv-import";
 
 const file = (name: string, size = 10) =>
   new File(["x".repeat(size)], name, { type: "text/csv" });
-
-const result = (name: string, status: CsvImportFile["status"]) =>
-  csvImportFileSchema.parse({ file: name, status });
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -29,13 +36,26 @@ describe("csvImportProblem", () => {
     expect(csvImportProblem([file("a.csv"), file("b.ZIP")])).toBeNull();
   });
 
-  it("names the first file of the wrong type or size", () => {
+  it("names the first file of the wrong type", () => {
     expect(csvImportProblem([file("a.csv"), file("b.xlsx")])).toBe(
       "b.xlsx: upload .csv or .zip files.",
     );
-    expect(csvImportProblem([file("big.zip", 5 * 1024 * 1024 + 1)])).toBe(
-      "big.zip: each file must be 5 MB or smaller.",
-    );
+  });
+
+  it("limits the upload to 4 MB in total, not per file", () => {
+    const megabytes = (count: number) => count * 1024 * 1024;
+    expect(csvImportProblem([file("full.csv", megabytes(4))])).toBeNull();
+    expect(
+      csvImportProblem([
+        file("a.csv", megabytes(2.5)),
+        file("b.zip", megabytes(2.5)),
+      ]),
+    ).toBe("The upload can be at most 4 MB in total.");
+    expect(
+      csvImportProblem([file("big.csv", megabytes(4) + 1)], {
+        isSingleCard: true,
+      }),
+    ).toBe("The upload can be at most 4 MB in total.");
   });
 
   it("limits the count, and a card to one .csv", () => {
@@ -67,12 +87,30 @@ describe("CSV import responses", () => {
     );
     expect(ignored).toEqual({
       file: "README.txt",
+      source: "MOSAIQ-Marketing-Intelligence-Templates.zip",
+      line: null,
       status: "ignored",
       errors: [],
     });
     const applied = csvImportApplyResponseSchema.parse(csvImportApplyFixture());
     expect(applied.data.applied).toEqual(["audience_by_segment"]);
     expect(applied.data.layout_version).toBe(4);
+  });
+
+  it("take results with or without the Step 14 source and line", () => {
+    const block = csvImportFileSchema.parse(
+      csvImportCombinedFixtures.coreValues,
+    );
+    expect(block).toMatchObject({
+      source: "MOSAIQ-Marketing-Intelligence.csv",
+      line: 212,
+    });
+    const step13 = csvImportFileSchema.parse({
+      file: "02_core_values.csv",
+      status: "skipped",
+    });
+    expect(step13.source).toBeUndefined();
+    expect(step13.line).toBeUndefined();
   });
 
   it("refuse an unknown status", () => {
@@ -82,45 +120,54 @@ describe("CSV import responses", () => {
   });
 });
 
-describe("csvApplyPlan", () => {
-  it("posts only the ready CSV files", () => {
-    const chosen = [file("a.csv"), file("b.csv"), file("c.csv")];
-    const plan = csvApplyPlan(chosen, [
-      result("a.csv", "ready"),
-      result("b.csv", "invalid"),
-      result("c.csv", "skipped"),
+describe("readyCardCodes", () => {
+  it("names every ready card once, whichever file it came from", () => {
+    const codes = readyCardCodes(
+      [
+        ...Object.values(csvImportCombinedFixtures),
+        csvImportFileFixtures.ready,
+        csvImportFileFixtures.invalid,
+      ].map((entry) => csvImportFileSchema.parse(entry)),
+    );
+    expect(codes).toEqual(["audience_by_segment", "category_spending"]);
+  });
+});
+
+describe("csvReviewRows", () => {
+  it("puts a file's own errors first and leaves ignored files out", () => {
+    const scope = layoutItemResponseSchema.parse({
+      data: layoutItem({
+        id: 5,
+        parent_id: null,
+        level: "section",
+        code: "marketing_intelligence",
+        title: "Marketing Intelligence",
+        position: 0,
+      }),
+    }).data;
+    const rows = csvReviewRows(
+      scope,
+      [
+        csvImportCombinedFixtures.coreValues,
+        csvImportFileFixtures.ignored,
+        csvImportFormatErrorFixture,
+      ].map((entry) => csvImportFileSchema.parse(entry)),
+    );
+    expect(rows.map((row) => row.file)).toEqual([
+      "MOSAIQ-Marketing-Intelligence.csv",
+      "MOSAIQ-Marketing-Intelligence.csv › core_values",
     ]);
-    expect(plan.uploads.map((upload) => upload.name)).toEqual(["a.csv"]);
-    expect(plan.readyCount).toBe(1);
-    expect(plan.blockedZips).toEqual([]);
+    expect(isFileLevelError(rows[0]!)).toBe(true);
+    expect(isFileLevelError(rows[1]!)).toBe(false);
   });
 
-  it("posts a zip whose files are all ready or unused", () => {
-    const zip = file("templates.zip");
-    const plan = csvApplyPlan(
-      [zip],
-      [
-        result("01-audience-profile/01_audience_overview.csv", "ready"),
-        result("01-audience-profile/02_cultural_identity.csv", "ready"),
-        result("README.txt", "ignored"),
-      ],
+  it("keys the same card twice in one file apart by line", () => {
+    const block = csvImportFileSchema.parse(
+      csvImportCombinedFixtures.coreValues,
     );
-    expect(plan.uploads).toEqual([zip]);
-    expect(plan.readyCount).toBe(2);
-  });
-
-  it("holds back a zip with a file that has errors", () => {
-    const plan = csvApplyPlan(
-      [file("templates.zip"), file("a.csv")],
-      [
-        result("04-behaviour/02_core_values.csv", "invalid"),
-        result("04-behaviour/01_shopping_behaviour.csv", "ready"),
-        result("a.csv", "ready"),
-      ],
+    expect(csvResultKey(block)).not.toBe(
+      csvResultKey({ ...block, status: "duplicate", line: 230 }),
     );
-    expect(plan.uploads.map((upload) => upload.name)).toEqual(["a.csv"]);
-    expect(plan.readyCount).toBe(1);
-    expect(plan.blockedZips).toEqual(["templates.zip"]);
   });
 });
 
@@ -155,7 +202,10 @@ describe("CSV import requests", () => {
       "2026-10-15",
     );
     fetchMock.mockResolvedValueOnce(Response.json(csvImportApplyFixture()));
-    await applyCsvImport(scope, 5, [file("a.csv")], "2026-10-15");
+    await applyCsvImport(scope, 5, [file("a.csv")], "2026-10-15", [
+      "audience_overview",
+      "core_values",
+    ]);
 
     const [previewUrl, previewInit] = fetchMock.mock.calls[0]!;
     expect(previewUrl).toBe(
@@ -166,11 +216,17 @@ describe("CSV import requests", () => {
       previewBody.getAll("files[]").map((entry) => (entry as File).name),
     ).toEqual(["a.csv", "b.zip"]);
     expect(previewBody.get("as_of")).toBe("2026-10-15");
+    expect(previewBody.has("cards[]")).toBe(false);
     // The browser sets the multipart boundary itself.
     expect(new Headers(previewInit?.headers).has("Content-Type")).toBe(false);
     expect(fetchMock.mock.calls[1]![0]).toBe(
       "/api/v1/agencies/1/clients/20/reports/7/layout/5/csv-import",
     );
+    const applyBody = fetchMock.mock.calls[1]![1]?.body as FormData;
+    expect(applyBody.getAll("cards[]")).toEqual([
+      "audience_overview",
+      "core_values",
+    ]);
   });
 });
 

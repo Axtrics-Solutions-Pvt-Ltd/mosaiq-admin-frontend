@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Download, LocateFixed, Plus, RotateCcw, Upload } from "lucide-react";
+import { LocateFixed, Plus, RotateCcw, Upload } from "lucide-react";
 import { type FocusEvent, type Ref, useEffect, useRef, useState } from "react";
 import {
   useFieldArray,
@@ -36,6 +36,7 @@ import {
   reportMetricLabel,
 } from "./contracts";
 import { CreativeSettings } from "./CreativeSettings";
+import { CsvTemplateDownload } from "./CsvTemplateDownload";
 import type { InspectorDraft } from "./draft-preview";
 import {
   activeCampaignsMaxLimit,
@@ -713,10 +714,11 @@ function fieldForPart(form: Element, part: WidgetPart) {
 // Budget pacing reads the client's monthly budgets, edited beside the widget.
 export const budgetWidgetCode = "budget_utilization";
 
-// CSV import for a Marketing Intelligence or Media Mix Model card.
+// CSV import for a Marketing Intelligence or Media Mix Model card. The
+// template is blank unless the admin asks for the example rows.
 export type InspectorCsvImport = {
   onOpen: () => void;
-  templateHref: string;
+  templateHref: (isSample: boolean) => string;
 };
 
 export type InspectorBudgets = {
@@ -917,11 +919,10 @@ export function WidgetInspector({
           >
             <Upload aria-hidden className="size-4" /> Import CSV
           </Button>
-          <Button asChild size="sm" variant="ghost">
-            <a download href={csvImport.templateHref}>
-              <Download aria-hidden className="size-4" /> Download template
-            </a>
-          </Button>
+          <CsvTemplateDownload
+            templateHref={csvImport.templateHref}
+            variant="ghost"
+          />
         </div>
       )}
       <div onBlur={clearFocus} onFocus={trackFocus} ref={formsRef}>

@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
-  Download,
   Eye,
   FileSpreadsheet,
   LoaderCircle,
@@ -39,12 +38,15 @@ import {
 } from "./contracts";
 import {
   chosenFileKey,
-  csvApplyPlan,
+  csvResultKey,
   csvReviewRows,
   hiddenScopeNote,
+  isFileLevelError,
   isUnknownAudienceError,
+  readyCardCodes,
   todayIsoDate,
 } from "./csv-import";
+import { CsvTemplateDownload } from "./CsvTemplateDownload";
 import { useCsvImportApply, useCsvImportPreview } from "./queries";
 
 type VisibleStatus = Exclude<CsvImportStatus, "ignored">;
@@ -82,12 +84,13 @@ function isAccessError(error: unknown) {
   );
 }
 
-// A refused upload names its problem on `files`; anything else is a safe
-// general message.
+// A refused upload names its problem on `files`, or on `cards` when a card
+// Apply named is no longer ready; anything else is a safe general message.
 function uploadError(error: unknown, fallback: string) {
   if (!(error instanceof ApiError)) return fallback;
   if (error.status === 422)
     return (
+      error.fieldErrors.cards ??
       error.fieldErrors.files ??
       Object.values(error.fieldErrors)[0] ??
       error.message
@@ -96,7 +99,15 @@ function uploadError(error: unknown, fallback: string) {
 }
 
 const cardTitle = (result: CsvImportFile) =>
-  result.widget?.title ?? result.file;
+  result.widget?.title ??
+  (isFileLevelError(result) ? (result.source ?? result.file) : result.file);
+
+// Under a card's title: the uploaded file it came from, when there are
+// several. Before Step 14 the API sent no `source`, so `file` stands in.
+function sourceCaption(result: CsvImportFile, isMultiFile: boolean) {
+  if (!result.widget || !isMultiFile) return undefined;
+  return result.source ?? result.file;
+}
 
 function ErrorLines({
   result,
@@ -198,45 +209,61 @@ function RowActions({
   return null;
 }
 
-// The review: one row per file the API matched or refused, with its line
-// errors and visibility notes. A table from md up, stacked cards below.
+// The review: one row per card the API matched or refused (a combined file
+// gives several), with its line errors and visibility notes, and a row per
+// file with a problem of its own at the top. A table from md up, stacked
+// cards below.
 function ReviewList({
+  isMultiFile,
   rows,
   settingsHref,
   onPreview,
 }: {
+  isMultiFile: boolean;
   rows: readonly CsvImportFile[];
   settingsHref: string;
   onPreview: (result: CsvImportFile) => void;
 }) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (file: string) =>
+  const toggle = (key: string) =>
     setExpanded((current) => {
       const next = new Set(current);
-      if (next.has(file)) next.delete(file);
-      else next.add(file);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
-  const actions = (result: CsvImportFile) => (
-    <RowActions
-      isExpanded={expanded.has(result.file)}
-      onPreview={() => onPreview(result)}
-      onToggle={() => toggle(result.file)}
-      result={result}
-    />
-  );
+  // A file-level error has nothing else to show, so its lines stay open.
+  const isExpanded = (result: CsvImportFile) =>
+    isFileLevelError(result) || expanded.has(csvResultKey(result));
+  const actions = (result: CsvImportFile) =>
+    isFileLevelError(result) ? null : (
+      <RowActions
+        isExpanded={isExpanded(result)}
+        onPreview={() => onPreview(result)}
+        onToggle={() => toggle(csvResultKey(result))}
+        result={result}
+      />
+    );
   const notes = (result: CsvImportFile) => (
     <RowNotes
-      isExpanded={expanded.has(result.file)}
+      isExpanded={isExpanded(result)}
       result={result}
       settingsHref={settingsHref}
     />
   );
+  const caption = (result: CsvImportFile) => {
+    const source = sourceCaption(result, isMultiFile);
+    return (
+      source && (
+        <p className="text-muted-foreground text-xs break-all">{source}</p>
+      )
+    );
+  };
   return (
     <>
       <div className="hidden overflow-x-auto rounded-lg border md:block">
         <table className="w-full border-collapse text-left text-sm">
-          <caption className="sr-only">Files checked</caption>
+          <caption className="sr-only">Cards checked</caption>
           <thead className="bg-muted text-muted-foreground border-b text-xs font-medium">
             <tr>
               <th className="px-3 py-2" scope="col">
@@ -258,14 +285,19 @@ function ReviewList({
           </thead>
           <tbody className="divide-y">
             {rows.map((result) => (
-              <tr className="align-top" key={result.file}>
+              <tr
+                className={
+                  isFileLevelError(result)
+                    ? "bg-destructive-soft align-top"
+                    : "align-top"
+                }
+                key={csvResultKey(result)}
+              >
                 <td className="space-y-1 px-3 py-2">
-                  <p className="text-strong font-medium">{cardTitle(result)}</p>
-                  {result.widget && (
-                    <p className="text-muted-foreground text-xs break-all">
-                      {result.file}
-                    </p>
-                  )}
+                  <p className="text-strong font-medium break-all">
+                    {cardTitle(result)}
+                  </p>
+                  {caption(result)}
                   {notes(result)}
                 </td>
                 <td className="px-3 py-2">{result.tab?.title ?? "—"}</td>
@@ -283,15 +315,23 @@ function ReviewList({
           </tbody>
         </table>
       </div>
-      <ul aria-label="Files checked" className="grid gap-2 md:hidden">
+      <ul aria-label="Cards checked" className="grid gap-2 md:hidden">
         {rows.map((result) => (
-          <li className="space-y-1.5 rounded-lg border p-3" key={result.file}>
+          <li
+            className={
+              isFileLevelError(result)
+                ? "border-destructive bg-destructive-soft space-y-1.5 rounded-lg border p-3"
+                : "space-y-1.5 rounded-lg border p-3"
+            }
+            key={csvResultKey(result)}
+          >
             <div className="flex items-start justify-between gap-2">
-              <p className="text-strong min-w-0 font-medium break-words">
+              <p className="text-strong min-w-0 font-medium break-all">
                 {cardTitle(result)}
               </p>
               <StatusBadge status={result.status} />
             </div>
+            {caption(result)}
             <p className="text-muted-foreground text-xs">
               {result.tab?.title ?? "—"}
               {result.rows !== undefined && ` · ${plural(result.rows, "row")}`}
@@ -336,13 +376,13 @@ function Dropzone({
       <UploadCloud aria-hidden className="text-primary mx-auto size-8" />
       <p className="text-strong mt-2 font-medium">
         {isSingleCard
-          ? "Drop the card's CSV here or choose it"
-          : "Drop CSV or zip files here or choose them"}
+          ? "Drop the CSV here or choose it"
+          : "Drop the CSV here or choose files"}
       </p>
       <p className="text-muted-foreground mt-1 text-sm">
         {isSingleCard
-          ? "One .csv file up to 5 MB"
-          : "Up to 60 .csv or .zip files, 5 MB each"}
+          ? "The card's CSV or the whole section file. Up to 4 MB."
+          : "One file for the whole section, or separate card files or a zip. Up to 4 MB in total."}
       </p>
       <label className="text-primary focus-within:ring-ring mt-4 inline-flex min-h-10 cursor-pointer items-center rounded-sm border border-current px-4 py-2 text-sm font-medium focus-within:ring-2 focus-within:ring-offset-2">
         {isSingleCard ? "Choose file" : "Choose files"}
@@ -377,8 +417,9 @@ export type CsvImportPreview = {
 
 // Fills Marketing Intelligence and Media Mix Model cards from CSV files: the
 // admin chooses files, the API checks them (writing nothing), then Apply
-// posts the ready ones again with the same "As of" date. `item` is the
-// section, tab or card the files are checked against.
+// posts them again with the same "As of" date and the codes of the ready
+// cards, so cards with errors are left alone. `item` is the section, tab or
+// card the files are checked against.
 export function CsvImportDialog({
   item,
   onApplied,
@@ -413,7 +454,7 @@ export function CsvImportDialog({
   const problem = chosen.length
     ? csvImportProblem(chosen, { isSingleCard })
     : null;
-  const plan = result ? csvApplyPlan(chosen, result.files) : undefined;
+  const readyCards = result ? readyCardCodes(result.files) : [];
   const rows = result ? csvReviewRows(item, result.files) : [];
   const unusedCount = rows.filter(
     (row) =>
@@ -475,14 +516,18 @@ export function CsvImportDialog({
     }
   }
 
+  // A 422 on `cards` means a file changed since the check; its message
+  // shows on the review, where the admin can change the files and check
+  // again.
   async function apply() {
-    if (!plan || plan.readyCount === 0) return;
+    if (readyCards.length === 0) return;
     setError(undefined);
     try {
       const applied = await applyMutation.mutateAsync({
         itemId: item.id,
-        files: plan.uploads,
+        files: chosen,
         asOf,
+        cards: readyCards,
       });
       const count = applied.applied.length;
       toast({
@@ -536,9 +581,7 @@ export function CsvImportDialog({
     onPreview(undefined);
   }
 
-  const applyLabel = plan
-    ? `Apply ${plural(plan.readyCount, "card")}`
-    : "Apply";
+  const applyLabel = `Apply ${plural(readyCards.length, "card")}`;
   const footer = isAccessDenied ? (
     <Button onClick={close} type="button" variant="outline">
       Close
@@ -557,7 +600,7 @@ export function CsvImportDialog({
         <ArrowLeft aria-hidden className="size-4" /> Change files
       </Button>
       <Button
-        disabled={isBusy || !plan || plan.readyCount === 0}
+        disabled={isBusy || readyCards.length === 0}
         onClick={apply}
         type="button"
       >
@@ -610,21 +653,20 @@ export function CsvImportDialog({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-muted-foreground text-sm">
-                Keep the header row. One file per card. Numbers without % or $.
+                Fill one row per item under each card. Don&apos;t change the #
+                lines. Numbers without % or $.
               </p>
-              <Button asChild size="sm" variant="outline">
-                <a
-                  download
-                  href={reportPaths.csvTemplate(
+              <CsvTemplateDownload
+                templateHref={(isSample) =>
+                  reportPaths.csvTemplate(
                     scope.agencyId,
                     scope.clientId,
                     scope.reportId,
                     item.id,
-                  )}
-                >
-                  <Download aria-hidden className="size-4" /> Download template
-                </a>
-              </Button>
+                    { sample: isSample },
+                  )
+                }
+              />
             </div>
             {result ? (
               <>
@@ -640,6 +682,7 @@ export function CsvImportDialog({
                 </p>
                 {rows.length > 0 ? (
                   <ReviewList
+                    isMultiFile={chosen.length > 1}
                     onPreview={showPreview}
                     rows={rows}
                     settingsHref={settingsHref}
@@ -649,20 +692,10 @@ export function CsvImportDialog({
                     None of the files has data for a card here.
                   </p>
                 )}
-                {plan && plan.blockedZips.length > 0 && (
-                  <p className="text-warning text-sm">
-                    {plan.blockedZips.join(", ")}{" "}
-                    {plan.blockedZips.length === 1 ? "has" : "have"} files with
-                    errors, so{" "}
-                    {plan.blockedZips.length === 1 ? "it isn't" : "they aren't"}{" "}
-                    applied. Fix them, or upload the ready CSV files on their
-                    own.
-                  </p>
-                )}
                 <p className="text-muted-foreground text-xs">
-                  Each ready file replaces its card&apos;s content, dated{" "}
-                  {asOf || "today"}, and shows the card. Nothing is saved until
-                  you apply.
+                  Each ready card gets the CSV content, dated {asOf || "today"},
+                  and is shown. Cards with errors and cards missing from the
+                  files keep their content. Nothing is saved until you apply.
                 </p>
               </>
             ) : (

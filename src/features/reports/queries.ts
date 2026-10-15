@@ -402,6 +402,11 @@ type CsvImportVariables = {
   asOf: string;
 };
 
+type CsvImportApplyVariables = CsvImportVariables & {
+  // The widget codes of the ready cards to write.
+  cards: readonly string[];
+};
+
 // Writes nothing, so nothing is refreshed.
 export function useCsvImportPreview(scope: ReportScope) {
   return useMutation({
@@ -416,8 +421,8 @@ export function useCsvImportPreview(scope: ReportScope) {
 export function useCsvImportApply(scope: ReportScope) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, files, asOf }: CsvImportVariables) =>
-      applyCsvImport(scope, itemId, files, asOf),
+    mutationFn: ({ itemId, files, asOf, cards }: CsvImportApplyVariables) =>
+      applyCsvImport(scope, itemId, files, asOf, cards),
     onSuccess: () =>
       Promise.all([
         client.invalidateQueries({ queryKey: reportKeys.layout(scope) }),

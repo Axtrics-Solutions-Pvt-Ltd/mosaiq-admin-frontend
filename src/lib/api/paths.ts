@@ -153,13 +153,15 @@ export const reportPaths = {
     itemId: number,
   ) =>
     `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-import`,
+  // Blank (header rows only) unless `sample` asks for the example rows.
   csvTemplate: (
     agencyId: number,
     clientId: number,
     reportId: number,
     itemId: number,
+    { sample = false }: { sample?: boolean } = {},
   ) =>
-    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-template`,
+    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-template${sample ? "?sample=1" : ""}`,
   previewMeta: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/preview/meta`,
   previewTab: (

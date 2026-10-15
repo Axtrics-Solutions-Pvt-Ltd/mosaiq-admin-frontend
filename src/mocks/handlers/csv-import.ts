@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import { reportPaths } from "@/lib/api/paths";
 
 import {
+  combinedCsvName,
   csvImportApplyFixture,
   csvImportPreviewFixture,
 } from "../fixtures/csv-import";
@@ -38,16 +39,31 @@ export function csvImportHandlers(
         return options.apply?.() ?? HttpResponse.json(csvImportApplyFixture());
       },
     ),
+    // One combined CSV; `X-Mock-Sample` tells a test whether the example
+    // rows were asked for.
     http.get(
       reportPaths.csvTemplate(agencyId, clientId, reportId, itemId),
-      () =>
-        new HttpResponse(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
-          headers: {
-            "Content-Type": "application/zip",
-            "Content-Disposition":
-              'attachment; filename="MOSAIQ-Marketing-Intelligence-Templates.zip"',
+      ({ request }) => {
+        const isSample =
+          new URL(request.url).searchParams.get("sample") === "1";
+        return new HttpResponse(
+          [
+            "# MOSAIQ Marketing Intelligence template.",
+            "#tab,audience_profile,Audience Profile",
+            "#card,audience_by_segment,Audience by Segment",
+            "label,value,format,audience",
+            ...(isSample ? ["Indian,58,percent,"] : []),
+            "",
+          ].join("\n"),
+          {
+            headers: {
+              "Content-Type": "text/csv; charset=UTF-8",
+              "Content-Disposition": `attachment; filename="${combinedCsvName}"`,
+              "X-Mock-Sample": isSample ? "1" : "0",
+            },
           },
-        }),
+        );
+      },
     ),
   ];
   return { handlers, calls };

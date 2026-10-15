@@ -292,11 +292,16 @@ export async function removeCreativeThumbnail(
 }
 
 // The API keeps nothing between the check and the apply, so both post the
-// same files.
-function csvImportBody(files: readonly File[], asOf: string) {
+// same files; Apply also names the ready cards to write.
+function csvImportBody(
+  files: readonly File[],
+  asOf: string,
+  cards: readonly string[] = [],
+) {
   const body = new FormData();
   for (const file of files) body.append("files[]", file, file.name);
   body.append("as_of", asOf);
+  for (const code of cards) body.append("cards[]", code);
   return body;
 }
 
@@ -318,10 +323,11 @@ export async function applyCsvImport(
   itemId: number,
   files: readonly File[],
   asOf: string,
+  cards: readonly string[],
 ) {
   const result = await apiRequest<unknown>(
     reportPaths.csvImport(agencyId, clientId, reportId, itemId),
-    { method: "POST", body: csvImportBody(files, asOf) },
+    { method: "POST", body: csvImportBody(files, asOf, cards) },
   );
   return csvImportApplyResponseSchema.parse(result).data;
 }

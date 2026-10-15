@@ -1635,9 +1635,11 @@ createServer(async (request, response) => {
       touch(report);
       return treeResponse();
     }
-    // CSV import (API Step 13). A zip stands for the template bundle: every
-    // written and manual card under the scope is ready. A .csv matches the
-    // card its name names, as `NN_<code>.csv`.
+    // CSV import (API Steps 13 and 14). A zip stands for the template
+    // bundle: every written and manual card under the scope is ready. A .csv
+    // with `#card` lines is a combined file, read block by block: a block
+    // with a % in a data row has errors, one with no data rows is skipped.
+    // Any other .csv matches the card its name names, as `NN_<code>.csv`.
     const csvMatch = rest.match(
       /^\/layout\/(\d+)\/(csv-import\/preview|csv-import|csv-template)$/,
     );
@@ -1661,12 +1663,28 @@ createServer(async (request, response) => {
             ],
           },
         });
+      const blockCode = (card) =>
+        scopeSection.code === "mmm"
+          ? card.code.replace(/^mmm_/, "")
+          : card.code;
       if (csvMatch[2] === "csv-template" && request.method === "GET") {
+        const isSample = url.searchParams.get("sample") === "1";
+        const lines = [
+          `# MOSAIQ ${scopeSection.title} template.`,
+          "# Fill the rows under each card. Don't change or remove the lines that start with #.",
+        ];
+        for (const card of layoutNodes([scopeNode]).filter(
+          (node) => node.level === "widget" && node.kind !== "live",
+        )) {
+          lines.push(`#card,${blockCode(card)},${card.title}`, "label,value");
+          if (isSample) lines.push("Population,2100000");
+          lines.push("");
+        }
         response.writeHead(200, {
-          "Content-Type": "application/zip",
-          "Content-Disposition": `attachment; filename="${scopeSection.code}-templates.zip"`,
+          "Content-Type": "text/csv; charset=UTF-8",
+          "Content-Disposition": `attachment; filename="MOSAIQ-${scopeNode.title.replaceAll(" ", "-")}.csv"`,
         });
-        return response.end(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+        return response.end(`\ufeff${lines.join("\n")}`);
       }
       if (request.method !== "POST")
         return json(response, 405, { message: "Method not allowed" });
@@ -1702,10 +1720,12 @@ createServer(async (request, response) => {
                   },
                 ],
               };
-      const ready = (file, card) => {
+      const ready = (file, card, source = file, line = null) => {
         const tab = tabOf(card);
         return {
           file,
+          source,
+          line,
           status: "ready",
           widget: {
             id: card.id,
@@ -1722,23 +1742,111 @@ createServer(async (request, response) => {
           content: sampleContent(card),
         };
       };
-      const files = uploads.flatMap((upload) => {
+      const sectionCards = layoutNodes([scopeSection]).filter(
+        (node) => node.level === "widget",
+      );
+      // One result per `#card` block of a combined file.
+      const combinedResults = (name, text) => {
+        const results = [];
+        let block;
+        const close = () => {
+          if (!block) return;
+          const file = `${name} › ${block.code}`;
+          const card = sectionCards.find(
+            (candidate) => blockCode(candidate) === block.code,
+          );
+          const base = { file, source: name, line: block.line };
+          if (!card)
+            results.push({ ...base, status: "unrecognised", errors: [] });
+          else if (!cards.includes(card))
+            results.push({
+              ...ready(file, card, name, block.line),
+              status: "out_of_scope",
+              content: null,
+            });
+          else if (block.errors.length > 0)
+            results.push({
+              ...ready(file, card, name, block.line),
+              status: "invalid",
+              rows: block.rows,
+              errors: block.errors,
+              content: null,
+            });
+          else if (block.rows === 0)
+            results.push({
+              ...ready(file, card, name, block.line),
+              status: "skipped",
+              rows: 0,
+              content: null,
+            });
+          else results.push(ready(file, card, name, block.line));
+        };
+        text.split(/\r?\n/).forEach((raw, index) => {
+          const row = raw.replace(/^\ufeff/, "").trim();
+          if (!row || row === "#" || row.startsWith("# ")) return;
+          if (row.startsWith("#card,")) {
+            close();
+            block = {
+              code: row.split(",")[1],
+              line: index + 1,
+              hasHeader: false,
+              rows: 0,
+              errors: [],
+            };
+            return;
+          }
+          if (row.startsWith("#tab,") || !block) return;
+          if (!block.hasHeader) {
+            block.hasHeader = true;
+            return;
+          }
+          block.rows += 1;
+          if (row.includes("%"))
+            block.errors.push({
+              line: index + 1,
+              column: "value",
+              message: "Write numbers without %, $ or commas, e.g. 30 not 30%.",
+            });
+        });
+        close();
+        return results;
+      };
+      const texts = await Promise.all(
+        uploads.map((upload) =>
+          upload.name.toLowerCase().endsWith(".csv") ? upload.text() : "",
+        ),
+      );
+      const files = uploads.flatMap((upload, uploadIndex) => {
+        if (/^#card,/m.test(texts[uploadIndex]))
+          return combinedResults(upload.name, texts[uploadIndex]);
         if (upload.name.toLowerCase().endsWith(".zip"))
           return [
             ...cards.map((card, index) =>
               ready(
                 `${String(index + 1).padStart(2, "0")}_${card.code}.csv`,
                 card,
+                upload.name,
               ),
             ),
-            { file: "README.txt", status: "ignored" },
+            {
+              file: "README.txt",
+              source: upload.name,
+              line: null,
+              status: "ignored",
+            },
           ];
         const code = upload.name.replace(/^\d+_/, "").replace(/\.csv$/i, "");
         const card = cards.find((candidate) => candidate.code === code);
         return [
           card
             ? ready(upload.name, card)
-            : { file: upload.name, status: "unrecognised", errors: [] },
+            : {
+                file: upload.name,
+                source: upload.name,
+                line: null,
+                status: "unrecognised",
+                errors: [],
+              },
         ];
       });
       const count = (status) =>
@@ -1756,7 +1864,28 @@ createServer(async (request, response) => {
       };
       if (csvMatch[2] === "csv-import/preview")
         return json(response, 200, { data: result });
-      const readyFiles = files.filter((file) => file.status === "ready");
+      // With `cards[]`, only those cards are written, and each must be ready.
+      const cardCodes = form
+        .getAll("cards[]")
+        .filter((entry) => typeof entry === "string");
+      const notReady = cardCodes.find(
+        (code) =>
+          !files.some(
+            (file) => file.status === "ready" && file.widget?.code === code,
+          ),
+      );
+      if (notReady) {
+        const title =
+          files.find((file) => file.widget?.code === notReady)?.widget.title ??
+          notReady;
+        const message = `${title} has errors. Check the files again.`;
+        return json(response, 422, { message, errors: { cards: [message] } });
+      }
+      const readyFiles = files.filter(
+        (file) =>
+          file.status === "ready" &&
+          (cardCodes.length === 0 || cardCodes.includes(file.widget.code)),
+      );
       if (readyFiles.length === 0)
         return json(response, 422, {
           errors: {

@@ -1,9 +1,12 @@
-// Contract fixtures for CSV import (API Step 13), shaped like the preview and
-// apply responses. Production code must not import this file.
+// Contract fixtures for CSV import (API Steps 13 and 14), shaped like the
+// preview and apply responses. Production code must not import this file.
 
+// Results from the files of a Step 13 template zip, and one separate CSV.
 export const csvImportFileFixtures = {
   ready: {
     file: "01-audience-profile/03_audience_by_segment.csv",
+    source: "MOSAIQ-Marketing-Intelligence-Templates.zip",
+    line: null,
     status: "ready",
     widget: {
       id: 31,
@@ -29,6 +32,8 @@ export const csvImportFileFixtures = {
   },
   invalid: {
     file: "04-behaviour/02_core_values.csv",
+    source: "MOSAIQ-Marketing-Intelligence-Templates.zip",
+    line: null,
     status: "invalid",
     widget: {
       id: 41,
@@ -56,6 +61,8 @@ export const csvImportFileFixtures = {
   },
   skipped: {
     file: "04-behaviour/03_category_spending.csv",
+    source: "MOSAIQ-Marketing-Intelligence-Templates.zip",
+    line: null,
     status: "skipped",
     widget: {
       id: 42,
@@ -71,6 +78,8 @@ export const csvImportFileFixtures = {
   },
   outOfScope: {
     file: "05_channel_diagnosis.csv",
+    source: "05_channel_diagnosis.csv",
+    line: null,
     status: "out_of_scope",
     widget: {
       id: 52,
@@ -82,7 +91,68 @@ export const csvImportFileFixtures = {
     errors: [],
     content: null,
   },
-  ignored: { file: "README.txt", status: "ignored" },
+  ignored: {
+    file: "README.txt",
+    source: "MOSAIQ-Marketing-Intelligence-Templates.zip",
+    line: null,
+    status: "ignored",
+  },
+} as const;
+
+export const combinedCsvName = "MOSAIQ-Marketing-Intelligence.csv";
+
+// The blocks of one combined file (API Step 14): two ready cards, one with
+// errors on lines of the file, and one outside the section.
+export const csvImportCombinedFixtures = {
+  audienceBySegment: {
+    ...csvImportFileFixtures.ready,
+    file: `${combinedCsvName} › audience_by_segment`,
+    source: combinedCsvName,
+    line: 12,
+  },
+  coreValues: {
+    ...csvImportFileFixtures.invalid,
+    file: `${combinedCsvName} › core_values`,
+    source: combinedCsvName,
+    line: 212,
+    errors: [
+      {
+        line: 215,
+        column: "value",
+        message: "Write numbers without %, $ or commas, e.g. 30 not 30%.",
+      },
+    ],
+  },
+  categorySpending: {
+    ...csvImportFileFixtures.skipped,
+    file: `${combinedCsvName} › category_spending`,
+    source: combinedCsvName,
+    line: 220,
+    status: "ready",
+    rows: 1,
+    content: {
+      items: [{ label: "Groceries", value: 41, format: "percent" }],
+      footer: [],
+    },
+  },
+  channelDiagnosis: {
+    ...csvImportFileFixtures.outOfScope,
+    file: `${combinedCsvName} › channel_diagnosis`,
+    source: combinedCsvName,
+    line: 301,
+  },
+} as const;
+
+// A problem with the combined file itself, belonging to no card.
+export const csvImportFormatErrorFixture = {
+  file: combinedCsvName,
+  source: combinedCsvName,
+  line: null,
+  status: "invalid",
+  widget: null,
+  errors: [
+    { line: 4, column: null, message: "Start each card with a #card line." },
+  ],
 } as const;
 
 type CsvImportFileFixture = {

@@ -461,10 +461,14 @@ export function creativeThumbnailProblem(file: File) {
   return null;
 }
 
-// CSV import of Marketing Intelligence and Media Mix Model content. One file
-// fills one card; a section or tab takes several files and/or template zips.
+// CSV import of Marketing Intelligence and Media Mix Model content. A file is
+// either one card's CSV or a combined file with a `#card` block per card; a
+// section or tab also takes several files and/or zips of them.
 export const maxCsvImportFiles = 60;
-export const maxCsvImportFileBytes = 5 * 1024 * 1024;
+// The whole request: Vercel refuses bodies over 4.5 MB.
+export const maxCsvImportTotalBytes = 4 * 1024 * 1024;
+// The widget codes Apply may name.
+export const maxCsvImportCards = 60;
 const csvImportExtensions = [".csv", ".zip"] as const;
 
 const extensionOf = (name: string) => {
@@ -473,7 +477,8 @@ const extensionOf = (name: string) => {
 };
 
 // The checks the proxy and the API make before reading the files. A widget
-// takes a single `.csv`. Returns the first problem, or null.
+// takes a single `.csv`, which may be the combined file. Returns the first
+// problem, or null.
 export function csvImportProblem(
   files: readonly File[],
   { isSingleCard = false }: { isSingleCard?: boolean } = {},
@@ -493,9 +498,10 @@ export function csvImportProblem(
       )
     )
       return `${file.name}: upload .csv or .zip files.`;
-    if (file.size > maxCsvImportFileBytes)
-      return `${file.name}: each file must be 5 MB or smaller.`;
   }
+  const totalBytes = files.reduce((total, file) => total + file.size, 0);
+  if (totalBytes > maxCsvImportTotalBytes)
+    return "The upload can be at most 4 MB in total.";
   return null;
 }
 
@@ -517,7 +523,13 @@ const csvImportErrorSchema = z.object({
 });
 
 export const csvImportFileSchema = z.object({
+  // The display name: the uploaded file, a path inside a zip, or
+  // `<file> › <code>` for a block of a combined file.
   file: z.string(),
+  // The uploaded file's name, and the `#card` line in a combined file (null
+  // otherwise). Optional until every API has Step 14.
+  source: z.string().optional(),
+  line: z.number().int().nullable().optional(),
   status: csvImportStatusSchema,
   widget: z
     .object({

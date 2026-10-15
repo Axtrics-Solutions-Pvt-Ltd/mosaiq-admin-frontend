@@ -2,53 +2,32 @@ import type { CsvImportFile, LayoutItem } from "./contracts";
 
 // Pure helpers for the CSV import dialog.
 
-const isZip = (file: File) => file.name.toLowerCase().endsWith(".zip");
-
 // A stable key for a chosen file; the same file chosen twice is kept once.
 export function chosenFileKey(file: File) {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
-export type CsvApplyPlan = {
-  // The chosen files to post again on Apply.
-  uploads: File[];
-  // The ready cards those files fill.
-  readyCount: number;
-  // Zips left out because a file inside has errors.
-  blockedZips: string[];
-};
+// A stable key for a result. A combined file gives a result per `#card`
+// block, and the same card twice gives two blocks of one name.
+export function csvResultKey(result: CsvImportFile) {
+  return `${result.source ?? ""}|${result.file}|${result.line ?? ""}`;
+}
 
-// Apply is refused if any posted file has errors, so only the uploads whose
-// cards are all ready (or harmlessly unused) are posted. A `.csv` matches its
-// result by name. The API names a zip's files by their path inside it, so a
-// result no chosen `.csv` matches came from a zip; with several zips, one
-// file with errors holds them all back.
-export function csvApplyPlan(
-  chosen: readonly File[],
-  results: readonly CsvImportFile[],
-): CsvApplyPlan {
-  const csvNames = new Set(
-    chosen.filter((file) => !isZip(file)).map((file) => file.name),
-  );
-  const fromCsv = results.filter((result) => csvNames.has(result.file));
-  const fromZips = results.filter((result) => !csvNames.has(result.file));
-  const isZipBlocked = fromZips.some((result) => result.status === "invalid");
-  const zipReady = fromZips.filter((result) => result.status === "ready");
-  const zips = chosen.filter(isZip);
-  const readyCsvNames = new Set(
-    fromCsv
-      .filter((result) => result.status === "ready")
-      .map((result) => result.file),
-  );
-  const uploads = [
-    ...chosen.filter((file) => !isZip(file) && readyCsvNames.has(file.name)),
-    ...(isZipBlocked || zipReady.length === 0 ? [] : zips),
+// A problem with a file as a whole (a row before the first `#card`, a zip
+// that can't be opened), not with one card.
+export const isFileLevelError = (result: CsvImportFile) =>
+  result.status === "invalid" && !result.widget;
+
+// The widget codes Apply posts as `cards[]`: every ready card, whichever
+// file it came from. The API leaves the other cards alone.
+export function readyCardCodes(results: readonly CsvImportFile[]) {
+  return [
+    ...new Set(
+      results.flatMap((result) =>
+        result.status === "ready" && result.widget ? [result.widget.code] : [],
+      ),
+    ),
   ];
-  return {
-    uploads,
-    readyCount: readyCsvNames.size + (isZipBlocked ? 0 : zipReady.length),
-    blockedZips: isZipBlocked ? zips.map((file) => file.name) : [],
-  };
 }
 
 // Each widget's place under the scope, in canvas order: tab by tab, then
@@ -64,21 +43,27 @@ function widgetOrder(scope: LayoutItem) {
 }
 
 // The rows the review lists: ignored files (a README, folders) are left out,
-// the others sorted by tab then card, with unmatched files last by name.
+// file-level errors come first, then the cards by tab then card, with
+// unmatched files last by name.
 export function csvReviewRows(
   scope: LayoutItem,
   results: readonly CsvImportFile[],
 ) {
   const order = widgetOrder(scope);
   const place = (result: CsvImportFile) =>
-    result.widget ? (order.get(result.widget.id) ?? order.size) : Infinity;
+    isFileLevelError(result)
+      ? -1
+      : result.widget
+        ? (order.get(result.widget.id) ?? order.size)
+        : Infinity;
   return results
     .filter((result) => result.status !== "ignored")
     .sort(
       (a, b) =>
         place(a) - place(b) ||
         (a.tab?.title ?? "").localeCompare(b.tab?.title ?? "") ||
-        a.file.localeCompare(b.file),
+        a.file.localeCompare(b.file) ||
+        (a.line ?? 0) - (b.line ?? 0),
     );
 }
 

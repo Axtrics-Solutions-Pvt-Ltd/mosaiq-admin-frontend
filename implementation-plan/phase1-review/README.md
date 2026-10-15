@@ -63,6 +63,7 @@ The capabilities `imports.create`, `importHistory.view`, `connectors.view` and `
 | 11 | [STEP-11-AUDIENCE-FILTER.md](STEP-11-AUDIENCE-FILTER.md) | Audience list in report settings, audience tags in Marketing Intelligence forms, audience filter in the preview |
 | 12 | [STEP-12-REPORTING-AUDIENCE-FILTER.md](STEP-12-REPORTING-AUDIENCE-FILTER.md) | Channel and campaign audiences in report settings, audience filter on Reporting tabs, "Not available by audience" and locked editing in the preview |
 | 13 | [STEP-13-CSV-CONTENT-IMPORT.md](STEP-13-CSV-CONTENT-IMPORT.md) | Import CSV dialog in the builder for Marketing Intelligence and MMM content: drop files or a zip, preview per card, apply; template downloads |
+| 14 | [STEP-14-COMBINED-CSV-AND-UPLOAD-LIMITS.md](STEP-14-COMBINED-CSV-AND-UPLOAD-LIMITS.md) | One combined CSV per section or tab, "Include example rows" on template downloads, 4 MB total upload check, Apply by `cards[]` (replaces the zip hold-back) |
 
 ## Definition of done per step
 

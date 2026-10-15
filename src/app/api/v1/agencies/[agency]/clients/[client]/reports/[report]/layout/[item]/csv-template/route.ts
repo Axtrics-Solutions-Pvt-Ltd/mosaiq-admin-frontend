@@ -2,7 +2,8 @@ import { forwardAdminFileDownload } from "@/lib/api/admin-server";
 import { reportPaths } from "@/lib/api/paths";
 import { invalidScope, positiveRouteIds } from "@/lib/api/route-ids";
 
-// A zip for a section or tab, a `.csv` for a widget, passed through as sent.
+// One `.csv` for every scope (combined for a section or tab), passed through
+// as sent; `?sample=1` asks for the example rows.
 export async function GET(
   request: Request,
   context: {
@@ -21,8 +22,11 @@ export async function GET(
     "item",
   ]);
   if (!ids) return invalidScope();
+  const sample = new URL(request.url).searchParams.get("sample");
   return forwardAdminFileDownload(
     request,
-    reportPaths.csvTemplate(ids.agency, ids.client, ids.report, ids.item),
+    reportPaths.csvTemplate(ids.agency, ids.client, ids.report, ids.item, {
+      sample: sample === "1" || sample === "true",
+    }),
   );
 }

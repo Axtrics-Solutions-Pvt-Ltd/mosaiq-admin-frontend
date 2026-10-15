@@ -1,11 +1,14 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse } from "msw";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { Toaster } from "@/components/ui/Toast";
 import {
+  combinedCsvName,
+  csvImportCombinedFixtures,
   csvImportFileFixtures,
+  csvImportFormatErrorFixture,
   csvImportPreviewFixture,
 } from "@/mocks/fixtures/csv-import";
 import { layoutItem } from "@/mocks/fixtures/reports";
@@ -18,7 +21,7 @@ import { layoutItemResponseSchema } from "./contracts";
 import { CsvImportDialog } from "./CsvImportDialog";
 import { reportKeys } from "./queries";
 
-// The real requests run through MSW; the spies show which files were sent.
+// The real requests run through MSW; the spies show what was sent.
 vi.mock("./api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api")>();
   return {
@@ -33,7 +36,13 @@ const sentFiles = (
   call = 0,
 ) => {
   const args = vi.mocked(spy).mock.calls[call];
-  return args && { files: args[2].map((file) => file.name), asOf: args[3] };
+  return (
+    args && {
+      files: args[2].map((file) => file.name),
+      asOf: args[3],
+      ...(args[4] ? { cards: args[4] } : {}),
+    }
+  );
 };
 
 vi.mock("next/navigation", () => ({
@@ -169,11 +178,32 @@ describe("CsvImportDialog", () => {
       screen.getByRole("button", { name: "Remove notes.xlsx" }),
     );
     expect(check).toBeEnabled();
+  });
 
-    drop(csv("big.csv", 5 * 1024 * 1024 + 1));
+  it("limits the chosen files to 4 MB in total", () => {
+    renderDialog();
+    const halfOver = 2.5 * 1024 * 1024;
+    drop(csv("a.csv", halfOver), csv("b.csv", halfOver));
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "big.csv: each file must be 5 MB or smaller.",
+      "The upload can be at most 4 MB in total",
     );
+    expect(screen.getByRole("button", { name: "Check files" })).toBeDisabled();
+  });
+
+  it("switches the template link to and from the example rows", async () => {
+    renderDialog();
+    const link = screen.getByRole("link", { name: "Download template" });
+    const blank =
+      "/api/v1/agencies/1/clients/20/reports/7/layout/5/csv-template";
+    expect(link).toHaveAttribute("href", blank);
+    const sample = screen.getByRole("checkbox", {
+      name: "Include example rows",
+    });
+    expect(sample).not.toBeChecked();
+    await userEvent.click(sample);
+    expect(link).toHaveAttribute("href", `${blank}?sample=1`);
+    await userEvent.click(sample);
+    expect(link).toHaveAttribute("href", blank);
   });
 
   it("lists every status, expands errors and hides ignored files", async () => {
@@ -191,7 +221,7 @@ describe("CsvImportDialog", () => {
     expect(sentFiles(previewCsvImport)?.files).toEqual([
       "MOSAIQ-Marketing-Intelligence-Templates.zip",
     ]);
-    const table = screen.getByRole("table", { name: "Files checked" });
+    const table = screen.getByRole("table", { name: "Cards checked" });
     const rows = within(table).getAllByRole("row").slice(1);
     // Tab by tab, card by card; the unmatched MMM file last.
     expect(rows.map((row) => within(row).getAllByRole("cell")[0]!)).toEqual([
@@ -232,13 +262,106 @@ describe("CsvImportDialog", () => {
         name: "Add audiences in report settings",
       }),
     ).toHaveAttribute("href", "/reports/7/settings?agency=1&client=20");
-    // The zip has a file with errors, so nothing can be applied.
-    expect(
-      screen.getByRole("button", { name: "Apply 0 cards" }),
-    ).toBeDisabled();
+    // The card with errors is left alone; the ready one still applies.
+    expect(screen.getByRole("button", { name: "Apply 1 card" })).toBeEnabled();
+    expect(screen.queryByText(/held back|aren't applied|isn't applied/)).toBe(
+      null,
+    );
   });
 
-  it("applies only the ready files with the chosen date, then closes", async () => {
+  it("lists a combined file's cards as rows, with line-numbered errors", async () => {
+    const api = csvImportHandlers(scope, section.id, {
+      preview: () =>
+        HttpResponse.json(
+          csvImportPreviewFixture(Object.values(csvImportCombinedFixtures)),
+        ),
+    });
+    server.use(...api.handlers);
+    renderDialog();
+    drop(csv(combinedCsvName));
+    await userEvent.click(screen.getByRole("button", { name: "Check files" }));
+
+    expect(
+      await screen.findByText(
+        "2 ready · 1 with errors · 0 skipped · 1 not used",
+      ),
+    ).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Cards checked" });
+    const titles = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[0]!.textContent);
+    expect(titles).toEqual([
+      "Audience by Segment",
+      "Core Values",
+      "Category Spending",
+      "Channel Diagnosis",
+    ]);
+    // One file uploaded, so no file name under the cards.
+    expect(within(table).queryByText(combinedCsvName)).not.toBeInTheDocument();
+    await userEvent.click(
+      within(table).getByRole("button", {
+        name: "Show 1 error in Core Values",
+      }),
+    );
+    expect(
+      within(table).getByText(
+        /Line 215 · value: Write numbers without %, \$ or commas/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply 2 cards" })).toBeEnabled();
+  });
+
+  it("names each card's file when several were uploaded", async () => {
+    const api = csvImportHandlers(scope, section.id, {
+      preview: () =>
+        HttpResponse.json(
+          csvImportPreviewFixture([
+            csvImportCombinedFixtures.audienceBySegment,
+            {
+              ...csvImportFileFixtures.skipped,
+              file: "03_category_spending.csv",
+              source: "03_category_spending.csv",
+            },
+          ]),
+        ),
+    });
+    server.use(...api.handlers);
+    renderDialog();
+    drop(csv(combinedCsvName), csv("03_category_spending.csv"));
+    await userEvent.click(screen.getByRole("button", { name: "Check files" }));
+    const table = await screen.findByRole("table", { name: "Cards checked" });
+    const [first, second] = within(table).getAllByRole("row").slice(1);
+    expect(within(first!).getByText(combinedCsvName)).toBeInTheDocument();
+    expect(
+      within(second!).getByText("03_category_spending.csv"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a file's own format error at the top, titled by the file", async () => {
+    const api = csvImportHandlers(scope, section.id, {
+      preview: () =>
+        HttpResponse.json(
+          csvImportPreviewFixture([
+            csvImportCombinedFixtures.audienceBySegment,
+            csvImportFormatErrorFixture,
+          ]),
+        ),
+    });
+    server.use(...api.handlers);
+    renderDialog();
+    drop(csv(combinedCsvName));
+    await userEvent.click(screen.getByRole("button", { name: "Check files" }));
+    const table = await screen.findByRole("table", { name: "Cards checked" });
+    const first = within(table).getAllByRole("row")[1]!;
+    expect(within(first).getByText(combinedCsvName)).toBeInTheDocument();
+    expect(within(first).getByText("Errors")).toBeInTheDocument();
+    expect(
+      within(first).getByText("Line 4: Start each card with a #card line."),
+    ).toBeInTheDocument();
+  });
+
+  it("posts every file again with the ready cards and the chosen date, then closes", async () => {
     const onClose = vi.fn();
     const api = csvImportHandlers(scope, section.id, {
       preview: () =>
@@ -262,8 +385,9 @@ describe("CsvImportDialog", () => {
       asOf: "2026-09-30",
     });
     expect(sentFiles(applyCsvImport)).toEqual({
-      files: ["03_audience_by_segment.csv"],
+      files: ["03_audience_by_segment.csv", "02_core_values.csv"],
       asOf: "2026-09-30",
+      cards: ["audience_by_segment"],
     });
     expect(api.calls.apply).toBe(1);
     expect(invalidate).toHaveBeenCalledWith({
@@ -300,6 +424,57 @@ describe("CsvImportDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("posts a combined file once, naming only its ready cards", async () => {
+    const api = csvImportHandlers(scope, section.id, {
+      preview: () =>
+        HttpResponse.json(
+          csvImportPreviewFixture(Object.values(csvImportCombinedFixtures)),
+        ),
+    });
+    server.use(...api.handlers);
+    const onClose = vi.fn();
+    renderDialog(section, { onClose });
+    drop(csv(combinedCsvName));
+    await userEvent.click(screen.getByRole("button", { name: "Check files" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Apply 2 cards" }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(sentFiles(applyCsvImport)).toMatchObject({
+      files: [combinedCsvName],
+      cards: ["audience_by_segment", "category_spending"],
+    });
+  });
+
+  it("stays on the review with the message when a card is no longer ready", async () => {
+    const onClose = vi.fn();
+    const message = "Core Values has errors. Check the files again.";
+    const api = csvImportHandlers(scope, section.id, {
+      preview: () => HttpResponse.json(csvImportPreviewFixture([readyFile])),
+      apply: () =>
+        HttpResponse.json(
+          { message, errors: { cards: [message] } },
+          { status: 422 },
+        ),
+    });
+    server.use(...api.handlers);
+    renderDialog(section, { onClose });
+    drop(csv("03_audience_by_segment.csv"));
+    await userEvent.click(screen.getByRole("button", { name: "Check files" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Apply 1 card" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(
+      screen.getByRole("table", { name: "Cards checked" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Change files" }),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("shows the shared access message when the report is out of reach", async () => {
     const api = csvImportHandlers(scope, section.id, {
       preview: () =>
@@ -329,6 +504,24 @@ describe("CsvImportDialog", () => {
     const chosen = screen.getByRole("list", { name: "Chosen files" });
     expect(within(chosen).getAllByRole("listitem")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Check files" })).toBeEnabled();
+  });
+
+  it("takes the whole section file for a card, and shows a missing block", async () => {
+    const message = "This file has no #card block for Core Values.";
+    const api = csvImportHandlers(scope, card.id, {
+      preview: () =>
+        HttpResponse.json(
+          { message, errors: { files: [message] } },
+          { status: 422 },
+        ),
+    });
+    server.use(...api.handlers);
+    renderDialog(card);
+    drop(csv(combinedCsvName));
+    const check = screen.getByRole("button", { name: "Check files" });
+    expect(check).toBeEnabled();
+    await userEvent.click(check);
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
   });
 
   it("warns when a ready card's tab is hidden", async () => {
@@ -365,7 +558,7 @@ describe("CsvImportDialog", () => {
     renderDialog(section, { onPreview });
     drop(csv("03_audience_by_segment.csv"));
     await userEvent.click(screen.getByRole("button", { name: "Check files" }));
-    const table = await screen.findByRole("table", { name: "Files checked" });
+    const table = await screen.findByRole("table", { name: "Cards checked" });
     await userEvent.click(
       within(table).getByRole("button", {
         name: "Preview Audience by Segment on the canvas",

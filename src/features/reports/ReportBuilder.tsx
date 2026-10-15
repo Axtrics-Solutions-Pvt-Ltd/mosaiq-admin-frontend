@@ -769,12 +769,14 @@ function Builder({
         csvImportable(selectedItem, selectedSectionCode)
           ? {
               onOpen: () => setCsvImportItemId(selectedItem.id),
-              templateHref: reportPaths.csvTemplate(
-                scope.agencyId,
-                scope.clientId,
-                scope.reportId,
-                selectedItem.id,
-              ),
+              templateHref: (isSample) =>
+                reportPaths.csvTemplate(
+                  scope.agencyId,
+                  scope.clientId,
+                  scope.reportId,
+                  selectedItem.id,
+                  { sample: isSample },
+                ),
             }
           : undefined
       }

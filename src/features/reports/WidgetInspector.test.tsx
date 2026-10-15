@@ -366,11 +366,21 @@ describe("WidgetInspector", () => {
         kind: "manual_data",
       }).item,
       undefined,
-      { onOpen, templateHref: "/template.csv" },
+      {
+        onOpen,
+        templateHref: (isSample) =>
+          isSample ? "/template.csv?sample=1" : "/template.csv",
+      },
     );
-    expect(
-      screen.getByRole("link", { name: "Download template" }),
-    ).toHaveAttribute("href", "/template.csv");
+    const link = screen.getByRole("link", { name: "Download template" });
+    expect(link).toHaveAttribute("href", "/template.csv");
+    const sample = screen.getByRole("checkbox", {
+      name: "Include example rows",
+    });
+    await userEvent.click(sample);
+    expect(link).toHaveAttribute("href", "/template.csv?sample=1");
+    await userEvent.click(sample);
+    expect(link).toHaveAttribute("href", "/template.csv");
     await userEvent.click(screen.getByRole("button", { name: "Import CSV" }));
     expect(onOpen).toHaveBeenCalledTimes(1);
 
