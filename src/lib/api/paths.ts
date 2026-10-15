@@ -137,6 +137,29 @@ export const reportPaths = {
     creativeKey: string,
   ) =>
     `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/creatives/${encodeURIComponent(creativeKey)}/thumbnail`,
+  // Marketing Intelligence and Media Mix Model only: check CSV files against
+  // a section, tab or widget, apply them, and download their templates.
+  csvImportPreview: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-import/preview`,
+  csvImport: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-import`,
+  csvTemplate: (
+    agencyId: number,
+    clientId: number,
+    reportId: number,
+    itemId: number,
+  ) =>
+    `${reportBase(agencyId, clientId, reportId)}/layout/${itemId}/csv-template`,
   previewMeta: (agencyId: number, clientId: number, reportId: number) =>
     `${reportBase(agencyId, clientId, reportId)}/preview/meta`,
   previewTab: (

@@ -19,6 +19,7 @@ import { type EditingValue, layoutItemResponseSchema } from "./contracts";
 import type { InspectorFormHandle } from "./inspector-parts";
 import { itemTitle } from "./layout";
 import {
+  type InspectorCsvImport,
   type LiveEditing,
   WidgetInspector,
   widgetTypeLabel,
@@ -109,10 +110,12 @@ const channels = [
 function renderInspector(
   item: ReturnType<typeof widget>["item"],
   liveEditing?: LiveEditing,
+  csvImport?: InspectorCsvImport,
 ) {
   return renderWithScope(
     <WidgetInspector
       accents={accentFixtures}
+      csvImport={csvImport}
       item={item}
       liveEditing={liveEditing}
       onDirtyChange={vi.fn()}
@@ -351,6 +354,44 @@ describe("WidgetInspector", () => {
       screen.getByRole("form", { name: "Audience Overview content" }),
     ).toBeVisible();
     expect(screen.getByRole("group", { name: "Rows" })).toBeVisible();
+  });
+
+  it("imports a card's CSV, asking first when the form has unsaved edits", async () => {
+    const onOpen = vi.fn();
+    renderInspector(
+      widget({
+        code: "audience_overview",
+        title: "Audience Overview",
+        type: "kpi_list",
+        kind: "manual_data",
+      }).item,
+      undefined,
+      { onOpen, templateHref: "/template.csv" },
+    );
+    expect(
+      screen.getByRole("link", { name: "Download template" }),
+    ).toHaveAttribute("href", "/template.csv");
+    await userEvent.click(screen.getByRole("button", { name: "Import CSV" }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+
+    await userEvent.type(screen.getByLabelText("Subtitle"), "Draft");
+    await userEvent.click(screen.getByRole("button", { name: "Import CSV" }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    const confirm = screen.getByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await userEvent.click(
+      within(confirm).getByRole("button", { name: "Discard changes" }),
+    );
+    expect(onOpen).toHaveBeenCalledTimes(2);
+    expect(screen.getByLabelText("Subtitle")).toHaveValue("");
+  });
+
+  it("has no CSV import unless the builder offers it", () => {
+    renderInspector(widget({}).item);
+    expect(
+      screen.queryByRole("button", { name: "Import CSV" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps a manual widget of an unknown type to its title", () => {

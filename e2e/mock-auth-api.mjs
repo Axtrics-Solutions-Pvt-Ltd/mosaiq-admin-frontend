@@ -1635,6 +1635,149 @@ createServer(async (request, response) => {
       touch(report);
       return treeResponse();
     }
+    // CSV import (API Step 13). A zip stands for the template bundle: every
+    // written and manual card under the scope is ready. A .csv matches the
+    // card its name names, as `NN_<code>.csv`.
+    const csvMatch = rest.match(
+      /^\/layout\/(\d+)\/(csv-import\/preview|csv-import|csv-template)$/,
+    );
+    if (csvMatch) {
+      const scopeNode = layoutNodes(sections).find(
+        (entry) => entry.id === Number(csvMatch[1]),
+      );
+      const scopeSection =
+        scopeNode &&
+        sections.find((section) =>
+          layoutNodes([section]).some((node) => node.id === scopeNode.id),
+        );
+      if (
+        !scopeSection ||
+        !["marketing_intelligence", "mmm"].includes(scopeSection.code)
+      )
+        return json(response, 422, {
+          errors: {
+            layout_item: [
+              "CSV import is only available for Marketing Intelligence and Media Mix Model.",
+            ],
+          },
+        });
+      if (csvMatch[2] === "csv-template" && request.method === "GET") {
+        response.writeHead(200, {
+          "Content-Type": "application/zip",
+          "Content-Disposition": `attachment; filename="${scopeSection.code}-templates.zip"`,
+        });
+        return response.end(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+      }
+      if (request.method !== "POST")
+        return json(response, 405, { message: "Method not allowed" });
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const form = await new Response(Buffer.concat(chunks), {
+        headers: { "Content-Type": request.headers["content-type"] ?? "" },
+      }).formData();
+      const uploads = form
+        .getAll("files[]")
+        .filter((entry) => typeof entry !== "string");
+      const asOf = form.get("as_of") || new Date().toISOString().slice(0, 10);
+      const cards = layoutNodes([scopeNode]).filter(
+        (node) => node.level === "widget" && node.kind !== "live",
+      );
+      const tabOf = (card) =>
+        scopeSection.children.find((tab) => tab.children.includes(card));
+      const sampleContent = (card) =>
+        card.type === "recommendation_list"
+          ? {
+              items: [
+                { title: "Shift budget to video", body: null, owner: null },
+              ],
+            }
+          : card.type === "text_hero"
+            ? { headline: "Imported headline", body: null }
+            : {
+                items: [
+                  {
+                    label: "Imported population",
+                    value: "2.1M",
+                    format: "text",
+                  },
+                ],
+              };
+      const ready = (file, card) => {
+        const tab = tabOf(card);
+        return {
+          file,
+          status: "ready",
+          widget: {
+            id: card.id,
+            code: card.code,
+            title: card.title,
+            type: card.type,
+          },
+          tab: tab
+            ? { code: tab.code, title: tab.title, is_enabled: tab.is_enabled }
+            : null,
+          section_enabled: scopeSection.is_enabled,
+          rows: 1,
+          errors: [],
+          content: sampleContent(card),
+        };
+      };
+      const files = uploads.flatMap((upload) => {
+        if (upload.name.toLowerCase().endsWith(".zip"))
+          return [
+            ...cards.map((card, index) =>
+              ready(
+                `${String(index + 1).padStart(2, "0")}_${card.code}.csv`,
+                card,
+              ),
+            ),
+            { file: "README.txt", status: "ignored" },
+          ];
+        const code = upload.name.replace(/^\d+_/, "").replace(/\.csv$/i, "");
+        const card = cards.find((candidate) => candidate.code === code);
+        return [
+          card
+            ? ready(upload.name, card)
+            : { file: upload.name, status: "unrecognised", errors: [] },
+        ];
+      });
+      const count = (status) =>
+        files.filter((file) => file.status === status).length;
+      const result = {
+        as_of: asOf,
+        summary: {
+          ready: count("ready"),
+          invalid: count("invalid"),
+          skipped: count("skipped"),
+          ignored:
+            files.length - count("ready") - count("invalid") - count("skipped"),
+        },
+        files,
+      };
+      if (csvMatch[2] === "csv-import/preview")
+        return json(response, 200, { data: result });
+      const readyFiles = files.filter((file) => file.status === "ready");
+      if (readyFiles.length === 0)
+        return json(response, 422, {
+          errors: {
+            files: ["None of the files has data for a card in this section."],
+          },
+        });
+      for (const file of readyFiles) {
+        const card = cards.find((candidate) => candidate.id === file.widget.id);
+        card.content = file.content;
+        card.as_of = asOf;
+        card.is_enabled = true;
+      }
+      touch(report);
+      return json(response, 200, {
+        data: {
+          ...result,
+          applied: readyFiles.map((file) => file.widget.code),
+          layout_version: report.layout_version,
+        },
+      });
+    }
     const itemMatch = rest.match(/^\/layout\/(\d+)(\/reset)?$/);
     if (itemMatch) {
       const node = layoutNodes(sections).find(

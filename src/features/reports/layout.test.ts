@@ -6,6 +6,7 @@ import { layoutResponseSchema } from "./contracts";
 import {
   accentStyle,
   applyOrder,
+  csvImportable,
   defaultTabCode,
   findTab,
   moveInOrder,
@@ -140,5 +141,29 @@ describe("layout helpers", () => {
     }).data;
     expect(layout.accents).toEqual([]);
     expect(layout.sections[0]!.accent).toBeNull();
+  });
+
+  it("allows CSV import on Marketing Intelligence and Media Mix Model only", () => {
+    const layout = sections();
+    const [reporting, mmm] = [layout[0]!, layout[1]!];
+    const mmmWidget = mmm.children[0]!;
+    expect(csvImportable(mmm, "mmm")).toBe(true);
+    expect(csvImportable({ ...mmmWidget, kind: "text" }, "mmm")).toBe(true);
+    expect(csvImportable({ ...mmmWidget, kind: "manual_data" }, "mmm")).toBe(
+      true,
+    );
+    expect(csvImportable({ ...mmmWidget, kind: "live" }, "mmm")).toBe(false);
+    const marketing = { ...reporting, code: "marketing_intelligence" };
+    expect(csvImportable(marketing, "marketing_intelligence")).toBe(true);
+    expect(
+      csvImportable(marketing.children[0]!, "marketing_intelligence"),
+    ).toBe(true);
+    // A tab only exists under Marketing Intelligence.
+    expect(csvImportable({ ...reporting.children[0]! }, "mmm")).toBe(false);
+    expect(csvImportable(reporting, "reporting")).toBe(false);
+    expect(csvImportable(reporting.children[0]!, "reporting")).toBe(false);
+    expect(
+      csvImportable({ ...mmmWidget, kind: "manual_data" }, "reporting"),
+    ).toBe(false);
   });
 });

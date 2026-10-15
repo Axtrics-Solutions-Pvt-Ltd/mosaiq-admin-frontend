@@ -55,6 +55,24 @@ export const audienceSectionCodes: readonly string[] = [
   "reporting",
 ];
 export const marketingIntelligenceCode = "marketing_intelligence";
+export const mediaMixModelCode = "mmm";
+
+// What CSV import can fill (API Step 13): the Marketing Intelligence section
+// and its tabs, the Media Mix Model section, and the written and manual cards
+// under them. Reporting's data is live, so it never is.
+export function csvImportable(
+  item: LayoutItem,
+  sectionCode: string | undefined,
+) {
+  if (
+    sectionCode !== marketingIntelligenceCode &&
+    sectionCode !== mediaMixModelCode
+  )
+    return false;
+  if (item.level === "section") return item.code === sectionCode;
+  if (item.level === "tab") return sectionCode === marketingIntelligenceCode;
+  return item.kind === "manual_data" || item.kind === "text";
+}
 
 // Siblings under one parent; `null` means the sections themselves.
 export function siblingsOf(
@@ -106,6 +124,14 @@ export function findTab(sections: readonly LayoutItem[], tabCode: string) {
   for (const section of sections)
     for (const tab of tabsOf(section))
       if (tab.code === tabCode) return { section, tab };
+  return undefined;
+}
+
+// The canvas tab a widget sits on.
+export function tabOfItem(sections: readonly LayoutItem[], id: number) {
+  for (const section of sections)
+    for (const tab of tabsOf(section))
+      if (tab.children.some((child) => child.id === id)) return tab;
   return undefined;
 }
 

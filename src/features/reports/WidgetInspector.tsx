@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LocateFixed, Plus, RotateCcw } from "lucide-react";
+import { Download, LocateFixed, Plus, RotateCcw, Upload } from "lucide-react";
 import { type FocusEvent, type Ref, useEffect, useRef, useState } from "react";
 import {
   useFieldArray,
@@ -713,6 +713,12 @@ function fieldForPart(form: Element, part: WidgetPart) {
 // Budget pacing reads the client's monthly budgets, edited beside the widget.
 export const budgetWidgetCode = "budget_utilization";
 
+// CSV import for a Marketing Intelligence or Media Mix Model card.
+export type InspectorCsvImport = {
+  onOpen: () => void;
+  templateHref: string;
+};
+
 export type InspectorBudgets = {
   allBudgetsHref: string;
   focusRequest: number;
@@ -727,6 +733,7 @@ export function WidgetInspector({
   audienceFilter,
   audiences,
   budgets,
+  csvImport,
   focusPart,
   formRef,
   item,
@@ -746,6 +753,7 @@ export function WidgetInspector({
   // whose rows can be tagged with one.
   audiences?: readonly Audience[];
   budgets?: InspectorBudgets;
+  csvImport?: InspectorCsvImport;
   // Moves focus to the field of a card part clicked on the canvas, each time
   // `count` changes.
   focusPart?: { part: WidgetPart; count: number };
@@ -765,6 +773,7 @@ export function WidgetInspector({
   const updateMutation = useUpdateLayoutItem(scope);
   const resetMutation = useResetLayoutItem(scope);
   const [isConfirmingReset, setIsConfirmingReset] = useState(false);
+  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
   // A reset or a new item starts the form again from the stored values.
   const [formVersion, setFormVersion] = useState(0);
   const title = itemTitle(item);
@@ -814,6 +823,20 @@ export function WidgetInspector({
       });
     }
     setIsConfirmingReset(false);
+  }
+
+  // The import replaces the card's content, so unsaved edits go first.
+  function openImport() {
+    if (isFormDirty) setIsConfirmingImport(true);
+    else csvImport?.onOpen();
+  }
+
+  function discardAndImport() {
+    setIsConfirmingImport(false);
+    setIsFormDirty(false);
+    setFormVersion((version) => version + 1);
+    onDraftChange?.(undefined);
+    csvImport?.onOpen();
   }
 
   const formKey = `${item.id}-${formVersion}`;
@@ -881,6 +904,26 @@ export function WidgetInspector({
           {!item.is_available && <Badge tone="neutral">Coming soon</Badge>}
         </div>
       </header>
+      {csvImport && (
+        <div className="bg-muted/50 flex flex-wrap items-center gap-2 rounded-lg border p-2">
+          <p className="text-muted-foreground mr-auto text-xs">
+            Fill this card from a CSV file.
+          </p>
+          <Button
+            onClick={openImport}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <Upload aria-hidden className="size-4" /> Import CSV
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <a download href={csvImport.templateHref}>
+              <Download aria-hidden className="size-4" /> Download template
+            </a>
+          </Button>
+        </div>
+      )}
       <div onBlur={clearFocus} onFocus={trackFocus} ref={formsRef}>
         <InspectorFormContext value={formContext}>
           {isSection && (
@@ -951,6 +994,21 @@ export function WidgetInspector({
         onCancel={() => setIsConfirmingReset(false)}
         onConfirm={reset}
         title={isSection ? "Reset this section?" : "Reset this widget?"}
+      />
+      <ConfirmationDialog
+        body={
+          <p>
+            {title} has unsaved changes. Importing a CSV replaces its content,
+            so the changes are discarded.
+          </p>
+        }
+        cancelLabel="Keep editing"
+        confirmLabel="Discard changes"
+        description="Unsaved changes are lost when you import."
+        isOpen={isConfirmingImport}
+        onCancel={() => setIsConfirmingImport(false)}
+        onConfirm={discardAndImport}
+        title="Discard unsaved changes?"
       />
     </section>
   );

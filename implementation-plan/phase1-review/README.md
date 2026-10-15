@@ -62,6 +62,7 @@ The capabilities `imports.create`, `importHistory.view`, `connectors.view` and `
 | 10 | [STEP-10-CHANNEL-PLATFORM-RENAME.md](STEP-10-CHANNEL-PLATFORM-RENAME.md) | UI rename Workspace → Channel, Channel → Platform; report data per channel (workspace) |
 | 11 | [STEP-11-AUDIENCE-FILTER.md](STEP-11-AUDIENCE-FILTER.md) | Audience list in report settings, audience tags in Marketing Intelligence forms, audience filter in the preview |
 | 12 | [STEP-12-REPORTING-AUDIENCE-FILTER.md](STEP-12-REPORTING-AUDIENCE-FILTER.md) | Channel and campaign audiences in report settings, audience filter on Reporting tabs, "Not available by audience" and locked editing in the preview |
+| 13 | [STEP-13-CSV-CONTENT-IMPORT.md](STEP-13-CSV-CONTENT-IMPORT.md) | Import CSV dialog in the builder for Marketing Intelligence and MMM content: drop files or a zip, preview per card, apply; template downloads |
 
 ## Definition of done per step
 

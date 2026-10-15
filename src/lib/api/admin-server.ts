@@ -117,7 +117,8 @@ export async function forwardAdminFileDownload(request: Request, path: string) {
     const contentDisposition = upstream.headers.get("Content-Disposition");
     if (contentDisposition)
       responseHeaders.set("Content-Disposition", contentDisposition);
-    return new Response(await upstream.text(), {
+    // Binary-safe: template downloads include zips.
+    return new Response(await upstream.arrayBuffer(), {
       status: upstream.status,
       headers: responseHeaders,
     });

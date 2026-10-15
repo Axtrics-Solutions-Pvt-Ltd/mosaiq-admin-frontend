@@ -29,6 +29,7 @@ import { correctionFilterParams } from "@/features/corrections/filters";
 import { metricFormat } from "@/features/corrections/format";
 import type { WidgetPart } from "@/features/report-widgets/contracts";
 import { ApiError } from "@/lib/api/errors";
+import { reportPaths } from "@/lib/api/paths";
 import { formatDateRange } from "@/lib/formatters";
 import { useMediaQuery } from "@/lib/utils/useMediaQuery";
 
@@ -43,6 +44,7 @@ import {
   type Report,
   reportMetricLabel,
 } from "./contracts";
+import { CsvImportDialog, type CsvImportPreview } from "./CsvImportDialog";
 import {
   type AudienceView,
   draftPreviewWidget,
@@ -52,6 +54,7 @@ import {
 import type { InspectorFormHandle } from "./inspector-parts";
 import {
   audienceSectionCodes,
+  csvImportable,
   defaultTabCode,
   findLayoutItem,
   findTab,
@@ -59,6 +62,7 @@ import {
   layoutItemElementId,
   marketingIntelligenceCode,
   sectionOfItem,
+  tabOfItem,
   tabsOf,
 } from "./layout";
 import { type DateRange, PreviewRangeControls } from "./PreviewRangeControls";
@@ -112,6 +116,15 @@ export type BuilderView = {
   // without the audience filter is open, and sent on tabs with it.
   audiences?: string;
 };
+
+// What a CSV import fills, for the dialog's heading.
+function csvScopeLabel(sections: readonly LayoutItem[], item: LayoutItem) {
+  if (item.level === "widget") return `Card: ${itemTitle(item)}`;
+  const section = sectionOfItem(sections, item.id);
+  return item.level === "tab" && section
+    ? `${itemTitle(section)} · ${itemTitle(item)}`
+    : itemTitle(item);
+}
 
 function isNotFound(error: unknown) {
   return error instanceof ApiError && error.status === 404;
@@ -323,6 +336,12 @@ function Builder({
   }>();
   const [appliedCorrections, setAppliedCorrections] =
     useState<AppliedCorrectionsContext | null>(null);
+  // The section, tab or card a CSV import is open for, a checked card shown
+  // on the canvas before it is applied, and a count bumped by each apply so
+  // the inspector starts again from the imported content.
+  const [csvImportItemId, setCsvImportItemId] = useState<number>();
+  const [csvPreview, setCsvPreview] = useState<CsvImportPreview>();
+  const [csvApplyCount, setCsvApplyCount] = useState(0);
   useUnsavedChangesWarning(isInspectorDirty);
 
   const sections = layout.data?.sections ?? [];
@@ -610,6 +629,14 @@ function Builder({
     });
   }
 
+  function previewCsvCard(next: CsvImportPreview | undefined) {
+    setCsvPreview(next);
+    if (!next) return;
+    const tab = tabOfItem(sections, next.itemId);
+    if (tab && tab.code !== tabCode) selectTab(tab.code);
+    highlightItem(next.itemId, true);
+  }
+
   const period = preview.data?.period;
 
   // Scrolls to the widget that shows a calculated value's input, and opens
@@ -715,13 +742,19 @@ function Builder({
     range?.to ??
     new Date().toISOString()
   ).slice(0, 7);
+  const selectedSectionCode =
+    selectedItem && sectionOfItem(sections, selectedItem.id)?.code;
   const isAudienceItem =
     selectedItem !== undefined &&
-    audienceSectionCodes.includes(
-      sectionOfItem(sections, selectedItem.id)?.code ?? "",
-    );
+    audienceSectionCodes.includes(selectedSectionCode ?? "");
+  const csvImportItem =
+    csvImportItemId !== undefined
+      ? findLayoutItem(sections, csvImportItemId)
+      : undefined;
   const inspector = selectedItem ? (
     <WidgetInspector
+      // An import replaces the content the open form started from.
+      key={`${selectedItem.id}-${csvApplyCount}`}
       accents={layout.data?.accents}
       audiences={isAudienceItem ? reportAudiences : undefined}
       audienceFilter={isAudienceItem ? contentAudiences : undefined}
@@ -731,6 +764,20 @@ function Builder({
         initialMonth: budgetMonth,
         workspaces: report.workspaces,
       }}
+      csvImport={
+        selectedItem.level === "widget" &&
+        csvImportable(selectedItem, selectedSectionCode)
+          ? {
+              onOpen: () => setCsvImportItemId(selectedItem.id),
+              templateHref: reportPaths.csvTemplate(
+                scope.agencyId,
+                scope.clientId,
+                scope.reportId,
+                selectedItem.id,
+              ),
+            }
+          : undefined
+      }
       item={selectedItem}
       liveEditing={{
         values:
@@ -778,7 +825,7 @@ function Builder({
     shownDraft,
     layout.data?.accents ?? [],
   );
-  const canvasWidgets =
+  const draftWidgets =
     selectedItem && shownDraft
       ? preview.data?.widgets.map((widget) =>
           widget.editing.item_id === shownDraft.itemId
@@ -791,6 +838,27 @@ function Builder({
             : widget,
         )
       : preview.data?.widgets;
+  // A checked CSV file's card, shown as it would be imported.
+  const csvPreviewItem = csvPreview
+    ? findLayoutItem(sections, csvPreview.itemId)
+    : undefined;
+  const canvasWidgets =
+    csvPreview && csvPreviewItem
+      ? draftWidgets?.map((widget) =>
+          widget.editing.item_id === csvPreview.itemId
+            ? draftPreviewWidget(
+                widget,
+                csvPreviewItem,
+                { content: csvPreview.content },
+                audienceSectionCodes.includes(
+                  sectionOfItem(sections, csvPreview.itemId)?.code ?? "",
+                )
+                  ? audienceView
+                  : undefined,
+              )
+            : widget,
+        )
+      : draftWidgets;
   const pendingTitle = selectedItem ? itemTitle(selectedItem) : "This item";
 
   if (layout.isPending) return <p aria-busy="true">Loading report layout...</p>;
@@ -885,6 +953,7 @@ function Builder({
               setBudgetFocusRequest(0);
               requestSelect(itemId);
             }}
+            onImportCsv={(item) => setCsvImportItemId(item.id)}
             onPickWidget={(itemId, part) => {
               if (part)
                 setFocusPart((current) => ({
@@ -901,7 +970,7 @@ function Builder({
             onSelectTab={selectTab}
             onToggleWidget={toggleWidget}
             activePart={activePart}
-            draftItemId={shownDraft?.itemId}
+            draftItemId={csvPreview?.itemId ?? shownDraft?.itemId}
             highlight={highlight}
             preview={{
               widgets: canvasWidgets,
@@ -985,6 +1054,18 @@ function Builder({
         onConfirm={continuePendingSelection}
         title="Save your changes?"
       />
+      {csvImportItem && (
+        <CsvImportDialog
+          item={csvImportItem}
+          key={csvImportItem.id}
+          onApplied={() => setCsvApplyCount((count) => count + 1)}
+          onClose={() => setCsvImportItemId(undefined)}
+          onPreview={previewCsvCard}
+          report={report}
+          scope={scope}
+          scopeLabel={csvScopeLabel(sections, csvImportItem)}
+        />
+      )}
       <CorrectionDialog
         context={correction}
         onClose={() => setCorrection(null)}

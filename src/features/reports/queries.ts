@@ -9,6 +9,7 @@ import {
 import { clientReportPreviewKey } from "@/features/corrections/queries";
 
 import {
+  applyCsvImport,
   createReport,
   type CreativeListFilters,
   deleteReport,
@@ -20,6 +21,7 @@ import {
   getReportLayout,
   listCreatives,
   listReports,
+  previewCsvImport,
   type PreviewRange,
   removeCreativeThumbnail,
   reorderReportLayout,
@@ -391,5 +393,35 @@ export function useRemoveCreativeThumbnail(scope: ReportScope) {
     }) => removeCreativeThumbnail(scope, itemId, creativeKey),
     onSettled: () =>
       client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
+  });
+}
+
+type CsvImportVariables = {
+  itemId: number;
+  files: readonly File[];
+  asOf: string;
+};
+
+// Writes nothing, so nothing is refreshed.
+export function useCsvImportPreview(scope: ReportScope) {
+  return useMutation({
+    mutationFn: ({ itemId, files, asOf }: CsvImportVariables) =>
+      previewCsvImport(scope, itemId, files, asOf),
+  });
+}
+
+// Imported cards change their content, `as_of` and visibility, so the layout
+// and every preview of the report reload. The mutation settles once they
+// have, so the inspector starts again from the saved content.
+export function useCsvImportApply(scope: ReportScope) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, files, asOf }: CsvImportVariables) =>
+      applyCsvImport(scope, itemId, files, asOf),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: reportKeys.layout(scope) }),
+        client.invalidateQueries({ queryKey: reportKeys.preview(scope) }),
+      ]),
   });
 }

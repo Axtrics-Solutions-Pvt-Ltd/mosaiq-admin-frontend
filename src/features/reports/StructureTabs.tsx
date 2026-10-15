@@ -1,10 +1,12 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, EyeOff, Palette } from "lucide-react";
+import { ArrowLeft, ArrowRight, EyeOff, Palette, Upload } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils/cn";
 
 import type { LayoutItem, ReorderItem, ResolvedAccent } from "./contracts";
@@ -51,6 +53,7 @@ function StructureTab({
   isSelected,
   item,
   onEdit,
+  onImport,
   onReorder,
   onSelect,
   siblings,
@@ -60,6 +63,7 @@ function StructureTab({
   isSelected: boolean;
   item: LayoutItem;
   onEdit?: () => void;
+  onImport?: () => void;
   onReorder: (order: ReorderItem[]) => void;
   onSelect: () => void;
   siblings: readonly LayoutItem[];
@@ -144,6 +148,20 @@ function StructureTab({
         )}
       </button>
       <div className={reveal}>
+        {onImport && (
+          <Tooltip content="Import CSV">
+            <Button
+              aria-label={`Import CSV into ${title}`}
+              className="size-8"
+              onClick={onImport}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <Upload aria-hidden className="size-4" />
+            </Button>
+          </Tooltip>
+        )}
         <MoveMenu
           label={onEdit ? `${title} options` : undefined}
           options={[
@@ -173,21 +191,26 @@ function StructureTab({
 // menu) into order. Each change sends every sibling (PUT layout/order).
 // The selected section and its tabs read as one header and panel in the
 // section's colour (`accent` for the tab row); a section's menu also opens its
-// colour and title (`onEdit`).
+// colour and title (`onEdit`). Rows CSV import can fill have an Import CSV
+// button (`onImport`, when `isImportable` allows).
 export function StructureTabs({
   accent,
+  isImportable,
   items,
   label,
   onEdit,
+  onImport,
   onReorder,
   onSelect,
   selectedId,
   size,
 }: {
   accent?: ResolvedAccent | null;
+  isImportable?: (item: LayoutItem) => boolean;
   items: readonly LayoutItem[];
   label: string;
   onEdit?: (item: LayoutItem) => void;
+  onImport?: (item: LayoutItem) => void;
   onReorder: (order: ReorderItem[]) => void;
   onSelect: (item: LayoutItem) => void;
   selectedId: number | undefined;
@@ -223,6 +246,11 @@ export function StructureTabs({
               item={item}
               key={item.id}
               onEdit={onEdit && (() => onEdit(item))}
+              onImport={
+                onImport && isImportable?.(item)
+                  ? () => onImport(item)
+                  : undefined
+              }
               onReorder={onReorder}
               onSelect={() => onSelect(item)}
               siblings={items}

@@ -4,10 +4,11 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 
 import { reportPaths } from "@/lib/api/paths";
-import { layoutFixture } from "@/mocks/fixtures/reports";
+import { layoutFixture, layoutItem } from "@/mocks/fixtures/reports";
 import { server } from "@/mocks/server";
 import { renderWithScope } from "@/test/renderWithScope";
 
+import type { LayoutItem } from "./contracts";
 import { useReorderLayout, useReportLayout } from "./queries";
 import { ReportCanvas } from "./ReportCanvas";
 
@@ -20,8 +21,12 @@ const scope = { agencyId: 1, clientId: 20, reportId: 7 };
 
 function Harness({
   onEditSection = vi.fn(),
+  onImportCsv,
+  selectedTabCode = "executive_summary",
 }: {
   onEditSection?: (itemId: number) => void;
+  onImportCsv?: (item: LayoutItem) => void;
+  selectedTabCode?: string;
 }) {
   const layout = useReportLayout(scope);
   const reorder = useReorderLayout(scope);
@@ -33,6 +38,7 @@ function Harness({
       onChannelSelect={vi.fn()}
       onEditSection={onEditSection}
       onEditWidget={vi.fn()}
+      onImportCsv={onImportCsv}
       onReorder={(order) => reorder.mutate(order)}
       onSelectTab={vi.fn()}
       onToggleWidget={vi.fn()}
@@ -44,7 +50,7 @@ function Harness({
       }}
       sections={layout.data.sections}
       selectedItemId={undefined}
-      selectedTabCode="executive_summary"
+      selectedTabCode={selectedTabCode}
       valueAdornment={() => undefined}
     />
   );
@@ -73,7 +79,75 @@ function useLayoutApi(orderResponse: () => Response) {
   return sent;
 }
 
+// The fixture plus Marketing Intelligence → Audience Profile and Behaviour.
+function withMarketingIntelligence() {
+  const layout = layoutFixture();
+  layout.sections.push(
+    layoutItem({
+      id: 5,
+      parent_id: null,
+      level: "section",
+      code: "marketing_intelligence",
+      title: "Marketing Intelligence",
+      position: 2,
+      children: ["audience_profile", "behaviour"].map((code, position) =>
+        layoutItem({
+          id: 6 + position,
+          parent_id: 5,
+          level: "tab",
+          code,
+          title: position === 0 ? "Audience Profile" : "Behaviour",
+          position,
+        }),
+      ),
+    }),
+  );
+  return layout;
+}
+
 describe("Structure tabs", () => {
+  it("offers CSV import on Marketing Intelligence, its tabs and Media Mix Model only", async () => {
+    server.use(
+      http.get(reportPaths.layout(1, 20, 7), () =>
+        HttpResponse.json({ data: withMarketingIntelligence() }),
+      ),
+    );
+    const onImportCsv = vi.fn();
+    const { unmount } = renderWithScope(
+      <Harness onImportCsv={onImportCsv} selectedTabCode="audience_profile" />,
+    );
+    for (const name of [
+      "Marketing Intelligence",
+      "Audience Profile",
+      "Behaviour",
+      "Media Mix Model",
+    ])
+      expect(
+        await screen.findByRole("button", { name: `Import CSV into ${name}` }),
+      ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Import CSV into Reporting Dashboard",
+      }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Import CSV into Behaviour" }),
+    );
+    expect(onImportCsv).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7, code: "behaviour" }),
+    );
+    unmount();
+
+    // Reporting's tabs never have it.
+    renderWithScope(<Harness onImportCsv={onImportCsv} />);
+    await screen.findByRole("navigation", {
+      name: "Reporting Dashboard tabs",
+    });
+    expect(
+      screen.queryByRole("button", { name: /Import CSV into Executive/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("hides a tab by sending its siblings with the new flag", async () => {
     const sent = useLayoutApi(() => {
       const layout = layoutFixture();

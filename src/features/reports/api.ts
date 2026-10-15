@@ -6,6 +6,8 @@ import {
   campaignAudiencesSchema,
   creativeListSchema,
   creativeThumbnailResponseSchema,
+  csvImportApplyResponseSchema,
+  csvImportResponseSchema,
   type LayoutItemPatch,
   layoutItemResponseSchema,
   layoutResponseSchema,
@@ -287,4 +289,39 @@ export async function removeCreativeThumbnail(
     { method: "DELETE" },
   );
   return creativeThumbnailResponseSchema.parse(result).data;
+}
+
+// The API keeps nothing between the check and the apply, so both post the
+// same files.
+function csvImportBody(files: readonly File[], asOf: string) {
+  const body = new FormData();
+  for (const file of files) body.append("files[]", file, file.name);
+  body.append("as_of", asOf);
+  return body;
+}
+
+export async function previewCsvImport(
+  { agencyId, clientId, reportId }: ReportScope,
+  itemId: number,
+  files: readonly File[],
+  asOf: string,
+) {
+  const result = await apiRequest<unknown>(
+    reportPaths.csvImportPreview(agencyId, clientId, reportId, itemId),
+    { method: "POST", body: csvImportBody(files, asOf) },
+  );
+  return csvImportResponseSchema.parse(result).data;
+}
+
+export async function applyCsvImport(
+  { agencyId, clientId, reportId }: ReportScope,
+  itemId: number,
+  files: readonly File[],
+  asOf: string,
+) {
+  const result = await apiRequest<unknown>(
+    reportPaths.csvImport(agencyId, clientId, reportId, itemId),
+    { method: "POST", body: csvImportBody(files, asOf) },
+  );
+  return csvImportApplyResponseSchema.parse(result).data;
 }

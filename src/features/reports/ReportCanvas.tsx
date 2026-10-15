@@ -26,6 +26,7 @@ import { useMediaQuery } from "@/lib/utils/useMediaQuery";
 
 import type { LayoutItem, PreviewWidget, ReorderItem } from "./contracts";
 import {
+  csvImportable,
   findTab,
   holdsWidgets,
   itemTitle,
@@ -162,6 +163,7 @@ export function ReportCanvas({
   onChannelSelect,
   onEditSection,
   onEditWidget,
+  onImportCsv,
   onPickWidget,
   onReorder,
   onSelectTab,
@@ -186,6 +188,9 @@ export function ReportCanvas({
   // Opens a section's colour and title in the inspector.
   onEditSection: (itemId: number) => void;
   onEditWidget: (itemId: number) => void;
+  // Opens CSV import for a Marketing Intelligence or Media Mix Model section
+  // or tab. Without it the structure has no import buttons.
+  onImportCsv?: (item: LayoutItem) => void;
   onPickWidget?: (itemId: number, part: WidgetPart | undefined) => void;
   // Saves a new order or show/hide flags of one set of siblings.
   onReorder: (order: ReorderItem[]) => void;
@@ -316,9 +321,11 @@ export function ReportCanvas({
       {/* One group, so the tab panel hangs straight off its section. */}
       <div>
         <StructureTabs
+          isImportable={(section) => csvImportable(section, section.code)}
           items={sections}
           label="Report sections"
           onEdit={(section) => onEditSection(section.id)}
+          onImport={onImportCsv}
           onReorder={onReorder}
           onSelect={(section) => {
             const first = tabsOf(section)[0];
@@ -332,8 +339,12 @@ export function ReportCanvas({
           !holdsWidgets(selection.section) && (
             <StructureTabs
               accent={selection.section.accent}
+              isImportable={(item) =>
+                csvImportable(item, selection.section.code)
+              }
               items={sectionTabs}
               label={`${itemTitle(selection.section)} tabs`}
+              onImport={onImportCsv}
               onReorder={(order) =>
                 onReorder(withPausedTabs(selection.section, order))
               }

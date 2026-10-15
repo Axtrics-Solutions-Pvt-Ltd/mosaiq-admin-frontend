@@ -461,6 +461,107 @@ export function creativeThumbnailProblem(file: File) {
   return null;
 }
 
+// CSV import of Marketing Intelligence and Media Mix Model content. One file
+// fills one card; a section or tab takes several files and/or template zips.
+export const maxCsvImportFiles = 60;
+export const maxCsvImportFileBytes = 5 * 1024 * 1024;
+const csvImportExtensions = [".csv", ".zip"] as const;
+
+const extensionOf = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot).toLowerCase();
+};
+
+// The checks the proxy and the API make before reading the files. A widget
+// takes a single `.csv`. Returns the first problem, or null.
+export function csvImportProblem(
+  files: readonly File[],
+  { isSingleCard = false }: { isSingleCard?: boolean } = {},
+) {
+  if (files.length === 0) return "Choose at least one file.";
+  if (isSingleCard) {
+    if (files.length > 1) return "A card takes one CSV file.";
+    if (extensionOf(files[0]!.name) !== ".csv")
+      return `${files[0]!.name}: a card takes a .csv file.`;
+  }
+  if (files.length > maxCsvImportFiles)
+    return `Choose at most ${maxCsvImportFiles} files.`;
+  for (const file of files) {
+    if (
+      !(csvImportExtensions as readonly string[]).includes(
+        extensionOf(file.name),
+      )
+    )
+      return `${file.name}: upload .csv or .zip files.`;
+    if (file.size > maxCsvImportFileBytes)
+      return `${file.name}: each file must be 5 MB or smaller.`;
+  }
+  return null;
+}
+
+export const csvImportStatuses = [
+  "ready",
+  "invalid",
+  "skipped",
+  "unrecognised",
+  "out_of_scope",
+  "duplicate",
+  "ignored",
+] as const;
+export const csvImportStatusSchema = z.enum(csvImportStatuses);
+
+const csvImportErrorSchema = z.object({
+  line: z.number().int(),
+  column: z.string().nullable().default(null),
+  message: z.string(),
+});
+
+export const csvImportFileSchema = z.object({
+  file: z.string(),
+  status: csvImportStatusSchema,
+  widget: z
+    .object({
+      id: idSchema,
+      code: z.string(),
+      title: z.string(),
+      type: z.string(),
+    })
+    .nullable()
+    .optional(),
+  // Null for Media Mix Model, whose cards sit in the section itself.
+  tab: z
+    .object({ code: z.string(), title: z.string(), is_enabled: z.boolean() })
+    .nullable()
+    .optional(),
+  section_enabled: z.boolean().optional(),
+  rows: z.number().int().nonnegative().optional(),
+  errors: z.array(csvImportErrorSchema).default([]),
+  // Only when ready: the content the card would get, for the canvas preview.
+  content: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+const csvImportResultSchema = z.object({
+  as_of: z.iso.date(),
+  summary: z.object({
+    ready: z.number().int().nonnegative(),
+    invalid: z.number().int().nonnegative(),
+    skipped: z.number().int().nonnegative(),
+    ignored: z.number().int().nonnegative(),
+  }),
+  files: z.array(csvImportFileSchema),
+});
+
+export const csvImportResponseSchema = z.object({
+  data: csvImportResultSchema,
+});
+export const csvImportApplyResponseSchema = z.object({
+  data: csvImportResultSchema.extend({
+    // The codes of the cards whose content changed.
+    applied: z.array(z.string()),
+    layout_version: z.number().int(),
+  }),
+});
+
 const listedCreativeSchema = z.object({
   key: z.string(),
   // The saved name, or the channel's when there is none.
@@ -521,3 +622,9 @@ export type CampaignAudiencesRequest = z.infer<
   typeof campaignAudiencesRequestSchema
 >;
 export type CreativeList = z.infer<typeof creativeListSchema>;
+export type CsvImportStatus = z.infer<typeof csvImportStatusSchema>;
+export type CsvImportFile = z.infer<typeof csvImportFileSchema>;
+export type CsvImportResult = z.infer<typeof csvImportResponseSchema>["data"];
+export type CsvImportApplyResult = z.infer<
+  typeof csvImportApplyResponseSchema
+>["data"];
